@@ -5,9 +5,9 @@ import subprocess
 
 # Usage: the following python script should be run with command line arguments in the following way
 #
-# python plotting_pbands.py <compound name>
+# python init_calc.py <compound name> <path-to-POSCAR-file>
 #
-# For more information visit the GitHub repository.
+# For more information visit the GitHub repository (https://github.com/shayanmoosavi/Quantum-Instant-Coffee.git)
 
 # INITIALIZATION
 # =======================================================================================================
@@ -380,7 +380,6 @@ f'''
   lforcet          = .true.
   lspinorb         = .true.
   noncolin         = .true.
-  nosym            = .true.
  /
  &ELECTRONS
   conv_thr         = 1e-12
@@ -472,7 +471,7 @@ f'''
  &CONTROL
   calculation      = 'bands' 
   outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials' 
+  pseudo_dir       = '../../../Pseudopotentials_rel' 
   prefix           = '{compound_name}' 
   verbosity        = 'high' 
   etot_conv_thr    = 1e-9 
@@ -612,7 +611,7 @@ f'''
  &CONTROL
   calculation      = 'nscf' 
   outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials'
+  pseudo_dir       = '../../../Pseudopotentials_rel'
   prefix           = '{compound_name}' 
   verbosity        = 'high' 
   etot_conv_thr    = 1e-9 

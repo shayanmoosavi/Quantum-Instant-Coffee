@@ -10,7 +10,10 @@ from matplotlib.collections import LineCollection
 
 # Usage: the following python script should be run with command line arguments in the following way
 #
-# python plotting_pbands.py <compound name> <fermi energy>
+# python plotting_pbands.py <compound name>
+#
+# For more information visit the GitHub repository (https://github.com/shayanmoosavi/Quantum-Instant-Coffee.git)
+
 
 # INITIALIZATION
 # ============================================================================================================================
