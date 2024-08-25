@@ -6,14 +6,14 @@
 </div>
 
 ## 💡 About
-Quantum Instant Coffee is a collection of Python scripts to easily generate a batch of all the needed input files for the most common [Quantum ESPRESSO](https://www.quantum-espresso.org) and [Wannier90](https://wannier.org/) calculations. The current supported calculations are:
+Quantum Instant Coffee is a collection of Python scripts designed to easily generate batches of input files needed for the most common [Quantum ESPRESSO](https://www.quantum-espresso.org) and [Wannier90](https://wannier.org/) calculations. The current supported calculations include:
 
 - **Self-Consistent Field** (scf)
 - **Projected Density of States** (pdos)
 - **Projected Band Structure** (projected_bands)
 - **Wannier interpolated bands** (wannier)
 
-The input files will be generated with and without taking spin-orbit coupling into account and they will be placed in their respective directories.
+The input files will be generated both with and without considering spin-orbit coupling and will be organized into their respective directories.
 
 Current toolkit:
 - `init_calc.py`
@@ -22,13 +22,13 @@ Current toolkit:
 - `compare_bands.py` (coming soon)
 
 ## 📖 Usage
-In order to use these scripts to generate the input files, you must first clone the repository in the main directory you want to generate input files. Then, run `init_calc.py` in the following way:
+In order to use these scripts to generate the input files, first clone the repository into the main directory where you want to generate input files. Then, run `init_calc.py` as follows:
 
 ```bash
 python init_calc.py <name-of-the-compound> <path-to-POSCAR-file>
 ```
 
-POSCAR is a famous file format generally used by the [VASP](https://vasp.at/) software , which stores the lattice vectors and the atomic positions for a specified compound. The `init_calc.py` script will generate a folder named `<name-of-the-compound>` and in that folder it will create subfolders with the following structure:
+The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `init_calc.py` script will generate a folder named `<name-of-the-compound>`, and within that folder, it will create subfolders with the following structure:
 
 ```bash
 .
@@ -63,13 +63,13 @@ POSCAR is a famous file format generally used by the [VASP](https://vasp.at/) so
 └── <name-of-the-compound>_wannier.win
 ```
 
-After the successful execution of `init_calc.py`, the input files are mostly ready. The only information missing is the pseudopotential files and atomic weights, which needs to be added manually in the input scripts. After doing the usual calculations with Quantum ESPRESSO and Wannier90, the `plot_pbands.py` script can be run. You need to run it in the following way:
+After successfully executing `init_calc.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `plot_pbands.py` script using the following command:
 
 ```bash
 python plot_pbands.py <name-of-the-compound>
 ```
 
-After the successful execution of `plot_pbands.py` the script will plot the projected bands for every atom in the structure.
+After successfully exwcuting `plot_pbands.py`, the script will plot the projected bands for every atom in the structure.
 
 ## 🏅 Acknowledgements
 - Logo created with [Banner Maker](https://banner.godori.dev/)
