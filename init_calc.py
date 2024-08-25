@@ -12,12 +12,12 @@ import subprocess
 # INITIALIZATION
 # =======================================================================================================
 
-print("Initializing...\n")
+print("Initializing...\n", flush=True)
 
 compound_name = argv[1]  # Taking the name of the compound of interest
 poscar_file = argv[2]  # The POSCAR file for the atomic structure
 
-print("Recognizing elements...")
+print("Recognizing elements...", flush=True)
 
 # Parsing the compound name for elements and their numbers
 compound_name_regex_pattern = r"(([A-Z][a-z]?)(\d?))"
@@ -36,15 +36,15 @@ for element in element_matches:
 number_of_atoms = sum(element_numbers)  # The number of atoms in the compound
 atom_types = len(element_names)  # The number of atom types in the compound
 
-print(f"Total number of atoms found: {number_of_atoms}")
-print(f"Number of distinct atom types found: {atom_types}")
+print(f"Total number of atoms found: {number_of_atoms}", flush=True)
+print(f"Number of distinct atom types found: {atom_types}", flush=True)
 
 atomic_labels = []
 for element_name, element_number in zip(element_names, element_numbers):
     for _ in range(element_number):
         atomic_labels.append(element_name)
 
-print("Recognized elements: ", end='')
+print("Recognized elements: ", end='', flush=True)
 
 for element_name in element_names:
     print(element_name, end=' ')
@@ -57,7 +57,7 @@ calculation_dirs = []  # Directories of calculations
 # Creating the folder structure of the project
 try:
     os.mkdir(project_dir)
-    print(f"\nProject directory initialized at:\n {project_dir}\n")
+    print(f"\nProject directory initialized at:\n {project_dir}\n", flush=True)
 
     print(f"Entering {compound_name} directory...")
     os.chdir(project_dir)
@@ -72,7 +72,7 @@ try:
         os.makedirs(calculation_with_soc)
         calculation_dirs.append(os.path.abspath(calculation_with_soc))
 
-    print("Successfully created calculation directories.\n")
+    print("Successfully created calculation directories.\n", flush=True)
 
 except FileExistsError:
     print("Project already initialized! Retrieving calculation directories...\n")
@@ -83,12 +83,12 @@ except FileExistsError:
 # TEMPLATE INPUT FILE GENERATION
 # =======================================================================================================
 
-print("Generating template input files...\n")
+print("Generating template input files...\n", flush=True)
 print(
 '''
 By default, the number of bands in spin-orbit case will be double of the provided number of bands below.
 Change the generated input files if that's not what you want.
-''')
+''', flush=True)
 number_of_bands = int(input("Enter the number of bands: "))
 
 # Reading the atomic positions and lattice vectors from the POSCAR file
@@ -733,9 +733,9 @@ end kpoint_path
 begin projections  ! Enter the atomic projections here
 '''
 
-for atomic_label in atomic_labels:
-    wannier_input += f"{atomic_label}: proj\n"
-    wannier_soc_input += f"{atomic_label}: proj\n"
+for element in element_names:
+    wannier_input += f"{element}: proj\n"
+    wannier_soc_input += f"{element}: proj\n"
 
 wannier_input += \
 '''end projections
@@ -814,7 +814,19 @@ f'''
 
 '''
 
-pw2wan_soc_input = pw2wan_input 
+pw2wan_soc_input = \
+f'''
+&inputpp
+  outdir     =  './out'   ! quantum espresso outdir
+  prefix     =  '{compound_name}' ! prefix of the pw.x scf calculation
+  seedname   =  '{compound_name}_wannier_soc' ! must be same as the file name of win file
+  write_amn  =  .true.
+  write_mmn  =  .true.
+  write_unk  =  .true.
+  reduce_unk =  .true.
+/
+
+'''
 
 # Calculation types and their respective input files nicely formatted for convenience and easy access
 calculation_info = {
@@ -870,13 +882,13 @@ for calculation in calculation_list:
         with open(os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename), "w") as file:
             file.write(input_src)
         print(f"Wrote {filename} at:\n \
-{os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename)}\n")
+{os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename)}\n", flush=True)
     
     for input_src, filename in zip(calculation_soc_info[calculation]["input_list"], calculation_soc_info[calculation]["filename_list"]):
 
         with open(os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename), "w") as file:
             file.write(input_src)
         print(f"Wrote {filename} at:\n \
-{os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename)}\n")
+{os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename)}\n", flush=True)
 
 print("\nInput files have been gererated successfully.")

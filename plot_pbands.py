@@ -68,6 +68,7 @@ for pband_dir, flag in zip(pbands_dir_list, spin_orbit_flag):
     # projbands_dir = os.path.join(project_dir, f"{compound_name}.projbands")  # The output directory of the awk script
 
 for pdos_dir, flag in zip(pdos_dir_list, spin_orbit_flag):
+
     nscf_output_dir_list.append(os.path.join(project_dir, 
         os.path.join(pdos_dir, f"{compound_name}_nscf{flag}.pw.out")))  # The output of Quantum ESPRESSO nscf calculation
 
@@ -81,6 +82,7 @@ for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
         
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
     try:
+
         # Reading the output of Quantum ESPRESSO pw.x bands calculation
         band_output_file = open(bands_output_dir, "r")
         bands_calculation_output = band_output_file.read()
@@ -98,7 +100,8 @@ for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
 
     except FileNotFoundError:
         print(f"File \"{compound_name}_bands{flag}.pw.out\" does not exist. Make sure the file name is correct or \
-    in the directory of the project.")
+in the directory of the project.")
+        exit(1)
 
 # Getting the Fermi energy from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -111,6 +114,7 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
     print(f"Reading {compound_name}_nscf{flag}.pw.out...")
     print("Getting Fermi energy...")
     try:
+
         # Reading the output of Quantum ESPRESSO pw.x bands calculation
         nscf_output_file = open(nscf_output_dir, "r")
         nscf_calculation_output = nscf_output_file.read()
@@ -128,7 +132,8 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
 
     except FileNotFoundError:
         print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
-    in the directory of the project.")
+in the directory of the project.")
+        exit(1)
 
 # Extracting projected bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -137,12 +142,14 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
 number_of_atomic_states_list = []
 kpdos_calculation_output_list = []
 
-for kpdos_output_dir, projbands_dir, flag in zip(kpdos_output_dir_list, projbands_dir_list, spin_orbit_flag):
+for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(kpdos_output_dir_list, projbands_dir_list, 
+fermi_energy_list, spin_orbit_flag):
 
     print(f"Reading {compound_name}{flag}.kpdos.out...")
     print("Getting the number of bands...")
 
     try:
+
         # Reading the output of kpdos calculation
         kpdos_output_file = open(kpdos_output_dir, "r")
         kpdos_calculation_output = kpdos_output_file.read()
@@ -176,6 +183,7 @@ for kpdos_output_dir, projbands_dir, flag in zip(kpdos_output_dir_list, projband
             except CalledProcessError as e:
                 print("An error occurred in projected bands calculation. See below for details:\n")
                 print((e.stderr).decode("utf-8"))
+                exit(1)
 
         else:
             print(f"File {compound_name}{flag}.projbands already exists!")
@@ -183,7 +191,8 @@ for kpdos_output_dir, projbands_dir, flag in zip(kpdos_output_dir_list, projband
 
     except FileNotFoundError:
         print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
-    in the directory of the project.")
+in the directory of the project.")
+        exit(1)
 
 # PREPROCESSING
 # ============================================================================================================================
@@ -339,16 +348,16 @@ for projbands_dir, bands_dir, number_of_bands, fermi_energy \
     projbands_data = np.loadtxt(projbands_dir)
     projbands_data_list.append(projbands_data)
 
-    bands_data = np.loadtxt(os.path.join(project_dir, bands_dir))
-
     k_points_proj = np.unique(projbands_data[:, 1])
     k_points_proj_list.append(k_points_proj)
 
-    k_points = np.unique(bands_data[:, 0])
-    k_points_list.append(k_points)
-    
     Energy_proj = np.reshape(projbands_data[:, 2], (-1, number_of_bands))
     Energy_proj_list.append(Energy_proj)
+
+    bands_data = np.loadtxt(os.path.join(project_dir, bands_dir))
+
+    k_points = np.unique(bands_data[:, 0])
+    k_points_list.append(k_points)
 
     Energy = np.reshape(bands_data[:, 1], (-1, len(k_points))) - fermi_energy
     Energy_list.append(Energy)
@@ -356,7 +365,7 @@ for projbands_dir, bands_dir, number_of_bands, fermi_energy \
 # Calculating the total weights
 # ----------------------------------------------------------------------------------------------------------------------------
 
-# Calculates the weights of the specified orbitals from the projbands data
+#Calculates the weights of the specified orbitals from the projbands data
 def calculate_total_weights(data, atomic_state_indices, number_of_bands):
     total_orbital_weights = np.zeros(len(data[:, 0]))
     for atomic_state_index in atomic_state_indices:
@@ -372,6 +381,7 @@ for atomic_projection_indices_info, projbands_data, number_of_bands \
     in zip(atomic_projection_indices_info_list, projbands_data_list, number_of_bands_list):
 
     atomic_projection_weights_info = dict()
+    Energy = np.reshape(bands_data[:, 1], (-1, len(k_points)))
 
     elements_list = [atomic_projection[0] for atomic_projection in atomic_projection_list]
     unique_elements_list = [item for i, item in enumerate(elements_list) if item not in elements_list[:i]]
@@ -418,17 +428,15 @@ def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbi
 
     # Plotting the bands
     for band in range(number_of_bands):
-        # ax.scatter(xdata[condition[:, band]], ydata[condition[:, band], band].T,
-        #     s=orbital_weights[condition[:, band], band], color=color, alpha=0.25)
-
+        
         x = xdata[condition[:, band]]
         y = ydata[condition[:, band], band].T
         weights = orbital_weights[condition[:, band], band]
-        weights = 4 * weights[:-1]
+        weights = 3 * weights[:-1]  # Multiplying the weights by a scaling factor to get thicker bands
         points = np.array([x, y]).T.reshape(-1, 1, 2)
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
         if spin_orbit:
-            line_collections = LineCollection(segments, linewidths=weights, color=color, alpha=0.25)
+            line_collections = LineCollection(segments, linewidths=weights, color=color, alpha=0.45)
         else:
             line_collections = LineCollection(segments, linewidths=weights, color=color)
         
@@ -437,6 +445,9 @@ def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbi
     return label
 
 orbital_plot_color_info = {
+    "s": "magenta",
+    "p": "green",
+    "d": "red",
     "pz": "blue",
     "px+py": "green",
     "dz2": "blue",
@@ -468,11 +479,6 @@ for atomic_projection_weights_info in atomic_projection_weights_info_list:
         "plot_colors": orbitals_plot_color_list, "orbital_weights": orbital_weights_list}})
     
     atomic_projection_plot_info_list.append(atomic_projection_plot_info)
-
-# print("non spin-orbit case:")
-# print(atomic_projection_indices_info_list[0])
-# print("spin-orbit case:")
-# print(atomic_projection_indices_info_list[1])
 
 compound_name_regex_pattern = r"(([A-Z][a-z]?)(\d?))"
 compound_name_regex_object = re.compile(compound_name_regex_pattern)
@@ -506,7 +512,11 @@ for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_p
 
     fig.set_figheight(6)
     fig.set_figwidth(12)
-    fig.suptitle("Projected Band Structure for " + compound_name_latex)
+
+    if spin_orbit_state:
+        fig.suptitle("Projected Band Structure for " + compound_name_latex + "Without Spin-Orbit Coupling")
+    else:
+        fig.suptitle("Projected Band Structure for " + compound_name_latex + "With Spin-Orbit Coupling")
 
     init_plot(axs[0], "k", "E (eV)", "TOTAL", high_symmetry_k_points, k_labels)
     bands_label = plot_bands(axs[0], k_points, Energy, "total", "blue")
