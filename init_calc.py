@@ -95,8 +95,8 @@ number_of_bands = int(input("Enter the number of bands: "))
 with open(poscar_file, "r") as file:
     poscar_file_content = file.read()
 
-    # The pattern for 3 decimal numbers with 16 significant digits
-    coordinates_regex_pattern = r"(-?\d\d?\.\d{16})\s+(-?\d\d?\.\d{16})\s+(-?\d\d?\.\d{16})"
+    # The pattern for 3 decimal numbers
+    coordinates_regex_pattern = r"(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
     coordinates_regex_object = re.compile(coordinates_regex_pattern)
     coordinates_matches = coordinates_regex_object.finditer(poscar_file_content)
     lattice_vectors = []
