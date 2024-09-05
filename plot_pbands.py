@@ -514,9 +514,9 @@ for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_p
     fig.set_figwidth(12)
 
     if spin_orbit_state:
-        fig.suptitle("Projected Band Structure for " + compound_name_latex + "Without Spin-Orbit Coupling")
-    else:
         fig.suptitle("Projected Band Structure for " + compound_name_latex + "With Spin-Orbit Coupling")
+    else:
+        fig.suptitle("Projected Band Structure for " + compound_name_latex + "Without Spin-Orbit Coupling")
 
     init_plot(axs[0], "k", "E (eV)", "TOTAL", high_symmetry_k_points, k_labels)
     bands_label = plot_bands(axs[0], k_points, Energy, "total", "blue")
