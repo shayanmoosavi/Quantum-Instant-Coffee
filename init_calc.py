@@ -3,6 +3,7 @@ from sys import argv
 import re
 import subprocess
 
+
 # Usage: the following python script should be run with command line arguments in the following way
 #
 # python init_calc.py <compound name> <path-to-POSCAR-file>
@@ -75,7 +76,7 @@ try:
     print("Successfully created calculation directories.\n", flush=True)
 
 except FileExistsError:
-    print("Project already initialized! Retrieving calculation directories...\n")
+    print("\nProject already initialized! Retrieving calculation directories...\n")
     for dirpath, dirnames, _ in os.walk(project_dir):
         if len(dirnames) == 0:
             calculation_dirs.append(dirpath)
@@ -115,25 +116,126 @@ with open(poscar_file, "r") as file:
 # Input file contents
 #-----------------------------------------------------------------------------------------------------
 
+print("Getting the Pseudopotential files...\n", flush=True)
+
+# Getting the directory of Pseudopotential files from the user
+success = False
+while not success:
+    pseudo_dir_input = input("Enter the directory of your non relativistic or scalar relativistic Pseudopotential files: ")
+    pseudo_dir_path = os.path.abspath(pseudo_dir_input)
+
+    # Prompting the user to input the correct path or quit the application in case of wrong path
+    if os.path.exists(pseudo_dir_path):
+        success = True
+    else:
+        print("Directory does not exist! Write the correct path or press q to quit.")
+        pseudo_dir_input = input()
+        if pseudo_dir_input == 'q':
+            exit()
+        elif os.path.exists(os.path.abspath(pseudo_dir_input)):
+            pseudo_dir_path = os.path.abspath(pseudo_dir_input)
+            success = True
+        else:
+            print("Invalid input or wrong directory path! Try again.")
+
+success = False
+while not success:
+    rel_pseudo_dir_input = input("Enter the directory of your relativistic Pseudopotential files: ")
+    rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
+    if os.path.exists(rel_pseudo_dir_path):
+        success = True
+    else:
+        print("Directory does not exist! Write the correct path or press q to quit.")
+        rel_pseudo_dir_input = input()
+        if rel_pseudo_dir_input == 'q':
+            exit()
+        elif os.path.exists(os.path.abspath(rel_pseudo_dir_input)):
+            rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
+            success = True
+        else:
+            print("Invalid input or wrong directory path! Try again.")
+
+# Searching the specified pseudopotential directories for the corresponding pseudopotentials
+# for each element in the compound
+pseudo_list = dict()
+for dirpaths, _, filenames in os.walk(pseudo_dir_path):
+
+       for element_name in element_names:
+        pseudo_files = []
+        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+
+        for filename in filenames:
+            pseudo_match = pseudo_regex_object.fullmatch(os.path.split(filename)[1])
+            if pseudo_match is not None:
+                pseudo_files.append(pseudo_match.group(0))
+        pseudo_list.update({element_name: pseudo_files})
+
+print("\nFinding the non relativistic or scalar relativistic pseudopotential files...")
+for element, pseudo_files in pseudo_list.items():
+    if len(pseudo_files) == 0:
+        print(f"ERROR: No pseudopotentials found for {element}. Make sure it exists in the specified directory \
+and rerun this script")
+        exit(1)
+    else:
+        print(f"\nfound the following pseudopotential files for {element}:")
+        for i in range(len(pseudo_files)):
+            print(f"{i + 1}: {pseudo_files[i]}")
+        selected_pseudo_number = int(input("Which one do you want? Enter the number associated with it: ")) - 1
+        pseudo_list.update({element: pseudo_files[selected_pseudo_number]})
+
+print("\nThe following pseudopotentials were selected:\n")
+print(pseudo_list)
+
+rel_pseudo_list = dict()
+for dirpaths, _, filenames in os.walk(rel_pseudo_dir_path):
+
+       for element_name in element_names:
+        rel_pseudo_files = []
+        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+
+        for filename in filenames:
+            rel_pseudo_match = pseudo_regex_object.fullmatch(os.path.split(filename)[1])
+            if rel_pseudo_match is not None:
+                rel_pseudo_files.append(rel_pseudo_match.group(0))
+        rel_pseudo_list.update({element_name: rel_pseudo_files})
+
+print("\nFinding the relativistic pseudopotential files...")
+for element, pseudo_files in rel_pseudo_list.items():
+    if len(pseudo_files) == 0:
+        print(f"ERROR: No pseudopotentials found for {element}. Make sure it exists in the specified directory \
+and rerun this script")
+        exit(1)
+    else:
+        print(f"\nfound the following pseudopotential files for {element}:")
+        for i in range(len(pseudo_files)):
+            print(f"{i + 1}: {pseudo_files[i]}")
+        selected_pseudo_number = int(input("Which one do you want? Enter the number associated with it: ")) - 1
+        rel_pseudo_list.update({element: pseudo_files[selected_pseudo_number]})
+
+print("The following pseudopotentials were selected:\n")
+print(rel_pseudo_list)
+
 # Input file for Quantum ESPRESSO vc-relax calculation
 vc_relax_input = \
 f'''
  &CONTROL
-  calculation      = 'vc-relax' 
-  outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'vc-relax'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../", os.path.relpath(pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
  /
  &ELECTRONS
@@ -148,25 +250,25 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-# Input file for Quantum ESPRESSO vc-relax calculation with spin-orbit coupling
+# # Input file for Quantum ESPRESSO vc-relax calculation with spin-orbit coupling
 vc_relax_soc_input = \
 f'''
  &CONTROL
-  calculation      = 'vc-relax' 
-  outdir           = './out' 
-  pseudo_dir       = '../../../Pseudopotentials_rel' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'vc-relax'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../../", os.path.relpath(rel_pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 60 
+  ecutwfc          = 60
   ecutrho          = 600
   occupations      = 'smearing'
   smearing         = 'fermi-dirac'
@@ -186,12 +288,14 @@ f'''
  &CELL
   cell_dofree      = 'fixc'
  /
-ATOMIC_SPECIES  ! Enter atom information here 
+ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element in element_names:
-    vc_relax_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
-    vc_relax_soc_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
+for element, pseudo in pseudo_list.items():
+    vc_relax_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
+
+for element, pseudo in rel_pseudo_list.items():
+    vc_relax_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 vc_relax_input += \
 '''
@@ -205,15 +309,15 @@ ATOMIC_POSITIONS crystal
 
 # Dynamically adding the atomic positions and lattice vectors to the input files
 for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
-    vc_relax_input += f"\t{atomic_label}\t{atomic_position}\n"
-    vc_relax_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
+    vc_relax_input += f"{atomic_label}\t{atomic_position}\n"
+    vc_relax_soc_input += f"{atomic_label}\t{atomic_position}\n"
 
-vc_relax_input += '''K_POINTS automatic 
-  12 12 1   0 0 0 
+vc_relax_input += '''K_POINTS automatic
+  12 12 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
-vc_relax_soc_input += '''K_POINTS automatic 
-  10 10 1   0 0 0 
+vc_relax_soc_input += '''K_POINTS automatic
+  10 10 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
 
@@ -221,25 +325,26 @@ for lattice_vector in lattice_vectors:
     vc_relax_input += f"\t{lattice_vector}\n"
     vc_relax_soc_input += f"\t{lattice_vector}\n"
 
+
 # Input file for Quantum ESPRESSO scf calculation
 scf_input = \
 f'''
  &CONTROL
-  calculation      = 'scf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'scf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../", os.path.relpath(pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   occupations      = 'smearing'
   smearing         = 'fermi-dirac'
@@ -256,21 +361,21 @@ ATOMIC_SPECIES  ! Enter atom information here
 scf_soc_input = \
 f'''
  &CONTROL
-  calculation      = 'scf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../../Pseudopotentials_rel' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'scf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../../", os.path.relpath(rel_pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 60 
+  ecutwfc          = 60
   ecutrho          = 600
   occupations      = 'smearing'
   smearing         = 'fermi-dirac'
@@ -288,9 +393,11 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element in element_names:
-    scf_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
-    scf_soc_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
+for element, pseudo in pseudo_list:
+    scf_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
+
+for element, pseudo in rel_pseudo_list:
+    scf_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 scf_input += \
 '''
@@ -304,15 +411,15 @@ ATOMIC_POSITIONS crystal
 
 # Dynamically adding the atomic positions and lattice vectors to the input files
 for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
-    scf_input += f"\t{atomic_label}\t{atomic_position}\n"
-    scf_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
+    scf_input += f"{atomic_label}\t{atomic_position}\n"
+    scf_soc_input += f"{atomic_label}\t{atomic_position}\n"
 
 scf_input += '''K_POINTS automatic
-  14 14 1   0 0 0 
+  14 14 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
 
-scf_soc_input = '''K_POINTS automatic 
+scf_soc_input += '''K_POINTS automatic
   14 14 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
@@ -325,21 +432,21 @@ for lattice_vector in lattice_vectors:
 nscf_input = \
 f'''
  &CONTROL
-  calculation      = 'nscf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'nscf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../", os.path.relpath(pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {number_of_bands}
   occupations      = 'smearing'
@@ -357,21 +464,21 @@ ATOMIC_SPECIES  ! Enter atom information here
 nscf_soc_input = \
 f'''
  &CONTROL
-  calculation      = 'nscf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../../Pseudopotentials_rel'
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'nscf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../../", os.path.relpath(rel_pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {2 * number_of_bands}
   occupations      = 'smearing'
@@ -388,9 +495,12 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element in element_names:
-    nscf_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
-    nscf_soc_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
+
+for element, pseudo in pseudo_list:
+    nscf_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
+
+for element, pseudo in rel_pseudo_list:
+    nscf_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 nscf_input += \
 '''
@@ -404,15 +514,15 @@ ATOMIC_POSITIONS crystal
 
 # Dynamically adding the atomic positions and lattice vectors to the input files
 for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
-    nscf_input += f"\t{atomic_label}\t{atomic_position}\n"
-    nscf_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
+    nscf_input += f"{atomic_label}\t{atomic_position}\n"
+    nscf_soc_input += f"{atomic_label}\t{atomic_position}\n"
 
-nscf_input += '''K_POINTS automatic 
-  28 28 1   0 0 0 
+nscf_input += '''K_POINTS automatic
+  28 28 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
 
-nscf_soc_input += '''K_POINTS automatic 
+nscf_soc_input += '''K_POINTS automatic
   18 18 1   0 0 0
 CELL_PARAMETERS angstrom
 '''
@@ -426,9 +536,9 @@ pdos_input = \
 f'''
  &PROJWFC
    outdir          = './out'
-   prefix          = '{compound_name}' 
-   filpdos         = '{compound_name}' 
-   DeltaE          = 0.01 
+   prefix          = '{compound_name}'
+   filpdos         = '{compound_name}'
+   DeltaE          = 0.01
  /
 
 '''
@@ -439,19 +549,19 @@ pdos_soc_input = pdos_input
 pw_bands_input = \
 f'''
  &CONTROL
-  calculation      = 'bands' 
-  outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'bands'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../", os.path.relpath(pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {number_of_bands}
   occupations      = 'smearing'
@@ -469,19 +579,19 @@ ATOMIC_SPECIES  ! Enter atom information here
 pw_bands_soc_input = \
 f'''
  &CONTROL
-  calculation      = 'bands' 
-  outdir           = './out' 
-  pseudo_dir       = '../../../Pseudopotentials_rel' 
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'bands'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../../", os.path.relpath(rel_pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {2 * number_of_bands}
   occupations      = 'smearing'
@@ -498,9 +608,11 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element in element_names:
-    pw_bands_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
-    pw_bands_soc_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
+for element, pseudo in pseudo_list:
+    pw_bands_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
+
+for element, pseudo in rel_pseudo_list:
+    pw_bands_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 pw_bands_input += \
 '''
@@ -517,21 +629,21 @@ for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
     pw_bands_input += f"\t{atomic_label}\t{atomic_position}\n"
     pw_bands_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
 
-pw_bands_input += '''K_POINTS crystal_b 
+pw_bands_input += '''K_POINTS crystal_b
 4
   0.0000000000    0.0000000000    0.0000000000    120 ! Gamma
   0.5000000000    0.0000000000    0.0000000000    120 ! M
   0.3333333333    0.3333333333    0.0000000000    120 ! K
-  0.0000000000    0.0000000000    0.0000000000    0 ! Gamma 
+  0.0000000000    0.0000000000    0.0000000000    0 ! Gamma
 CELL_PARAMETERS angstrom
 '''
 
-pw_bands_soc_input += '''K_POINTS crystal_b 
+pw_bands_soc_input += '''K_POINTS crystal_b
 4
   0.0000000000    0.0000000000    0.0000000000    120 ! Gamma
   0.5000000000    0.0000000000    0.0000000000    120 ! M
   0.3333333333    0.3333333333    0.0000000000    120 ! K
-  0.0000000000    0.0000000000    0.0000000000    0 ! Gamma 
+  0.0000000000    0.0000000000    0.0000000000    0 ! Gamma
 CELL_PARAMETERS angstrom
 '''
 
@@ -546,7 +658,7 @@ f'''
   prefix  = '{compound_name}'
   outdir  = './out'
   lsym    = .true.
-  filband = '{compound_name}.bands' 
+  filband = '{compound_name}.bands'
  /
 
 '''
@@ -576,21 +688,21 @@ kpdos_soc_input = kpdos_input
 nscf_wannier_input = \
 f'''
  &CONTROL
-  calculation      = 'nscf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../Pseudopotentials'
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'nscf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../", os.path.relpath(pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {number_of_bands}
   occupations      = 'smearing'
@@ -604,26 +716,26 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-# Input file for Quantum ESPRESSO nscf calculation with spin-orbit coupling 
+# Input file for Quantum ESPRESSO nscf calculation with spin-orbit coupling
 # for usage in wannier function calculation
 nscf_wannier_soc_input = \
 f'''
  &CONTROL
-  calculation      = 'nscf' 
-  outdir           = './out' 
-  pseudo_dir       = '../../../Pseudopotentials_rel'
-  prefix           = '{compound_name}' 
-  verbosity        = 'high' 
-  etot_conv_thr    = 1e-9 
+  calculation      = 'nscf'
+  outdir           = './out'
+  pseudo_dir       = '{os.path.join("../../", os.path.relpath(rel_pseudo_dir_path, project_dir))}'
+  prefix           = '{compound_name}'
+  verbosity        = 'high'
+  etot_conv_thr    = 1e-9
   forc_conv_thr    = 1e-7
   tprnfor          = .true.
   tstress          = .true.
  /
  &SYSTEM
-  ibrav            = 0 
+  ibrav            = 0
   nat              = {number_of_atoms}
   ntyp             = {atom_types}
-  ecutwfc          = 50 
+  ecutwfc          = 50
   ecutrho          = 500
   nbnd             = {2 * number_of_bands}
   occupations      = 'smearing'
@@ -641,9 +753,11 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element in element_names:
-    nscf_wannier_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
-    nscf_wannier_soc_input += f"\t{element}\t{element}_weight\t{element}_Pseudo_pot\n"
+for element, pseudo in pseudo_list:
+    nscf_wannier_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
+
+for element, pseudo in rel_pseudo_list:
+    nscf_wannier_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 nscf_wannier_input += \
 '''
@@ -657,8 +771,8 @@ ATOMIC_POSITIONS crystal
 
 # Dynamically adding the atomic positions and lattice vectors to the input files
 for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
-    nscf_wannier_input += f"\t{atomic_label}\t{atomic_position}\n"
-    nscf_wannier_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
+    nscf_wannier_input += f"{atomic_label}\t{atomic_position}\n"
+    nscf_wannier_soc_input += f"{atomic_label}\t{atomic_position}\n"
 
 nscf_wannier_input += "CELL_PARAMETERS angstrom\n"
 nscf_wannier_soc_input += "CELL_PARAMETERS angstrom\n"
@@ -667,9 +781,22 @@ for lattice_vector in lattice_vectors:
     nscf_wannier_input += f"\t{lattice_vector}\n"
     nscf_wannier_soc_input += f"\t{lattice_vector}\n"
 
+# Getting the kpoint mesh density from the user
+mesh_density = input("Enter the desired kpoint mesh density in the \"nx ny nz\" format for the non spin-orbit case: ")
+mesh_density_soc = input("Enter the desired kpoint mesh density in the \"nx ny nz\" format for the spin-orbit case: ")
+
 # Running the kmesh.pl utility script provided by Quantum ESPRESSO in order to get the kpoint mesh of desired density
-kpoints = subprocess.run(f"../kmesh.pl 28 28 1", shell=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
-kpoints_soc = subprocess.run(f"../kmesh.pl 18 18 1", shell=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
+try:
+    kpoints = subprocess.run(f"./kmesh.pl {mesh_density}", shell=True, stdout=subprocess.PIPE,
+        check=True, capture_output=True).stdout.decode("utf-8")
+    kpoints_soc = subprocess.run(f"./kmesh.pl {mesh_density_soc}", shell=True, stdout=subprocess.PIPE,
+        check=True, capture_output=True).stdout.decode("utf-8")
+
+# Capturing the error message
+except subprocess.CalledProcessError as e:
+    print("An error occurred in running kmesh.pl script. See below for details:\n")
+    print((e.stderr).decode("utf-8"))
+    exit(1)
 
 # Adding the created kpoint mesh to the input files
 nscf_wannier_input += kpoints
@@ -773,25 +900,32 @@ for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
     wannier_input += f"\t{atomic_label}\t{atomic_position}\n"
     wannier_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
 
-wannier_input += '''end atoms_frac
+wannier_input += f'''end atoms_frac
 
-mp_grid = 28 28 1
+mp_grid = {mesh_density}
 
 begin kpoints
 '''
 
-wannier_soc_input += '''end atoms_frac
+wannier_soc_input += f'''end atoms_frac
 
-mp_grid = 18 18 1
+mp_grid = {mesh_density_soc}
 
 begin kpoints
 '''
 
 # Running the kmesh.pl utility script provided by Quantum ESPRESSO in order to get the kpoint mesh of desired density
-kpoints_wannier = subprocess.run(f"../kmesh.pl 28 28 1 wann", shell=True, 
-stdout=subprocess.PIPE).stdout.decode("utf-8")
-kpoints_soc_wannier = subprocess.run(f"../kmesh.pl 18 18 1 wann", shell=True, 
-stdout=subprocess.PIPE).stdout.decode("utf-8")
+try:
+    kpoints_wannier = subprocess.run(f"./kmesh.pl {mesh_density} wann", shell=True,
+    stdout=subprocess.PIPE, check=True, capture_output=True).stdout.decode("utf-8")
+    kpoints_soc_wannier = subprocess.run(f"./kmesh.pl {mesh_density_soc} wann", shell=True,
+    stdout=subprocess.PIPE, check=True, capture_output=True).stdout.decode("utf-8")
+
+# Capturing the error message
+except subprocess.CalledProcessError as e:
+    print("An error occurred in running kmesh.pl script. See below for details:\n")
+    print((e.stderr).decode("utf-8"))
+    exit(1)
 
 # Adding the created kpoint mesh to the input files
 wannier_input += kpoints_wannier
@@ -799,7 +933,7 @@ wannier_input += "end kpoints\n"
 wannier_soc_input += kpoints_soc_wannier
 wannier_soc_input += "end kpoints\n"
 
-# Input file for Quantum ESPRESSO pw2wan calculation 
+# Input file for Quantum ESPRESSO pw2wan calculation
 pw2wan_input = \
 f'''
 &inputpp
@@ -832,22 +966,22 @@ f'''
 calculation_info = {
     "scf": {
         "index": 0,
-        "input_list": (vc_relax_input, scf_input), 
+        "input_list": (vc_relax_input, scf_input),
         "filename_list": (f"{compound_name}_vc_relax.pw.in", f"{compound_name}_scf.pw.in")
     },
     "pdos": {
         "index": 1,
-        "input_list": (nscf_input, pdos_input), 
+        "input_list": (nscf_input, pdos_input),
         "filename_list": (f"{compound_name}_nscf.pw.in", f"{compound_name}.pdos.in")
     },
     "projected_bands": {
         "index": 2,
-        "input_list": (pw_bands_input, bands_input, kpdos_input), 
+        "input_list": (pw_bands_input, bands_input, kpdos_input),
         "filename_list": (f"{compound_name}_bands.pw.in", f"{compound_name}.bands.in", f"{compound_name}.kpdos.in")
     },
     "wannier": {
         "index": 3,
-        "input_list": (nscf_wannier_input, wannier_input, pw2wan_input), 
+        "input_list": (nscf_wannier_input, wannier_input, pw2wan_input),
         "filename_list": (f"{compound_name}_nscf_wannier.pw.in", f"{compound_name}_wannier.win", f"{compound_name}.pw2wan.in")
     }
 }
@@ -855,22 +989,22 @@ calculation_info = {
 calculation_soc_info = {
     "scf": {
         "index": 4,
-        "input_list": (vc_relax_soc_input, scf_soc_input), 
+        "input_list": (vc_relax_soc_input, scf_soc_input),
         "filename_list": (f"{compound_name}_vc_relax_soc.pw.in", f"{compound_name}_scf_soc.pw.in")
     },
     "pdos": {
         "index": 5,
-        "input_list": (nscf_soc_input, pdos_soc_input), 
+        "input_list": (nscf_soc_input, pdos_soc_input),
         "filename_list": (f"{compound_name}_nscf_soc.pw.in", f"{compound_name}_soc.pdos.in")
     },
     "projected_bands": {
         "index": 6,
-        "input_list": (pw_bands_soc_input, bands_soc_input, kpdos_soc_input), 
+        "input_list": (pw_bands_soc_input, bands_soc_input, kpdos_soc_input),
         "filename_list": (f"{compound_name}_bands_soc.pw.in", f"{compound_name}_soc.bands.in", f"{compound_name}_soc.kpdos.in")
     },
     "wannier": {
         "index": 7,
-        "input_list": (nscf_wannier_soc_input, wannier_soc_input, pw2wan_soc_input), 
+        "input_list": (nscf_wannier_soc_input, wannier_soc_input, pw2wan_soc_input),
         "filename_list": (f"{compound_name}_nscf_wannier_soc.pw.in", f"{compound_name}_wannier_soc.win", f"{compound_name}_soc.pw2wan.in")
     }
 }
@@ -883,7 +1017,7 @@ for calculation in calculation_list:
             file.write(input_src)
         print(f"Wrote {filename} at:\n \
 {os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename)}\n", flush=True)
-    
+
     for input_src, filename in zip(calculation_soc_info[calculation]["input_list"], calculation_soc_info[calculation]["filename_list"]):
 
         with open(os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename), "w") as file:

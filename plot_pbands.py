@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 from subprocess import run, CalledProcessError
-from math import sqrt
 from matplotlib.collections import LineCollection
 
 
@@ -24,15 +23,12 @@ compound_name = argv[1]  # Taking the name of the compound of interest
 fermi_energy = 0.0
 number_of_bands = 0  # Declaring the variable
 root_dir = os.path.abspath("../")  # The root directory of the project
-project_dir = os.path.join(root_dir, argv[1])  # The calculation directory 
-
-# Path of awk script provided by Quantum ESPRESSO to calculate projected bands
-projwfc_to_bands_dir = os.path.join(root_dir, "projwfc_to_bands.awk")
+project_dir = os.path.join(root_dir, argv[1])  # The calculation directory
 
 # Directory of projected bands calculation
 pbands_dir_list = [
     os.path.join(project_dir, "projected_bands"), os.path.join(project_dir, "spin_orbit/projected_bands")
-]  
+]
 
 # Directory of pdos calculation
 pdos_dir_list = [
@@ -40,7 +36,7 @@ pdos_dir_list = [
 ]
 
 # The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
-spin_orbit_flag = ["", "_soc"]  
+spin_orbit_flag = ["", "_soc"]
 
 # Output file directories
 pw_bands_output_dir_list = []
@@ -51,25 +47,21 @@ bands_dir_list = []
 
 for pband_dir, flag in zip(pbands_dir_list, spin_orbit_flag):
 
-    pw_bands_output_dir_list.append(os.path.join(project_dir, 
+    pw_bands_output_dir_list.append(os.path.join(project_dir,
     os.path.join(pband_dir, f"{compound_name}_bands{flag}.pw.out")))  # The output of Quantum ESPRESSO pw bands calculation
 
-    kpdos_output_dir_list.append(os.path.join(project_dir, 
+    kpdos_output_dir_list.append(os.path.join(project_dir,
     os.path.join(pband_dir, f"{compound_name}{flag}.kpdos.out")))  # The output of Quantum ESPRESSO kpdos calculation
 
-    projbands_dir_list.append(os.path.join(project_dir, 
+    projbands_dir_list.append(os.path.join(project_dir,
         os.path.join(pband_dir, f"{compound_name}{flag}.projbands")))  # The output of Quantum ESPRESSO nscf calculation
 
-    bands_dir_list.append(os.path.join(project_dir, 
+    bands_dir_list.append(os.path.join(project_dir,
     os.path.join(pband_dir, f"{compound_name}.bands.gnu")))  # The output of Quantum ESPRESSO bands calculation
-
-    # kpdos_output_dir = os.path.join(project_dir, f"{compound_name}.kpdos.out")  # The output of Quantum ESPRESSO kpdos calculation
-    # nscf_output_dir = os.path.join(project_dir, f"{compound_name}_nscf.pw.out")  # The output of Quantum ESPRESSO nscf calculation
-    # projbands_dir = os.path.join(project_dir, f"{compound_name}.projbands")  # The output directory of the awk script
 
 for pdos_dir, flag in zip(pdos_dir_list, spin_orbit_flag):
 
-    nscf_output_dir_list.append(os.path.join(project_dir, 
+    nscf_output_dir_list.append(os.path.join(project_dir,
         os.path.join(pdos_dir, f"{compound_name}_nscf{flag}.pw.out")))  # The output of Quantum ESPRESSO nscf calculation
 
 # Getting the number of bands from Quantum ESPRESSO calculation
@@ -79,7 +71,7 @@ for pdos_dir, flag in zip(pdos_dir_list, spin_orbit_flag):
 number_of_bands_list = []
 
 for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
-        
+
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
     try:
 
@@ -92,10 +84,10 @@ for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
         band_number_regex_pattern = r"number of Kohn-Sham states=\s+(\d+)"
         band_number_regex_object = re.compile(band_number_regex_pattern)
         band_number_matches = band_number_regex_object.finditer(bands_calculation_output)
-        
+
         number_of_bands = int(next(band_number_matches).group(1))  # Accessing the value of the iterator
         number_of_bands_list.append(number_of_bands)
-        
+
         print(f"Band number extracted successfully. There are {number_of_bands} bands in this calculation.\n")
 
     except FileNotFoundError:
@@ -124,10 +116,10 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
         Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
         Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
         Fermi_energy_matches = Fermi_energy_regex_object.finditer(nscf_calculation_output)
-        
+
         fermi_energy = float(next(Fermi_energy_matches).group(1))  # Accessing the value of the iterator
         fermi_energy_list.append(fermi_energy)
-        
+
         print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
 
     except FileNotFoundError:
@@ -142,7 +134,7 @@ in the directory of the project.")
 number_of_atomic_states_list = []
 kpdos_calculation_output_list = []
 
-for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(kpdos_output_dir_list, projbands_dir_list, 
+for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(kpdos_output_dir_list, projbands_dir_list,
 fermi_energy_list, spin_orbit_flag):
 
     print(f"Reading {compound_name}{flag}.kpdos.out...")
@@ -167,18 +159,18 @@ fermi_energy_list, spin_orbit_flag):
         number_of_atomic_states_list.append(number_of_atomic_states)
 
         print(f"There are {number_of_atomic_states} atomic states.")
-        print(f"Calculating projected bands...\n")
+        print("Calculating projected bands...\n")
 
         # Avoiding unnecessary execution of awk script
         if not os.path.exists(projbands_dir):
 
             try:
                 run(f"awk -v firststate=1 -v laststate={number_of_atomic_states} -v ef={fermi_energy} \
-                    -f {projwfc_to_bands_dir} {kpdos_output_dir} > {projbands_dir}", shell=True, check=True, 
+                    -f ./projwfc_to_bands.awk {kpdos_output_dir} > {projbands_dir}", shell=True, check=True,
                     capture_output=True)
 
                 print("Initialization done.\n")
-            
+
             # Catching the error message
             except CalledProcessError as e:
                 print("An error occurred in projected bands calculation. See below for details:\n")
@@ -223,33 +215,33 @@ while failure:
 
         for atomic_projection in atomic_projections:
             atomic_projection_list.append(atomic_projection.split('-'))
-        
+
         # Atomic orbitals and their corresponding orbital numbers
         orbital_info = {
             "s": [
-                "l=0 m= 1", 
+                "l=0 m= 1",
                 "l=0 j=0.5 m_j=-0.5", "l=0 j=0.5 m_j= 0.5"
             ],
 
             "p": [
-                "l=1 m= 1", "l=1 m= 2", "l=1 m= 3", 
-                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5", 
+                "l=1 m= 1", "l=1 m= 2", "l=1 m= 3",
+                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5",
                 "l=1 j=1.5 m_j=-0.5", "l=1 j=1.5 m_j= 0.5", "l=1 j=1.5 m_j= 1.5"
             ],
 
             "pz": [
                 "l=1 m= 1",
-                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", 
+                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5",
                 "l=1 j=1.5 m_j=-0.5", "l=1 j=1.5 m_j= 0.5"
             ],
             "px": [
                 "l=1 m= 2",
-                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5", 
+                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5",
                 "l=1 j=1.5 m_j=-0.5", "l=1 j=1.5 m_j= 0.5", "l=1 j=1.5 m_j= 1.5"
             ],
             "py": [
                 "l=1 m= 3",
-                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5", 
+                "l=1 j=0.5 m_j=-0.5", "l=1 j=0.5 m_j= 0.5", "l=1 j=1.5 m_j=-1.5",
                 "l=1 j=1.5 m_j=-0.5", "l=1 j=1.5 m_j= 0.5", "l=1 j=1.5 m_j= 1.5"
             ],
 
@@ -310,7 +302,7 @@ while failure:
                     for atomic_state in atomic_state_number_matches:
                         projection_indices_list.append(int(atomic_state.group(1)))
                 projection_indices_list.sort()
-                
+
                 # px and py orbitals have the same contribution
                 if atomic_projection[1] == "px" or atomic_projection[1] == "py":
                     if "px+py" not in atomic_projection_indices_info.keys():
@@ -327,7 +319,7 @@ while failure:
                         atomic_projection_indices_info.update({f"{atomic_projection[0]}-dx2y2+dxy": projection_indices_list})
 
                 else:
-                    atomic_projection_indices_info.update({f"{atomic_projection[0]}-{atomic_projection[1]}": 
+                    atomic_projection_indices_info.update({f"{atomic_projection[0]}-{atomic_projection[1]}":
                     projection_indices_list})
 
             atomic_projection_indices_info_list.append(atomic_projection_indices_info)
@@ -416,7 +408,7 @@ def plot_bands(ax, xdata, ydata, data_label="data", color="blue"):
 
     for band in range(len(Energy)):
         ax.plot(xdata, ydata[band, :], color=color)
-    
+
     return label
 
 def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbit = True, data_label="data", color="blue"):
@@ -428,7 +420,7 @@ def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbi
 
     # Plotting the bands
     for band in range(number_of_bands):
-        
+
         x = xdata[condition[:, band]]
         y = ydata[condition[:, band], band].T
         weights = orbital_weights[condition[:, band], band]
@@ -439,7 +431,7 @@ def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbi
             line_collections = LineCollection(segments, linewidths=weights, color=color, alpha=0.45)
         else:
             line_collections = LineCollection(segments, linewidths=weights, color=color)
-        
+
         ax.add_collection(line_collections)
 
     return label
@@ -474,10 +466,10 @@ for atomic_projection_weights_info in atomic_projection_weights_info_list:
                 orbitals_list.append(orbital)
                 orbitals_plot_color_list.append(orbital_plot_color_info[orbital])
                 orbital_weights_list.append(atomic_projection_weights_info[atomic_projection])
-                
+
         atomic_projection_plot_info.update({f"{unique_elements_list[i]}":{"index": i + 1, "projected_orbitals": orbitals_list,
         "plot_colors": orbitals_plot_color_list, "orbital_weights": orbital_weights_list}})
-    
+
     atomic_projection_plot_info_list.append(atomic_projection_plot_info)
 
 compound_name_regex_pattern = r"(([A-Z][a-z]?)(\d?))"
@@ -503,7 +495,7 @@ for i in range(len(element_names)):
 compound_name_latex += r'$'
 
 for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_proj, number_of_bands, spin_orbit_state \
-    in zip(atomic_projection_plot_info_list, spin_orbit_flag, k_points_list, Energy_list, 
+    in zip(atomic_projection_plot_info_list, spin_orbit_flag, k_points_list, Energy_list,
     k_points_proj_list, Energy_proj_list, number_of_bands_list, [False, True]):
 
     plt.style.use("ggplot")
@@ -527,13 +519,13 @@ for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_p
         legend_labels = []
 
         for i in range(len(atomic_projection_plot_info[element]["projected_orbitals"])):
-            
-            init_plot(axs[atomic_projection_plot_info[element]["index"]], "k", "E (eV)", 
+
+            init_plot(axs[atomic_projection_plot_info[element]["index"]], "k", "E (eV)",
             element, high_symmetry_k_points, k_labels)
-            
-            label = plot_projbands(axs[atomic_projection_plot_info[element]["index"]], k_points_proj, Energy_proj, 
+
+            label = plot_projbands(axs[atomic_projection_plot_info[element]["index"]], k_points_proj, Energy_proj,
             atomic_projection_plot_info[element]["orbital_weights"][i], number_of_bands, spin_orbit_state,
-            atomic_projection_plot_info[element]["projected_orbitals"][i], 
+            atomic_projection_plot_info[element]["projected_orbitals"][i],
             atomic_projection_plot_info[element]["plot_colors"][i])
 
             legend_labels.append(label)
