@@ -393,10 +393,10 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element, pseudo in pseudo_list:
+for element, pseudo in pseudo_list.items():
     scf_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
-for element, pseudo in rel_pseudo_list:
+for element, pseudo in rel_pseudo_list.items():
     scf_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 scf_input += \
@@ -496,10 +496,10 @@ ATOMIC_SPECIES  ! Enter atom information here
 '''
 
 
-for element, pseudo in pseudo_list:
+for element, pseudo in pseudo_list.items():
     nscf_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
-for element, pseudo in rel_pseudo_list:
+for element, pseudo in rel_pseudo_list.items():
     nscf_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 nscf_input += \
@@ -608,10 +608,10 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element, pseudo in pseudo_list:
+for element, pseudo in pseudo_list.items():
     pw_bands_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
-for element, pseudo in rel_pseudo_list:
+for element, pseudo in rel_pseudo_list.items():
     pw_bands_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 pw_bands_input += \
@@ -753,10 +753,10 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-for element, pseudo in pseudo_list:
+for element, pseudo in pseudo_list.items():
     nscf_wannier_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
-for element, pseudo in rel_pseudo_list:
+for element, pseudo in rel_pseudo_list.items():
     nscf_wannier_soc_input += f"\t{element}\t{element}_weight\t{pseudo}\n"
 
 nscf_wannier_input += \
