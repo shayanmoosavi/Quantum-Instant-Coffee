@@ -787,9 +787,9 @@ mesh_density_soc = input("Enter the desired kpoint mesh density in the \"nx ny n
 
 # Running the kmesh.pl utility script provided by Quantum ESPRESSO in order to get the kpoint mesh of desired density
 try:
-    kpoints = subprocess.run(f"./kmesh.pl {mesh_density}", shell=True, stdout=subprocess.PIPE,
+    kpoints = subprocess.run(f"./kmesh.pl {mesh_density}", shell=True,
         check=True, capture_output=True).stdout.decode("utf-8")
-    kpoints_soc = subprocess.run(f"./kmesh.pl {mesh_density_soc}", shell=True, stdout=subprocess.PIPE,
+    kpoints_soc = subprocess.run(f"./kmesh.pl {mesh_density_soc}", shell=True,
         check=True, capture_output=True).stdout.decode("utf-8")
 
 # Capturing the error message
@@ -917,9 +917,9 @@ begin kpoints
 # Running the kmesh.pl utility script provided by Quantum ESPRESSO in order to get the kpoint mesh of desired density
 try:
     kpoints_wannier = subprocess.run(f"./kmesh.pl {mesh_density} wann", shell=True,
-    stdout=subprocess.PIPE, check=True, capture_output=True).stdout.decode("utf-8")
+        check=True, capture_output=True).stdout.decode("utf-8")
     kpoints_soc_wannier = subprocess.run(f"./kmesh.pl {mesh_density_soc} wann", shell=True,
-    stdout=subprocess.PIPE, check=True, capture_output=True).stdout.decode("utf-8")
+        check=True, capture_output=True).stdout.decode("utf-8")
 
 # Capturing the error message
 except subprocess.CalledProcessError as e:
