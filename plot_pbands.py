@@ -25,6 +25,11 @@ number_of_bands = 0  # Declaring the variable
 root_dir = os.path.abspath("../")  # The root directory of the project
 project_dir = os.path.join(root_dir, argv[1])  # The calculation directory
 
+# Directory of scf calculation
+scf_dir_list = [
+    os.path.join(project_dir, "scf"), os.path.join(project_dir, "spin_orbit/scf")
+]
+
 # Directory of projected bands calculation
 pbands_dir_list = [
     os.path.join(project_dir, "projected_bands"), os.path.join(project_dir, "spin_orbit/projected_bands")
@@ -42,10 +47,11 @@ spin_orbit_flag = ["", "_soc"]
 pw_bands_output_dir_list = []
 kpdos_output_dir_list = []
 nscf_output_dir_list = []
+scf_output_dir_list = []
 projbands_dir_list = []
 bands_dir_list = []
 
-for pband_dir, flag in zip(pbands_dir_list, spin_orbit_flag):
+for scf_dir, pband_dir, pdos_dir, flag in zip(scf_dir_list, pbands_dir_list, pdos_dir_list, spin_orbit_flag):
 
     pw_bands_output_dir_list.append(os.path.join(project_dir,
     os.path.join(pband_dir, f"{compound_name}_bands{flag}.pw.out")))  # The output of Quantum ESPRESSO pw bands calculation
@@ -59,10 +65,11 @@ for pband_dir, flag in zip(pbands_dir_list, spin_orbit_flag):
     bands_dir_list.append(os.path.join(project_dir,
     os.path.join(pband_dir, f"{compound_name}.bands.gnu")))  # The output of Quantum ESPRESSO bands calculation
 
-for pdos_dir, flag in zip(pdos_dir_list, spin_orbit_flag):
-
     nscf_output_dir_list.append(os.path.join(project_dir,
         os.path.join(pdos_dir, f"{compound_name}_nscf{flag}.pw.out")))  # The output of Quantum ESPRESSO nscf calculation
+
+    scf_output_dir_list.append(os.path.join(project_dir,
+        os.path.join(scf_dir, f"{compound_name}_scf{flag}.pw.out")))  # The output of Quantum ESPRESSO nscf calculation
 
 # Getting the number of bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -111,18 +118,18 @@ in the directory of the project.")
 # List of Fermi energies for spin-orbit and non spin-orbit case
 fermi_energy_list = []
 
-for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
+for scf_output_dir, nscf_output_dir, flag in zip(scf_output_dir_list, nscf_output_dir_list, spin_orbit_flag):
 
-    print(f"Reading {compound_name}_nscf{flag}.pw.out...")
     print("Getting Fermi energy...")
+    print(f"Reading {compound_name}_nscf{flag}.pw.out...")
     try:
 
-        # Reading the output of Quantum ESPRESSO pw.x bands calculation
+        # Reading the output of Quantum ESPRESSO nscf calculation
         nscf_output_file = open(nscf_output_dir, "r")
         nscf_calculation_output = nscf_output_file.read()
         nscf_output_file.close()
 
-        # Getting the number of calculated bands from the calculation output
+        # Getting fermi energy from the calculation output
         Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
         Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
         Fermi_energy_matches = Fermi_energy_regex_object.finditer(nscf_calculation_output)
@@ -133,15 +140,38 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
         print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
 
     except FileNotFoundError:
-        if flag == "_soc":
-            if not skip_soc:
+        if skip_soc:
+            print("Spin-orbit was set to be skipped. Continuing...")
+        else:
+            if os.path.exists(scf_output_dir):
+                try:
+
+                    print("No nscf calculation found.\n")
+                    print(f"Reading {compound_name}_scf{flag}.pw.out...")
+
+                    # Reading the output of Quantum ESPRESSO scf calculation
+                    scf_output_file = open(scf_output_dir, "r")
+                    scf_calculation_output = scf_output_file.read()
+                    scf_output_file.close()
+
+                    # Getting the number of calculated bands from the calculation output
+                    Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
+                    Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
+                    Fermi_energy_matches = Fermi_energy_regex_object.finditer(scf_calculation_output)
+
+                    fermi_energy = float(next(Fermi_energy_matches).group(1))  # Accessing the value of the iterator
+                    fermi_energy_list.append(fermi_energy)
+
+                    print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
+
+                except FileNotFoundError:
+                        print(f"File \"{compound_name}_scf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+in the directory of the project.")
+                        exit(1)
+            else:
                 print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
                 exit(1)
-        else:
-            print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
-in the directory of the project.")
-            exit(1)
 
 # Extracting projected bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -201,11 +231,11 @@ fermi_energy_list, spin_orbit_flag):
         if flag == "_soc":
             if not skip_soc:
                 print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
-        in the directory of the project.")
+in the directory of the project.")
                 exit(1)
         else:
             print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
-    in the directory of the project.")
+in the directory of the project.")
             exit(1)
 
 # PREPROCESSING
