@@ -4,7 +4,7 @@ import re
 import subprocess
 
 
-# Usage: the following python script should be run with command line arguments in the following way
+# Usage: the following python script should be run with command line arguments in the following way:
 #
 # python init_calc.py <compound name> <path-to-POSCAR-file>
 #
@@ -250,7 +250,7 @@ f'''
 ATOMIC_SPECIES  ! Enter atom information here
 '''
 
-# # Input file for Quantum ESPRESSO vc-relax calculation with spin-orbit coupling
+# Input file for Quantum ESPRESSO vc-relax calculation with spin-orbit coupling
 vc_relax_soc_input = \
 f'''
  &CONTROL
@@ -626,8 +626,8 @@ ATOMIC_POSITIONS crystal
 
 # Dynamically adding the atomic positions and lattice vectors to the input files
 for atomic_position, atomic_label in zip(atomic_positions, atomic_labels):
-    pw_bands_input += f"\t{atomic_label}\t{atomic_position}\n"
-    pw_bands_soc_input += f"\t{atomic_label}\t{atomic_position}\n"
+    pw_bands_input += f"{atomic_label}\t{atomic_position}\n"
+    pw_bands_soc_input += f"{atomic_label}\t{atomic_position}\n"
 
 pw_bands_input += '''K_POINTS crystal_b
 4

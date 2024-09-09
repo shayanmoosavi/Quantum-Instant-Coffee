@@ -7,7 +7,7 @@ from subprocess import run, CalledProcessError
 from matplotlib.collections import LineCollection
 
 
-# Usage: the following python script should be run with command line arguments in the following way
+# Usage: the following python script should be run with command line arguments in the following way:
 #
 # python plotting_pbands.py <compound name>
 #
@@ -69,7 +69,7 @@ for pdos_dir, flag in zip(pdos_dir_list, spin_orbit_flag):
 
 # List of band numbers for spin-orbit and non spin-orbit case
 number_of_bands_list = []
-
+skip_soc = False  # Whether to skip the spin-orbit case
 for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
 
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
@@ -91,9 +91,19 @@ for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
         print(f"Band number extracted successfully. There are {number_of_bands} bands in this calculation.\n")
 
     except FileNotFoundError:
-        print(f"File \"{compound_name}_bands{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+        if flag == "_soc":
+            print(f"File \"{compound_name}_bands{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
-        exit(1)
+            skip_soc_input = input("Do you want to skip spin-orbit case? Enter \"yes\" if you want to skip spin-orbit or \
+\"no\" to quit the program.")
+            if skip_soc_input == "no":
+                exit(1)
+            else:
+                skip_soc = True
+        else:
+            print(f"File \"{compound_name}_bands{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+in the directory of the project.")
+            exit(1)
 
 # Getting the Fermi energy from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -123,9 +133,15 @@ for nscf_output_dir, flag in zip(nscf_output_dir_list, spin_orbit_flag):
         print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
 
     except FileNotFoundError:
-        print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+        if flag == "_soc":
+            if not skip_soc:
+                print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
-        exit(1)
+                exit(1)
+        else:
+            print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+in the directory of the project.")
+            exit(1)
 
 # Extracting projected bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -182,9 +198,15 @@ fermi_energy_list, spin_orbit_flag):
             print("Initialization done.\n")
 
     except FileNotFoundError:
-        print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
-in the directory of the project.")
-        exit(1)
+        if flag == "_soc":
+            if not skip_soc:
+                print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
+        in the directory of the project.")
+                exit(1)
+        else:
+            print(f"File \"{compound_name}{flag}.kpdos.out\" does not exist. Make sure the file name is correct or \
+    in the directory of the project.")
+            exit(1)
 
 # PREPROCESSING
 # ============================================================================================================================
@@ -532,7 +554,6 @@ for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_p
 
         axs[atomic_projection_plot_info[element]["index"]].legend(
             handles=legend_labels)
-
 
     plt.ylim(-3, 3)
     plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}.png"))
