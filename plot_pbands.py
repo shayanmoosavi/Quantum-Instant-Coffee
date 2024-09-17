@@ -163,11 +163,10 @@ for scf_output_dir, nscf_output_dir, flag in zip(scf_output_dir_list, nscf_outpu
                     fermi_energy_list.append(fermi_energy)
 
                     print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
-
                 except FileNotFoundError:
-                        print(f"File \"{compound_name}_scf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+                    print(f"File \"{compound_name}_scf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
-                        exit(1)
+                    exit(1)
             else:
                 print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
