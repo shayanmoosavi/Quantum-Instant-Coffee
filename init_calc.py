@@ -1016,13 +1016,13 @@ for calculation in calculation_list:
         with open(os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename), "w") as file:
             file.write(input_src)
         print(f"Wrote {filename} at:\n \
-{os.path.join(calculation_dirs[calculation_info[calculation]["index"]], filename)}\n", flush=True)
+            {os.path.join(calculation_dirs[calculation_info[calculation]['index']], filename)}\n", flush=True)
 
     for input_src, filename in zip(calculation_soc_info[calculation]["input_list"], calculation_soc_info[calculation]["filename_list"]):
 
         with open(os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename), "w") as file:
             file.write(input_src)
         print(f"Wrote {filename} at:\n \
-{os.path.join(calculation_dirs[calculation_soc_info[calculation]["index"]], filename)}\n", flush=True)
+            {os.path.join(calculation_dirs[calculation_soc_info[calculation]['index']], filename)}\n", flush=True)
 
-print("\nInput files have been gererated successfully.")
+print("\nInput files have been generated successfully.")
