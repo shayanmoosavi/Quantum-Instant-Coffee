@@ -523,6 +523,9 @@ for atomic_projection_weights_info in atomic_projection_weights_info_list:
 
     atomic_projection_plot_info_list.append(atomic_projection_plot_info)
 
+# Creating the LaTeX symbols for the comopound name to display in the plot
+# ----------------------------------------------------------------------------------------------------------------------------
+
 compound_name_regex_pattern = r"(([A-Z][a-z]?)(\d?))"
 compound_name_regex_object = re.compile(compound_name_regex_pattern)
 element_matches = compound_name_regex_object.finditer(compound_name)
@@ -545,6 +548,9 @@ for i in range(len(element_names)):
 
 compound_name_latex += r'$'
 
+# Plotting the data
+# ----------------------------------------------------------------------------------------------------------------------------
+
 for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_proj, number_of_bands, spin_orbit_state \
     in zip(atomic_projection_plot_info_list, spin_orbit_flag, k_points_list, Energy_list,
     k_points_proj_list, Energy_proj_list, number_of_bands_list, [False, True]):
@@ -557,9 +563,9 @@ for atomic_projection_plot_info, flag, k_points, Energy, k_points_proj, Energy_p
     fig.set_figwidth(12)
 
     if spin_orbit_state:
-        fig.suptitle("Projected Band Structure for " + compound_name_latex + "With Spin-Orbit Coupling")
+        fig.suptitle("Projected Band Structure for " + compound_name_latex + "with Spin-Orbit Coupling")
     else:
-        fig.suptitle("Projected Band Structure for " + compound_name_latex + "Without Spin-Orbit Coupling")
+        fig.suptitle("Projected Band Structure for " + compound_name_latex + "without Spin-Orbit Coupling")
 
     init_plot(axs[0], "k", "E (eV)", "TOTAL", high_symmetry_k_points, k_labels)
     bands_label = plot_bands(axs[0], k_points, Energy, "total", "blue")
