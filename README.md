@@ -19,7 +19,7 @@ Current toolkit:
 - `init_calc.py`
 - `plot_pbands.py`
 - `plot_pdos.py` (coming soon)
-- `compare_bands.py` (coming soon)
+- `compare_bands.py` 
 
 ## 📖 Usage
 In order to use these scripts to generate the input files, first clone the repository into the main directory where you want to generate input files. Then, run `init_calc.py` as follows:
@@ -69,9 +69,16 @@ After successfully executing `init_calc.py`, the input files will be mostly read
 python plot_pbands.py <name-of-the-compound>
 ```
 
-After successfully exwcuting `plot_pbands.py`, the script will plot the projected bands for every atom in the structure.
+After successfully executing `plot_pbands.py`, the script will plot the projected bands for every atom in the structure.
+
+To compare the wannier interpolated bands with DFT bands, run the following command:
+
+```bash
+python compare_bands.py <name-of-the-compound>
+```
 
 ## 🏅 Acknowledgements
+- `kmesh.pl` and `projwfc_to_bands.awk` scripts are provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
 - Logo created with [Banner Maker](https://banner.godori.dev/)
 - Badges created with [Shields.io](https://shields.io/)
 - Logo icon provided by [Flaticon](https://www.flaticon.com/)
