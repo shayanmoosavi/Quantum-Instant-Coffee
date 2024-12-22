@@ -140,37 +140,37 @@ for scf_output_dir, nscf_output_dir, flag in zip(scf_output_dir_list, nscf_outpu
         print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
 
     except FileNotFoundError:
-        if skip_soc:
+        if flag == "_soc":
             print("Spin-orbit was set to be skipped. Continuing...")
-        else:
-            if os.path.exists(scf_output_dir):
-                try:
+            continue
+        if os.path.exists(scf_output_dir):
+            try:
 
-                    print("No nscf calculation found.\n")
-                    print(f"Reading {compound_name}_scf{flag}.pw.out...")
+                print("No nscf calculation found.\n")
+                print(f"Reading {compound_name}_scf{flag}.pw.out...")
 
-                    # Reading the output of Quantum ESPRESSO scf calculation
-                    scf_output_file = open(scf_output_dir, "r")
-                    scf_calculation_output = scf_output_file.read()
-                    scf_output_file.close()
+                # Reading the output of Quantum ESPRESSO scf calculation
+                scf_output_file = open(scf_output_dir, "r")
+                scf_calculation_output = scf_output_file.read()
+                scf_output_file.close()
 
-                    # Getting the number of calculated bands from the calculation output
-                    Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
-                    Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
-                    Fermi_energy_matches = Fermi_energy_regex_object.finditer(scf_calculation_output)
+                # Getting the number of calculated bands from the calculation output
+                Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
+                Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
+                Fermi_energy_matches = Fermi_energy_regex_object.finditer(scf_calculation_output)
 
-                    fermi_energy = float(next(Fermi_energy_matches).group(1))  # Accessing the value of the iterator
-                    fermi_energy_list.append(fermi_energy)
+                fermi_energy = float(next(Fermi_energy_matches).group(1))  # Accessing the value of the iterator
+                fermi_energy_list.append(fermi_energy)
 
-                    print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
-                except FileNotFoundError:
-                    print(f"File \"{compound_name}_scf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
-in the directory of the project.")
-                    exit(1)
-            else:
-                print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+                print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
+            except FileNotFoundError:
+                print(f"File \"{compound_name}_scf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
 in the directory of the project.")
                 exit(1)
+        else:
+            print(f"File \"{compound_name}_nscf{flag}.pw.out\" does not exist. Make sure the file name is correct or \
+in the directory of the project.")
+            exit(1)
 
 # Extracting projected bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
