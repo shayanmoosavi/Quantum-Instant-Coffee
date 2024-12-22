@@ -475,15 +475,17 @@ def plot_projbands(ax, xdata, ydata, orbital_weights, number_of_bands, spin_orbi
         x = xdata[condition[:, band]]
         y = ydata[condition[:, band], band].T
         weights = orbital_weights[condition[:, band], band]
-        weights = 3 * weights[:-1]  # Multiplying the weights by a scaling factor to get thicker bands
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        weights = 3 * weights  # Multiplying the weights by a scaling factor to get thicker bands
+        # points = np.array([x, y]).T.reshape(-1, 1, 2)
+        # segments = np.concatenate([points[:-1], points[1:]], axis=1)
         if spin_orbit:
-            line_collections = LineCollection(segments, linewidths=weights, color=color, alpha=0.45)
+            # line_collections = LineCollection(segments, linewidths=weights, color=color, alpha=0.45)
+            ax.scatter(x, y, s=weights, color=color, alpha=0.45)
         else:
-            line_collections = LineCollection(segments, linewidths=weights, color=color)
+            # line_collections = LineCollection(segments, linewidths=weights, color=color)
+            ax.scatter(x, y, s=weights, color=color)
 
-        ax.add_collection(line_collections)
+        # ax.add_collection(line_collections)
 
     return label
 
