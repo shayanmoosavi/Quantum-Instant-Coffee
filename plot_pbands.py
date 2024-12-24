@@ -1,9 +1,10 @@
 import os
-from sys import argv
-import numpy as np
-import matplotlib.pyplot as plt
 import re
-from subprocess import run, CalledProcessError
+from subprocess import CalledProcessError, run
+from sys import argv
+import matplotlib.pyplot as plt
+import numpy as np
+
 # from matplotlib.collections import LineCollection
 
 
@@ -25,62 +26,73 @@ number_of_bands = 0  # Declaring the variable
 root_dir = os.path.abspath("../")  # The root directory of the project
 project_dir = os.path.join(root_dir, argv[1])  # The calculation directory
 
-# Directory of scf calculation
-scf_dir_list = [
-    os.path.join(project_dir, "scf"),
-    os.path.join(project_dir, "spin_orbit/scf"),
-]
-
-# Directory of projected bands calculation
-pbands_dir_list = [
-    os.path.join(project_dir, "projected_bands"),
-    os.path.join(project_dir, "spin_orbit/projected_bands"),
-]
-
-# Directory of pdos calculation
-pdos_dir_list = [
-    os.path.join(project_dir, "pdos"),
-    os.path.join(project_dir, "spin_orbit/pdos"),
-]
-
 include_stress_input = input(
     'Do you want to plot strain analysis instead? Type "yes" to plot strain analysis and "no" to plot normal projected bands. '
 )
+
+# Initializing the list in order to avoid having it empty and preventing from proper iteration
+stress_dir_list = ["1", "1_soc"]
 
 if include_stress_input == "yes":
     include_stress = True
 else:
     include_stress = False
 
+# The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
 if include_stress:
+
+    # Directory of scf calculation
+    scf_dir_list = [
+        os.path.join(project_dir, "scf"),
+    ]
+
+    # Directory of projected bands calculation
+    pbands_dir_list = [
+        os.path.join(project_dir, "projected_bands"),
+    ]
+
     stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
 For example 1_30 means the coordinates are stretched by 30%. Provide a space seperated list of DFT calculations with the specified strees amounts
 like "1_<percent-of-stretch-1> 1_<percent-of-stretch-2> 1_<percent-of-stretch-2> ... ":
 """)
 
-    stress_dir_list = []
     stress_amount_list = stress_amount_list_input.split(" ")
 
+    stress_dir_list.clear()
     for stress_amount in stress_amount_list:
-        stress_dir_list.append(os.path.join(project_dir,f"strain/{stress_amount}"))
-    
+        stress_dir_list.append(os.path.join(project_dir, f"strain/{stress_amount}"))
 
+    spin_orbit_flag = ["" for i in range(len(stress_amount_list) + 1)]
+    # Skipping the spin-orbit case when plotting strain analysis
+    skip_soc = True
 
-# The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
-spin_orbit_flag = ["", "_soc"]
-skip_soc = False # Whether to skip the spin-orbit case
+else:
+    spin_orbit_flag = ["", "_soc"]
+    skip_soc = False
+
+    # Directory of scf calculation
+    scf_dir_list = [
+        os.path.join(project_dir, "scf"),
+        os.path.join(project_dir, "spin_orbit/scf"),
+    ]
+
+    # Directory of projected bands calculation
+    pbands_dir_list = [
+        os.path.join(project_dir, "projected_bands"),
+        os.path.join(project_dir, "spin_orbit/projected_bands"),
+    ]
 
 # Output file directories
 pw_bands_output_dir_list = []
 kpdos_output_dir_list = []
-nscf_output_dir_list = []
 scf_output_dir_list = []
 projbands_dir_list = []
 bands_dir_list = []
 
-for scf_dir, pband_dir, pdos_dir, stress_dir, flag in zip(
-    scf_dir_list, pbands_dir_list, pdos_dir_list, stress_dir_list, spin_orbit_flag
+for scf_dir, pband_dir, flag in zip(
+    scf_dir_list, pbands_dir_list, spin_orbit_flag
 ):
+
     pw_bands_output_dir_list.append(
         os.path.join(
             project_dir, os.path.join(pband_dir, f"{compound_name}_bands{flag}.pw.out")
@@ -103,59 +115,54 @@ for scf_dir, pband_dir, pdos_dir, stress_dir, flag in zip(
         os.path.join(project_dir, os.path.join(pband_dir, f"{compound_name}.bands.gnu"))
     )  # The output of Quantum ESPRESSO bands calculation
 
-    nscf_output_dir_list.append(
-        os.path.join(
-            project_dir, os.path.join(pdos_dir, f"{compound_name}_nscf{flag}.pw.out")
-        )
-    )  # The output of Quantum ESPRESSO nscf calculation
-
     scf_output_dir_list.append(
         os.path.join(
             project_dir, os.path.join(scf_dir, f"{compound_name}_scf{flag}.pw.out")
         )
     )  # The output of Quantum ESPRESSO scf calculation
 
-    if include_stress:
-        if flag == "_soc":
-            continue
-        else:
-            skip_soc = True # Skipping the spin-orbit case when plotting strain analysis
+if include_stress:
+    for stress_dir in stress_dir_list:
 
-            pw_bands_output_dir_list.append(
-                os.path.join(
-                    project_dir, os.path.join(stress_dir, f"{compound_name}_bands.pw.out")
-                )
-            )  # The output of Quantum ESPRESSO pw bands calculation
+        pw_bands_output_dir_list.append(
+            os.path.join(
+                project_dir,
+                os.path.join(stress_dir, f"{compound_name}_bands.pw.out"),
+            )
+        )  # The output of Quantum ESPRESSO pw bands calculation
 
-            kpdos_output_dir_list.append(
-                os.path.join(
-                    project_dir, os.path.join(stress_dir, f"{compound_name}.kpdos.out")
-                )
-            )  # The output of Quantum ESPRESSO kpdos calculation
+        kpdos_output_dir_list.append(
+            os.path.join(
+                project_dir, os.path.join(stress_dir, f"{compound_name}.kpdos.out")
+            )
+        )  # The output of Quantum ESPRESSO kpdos calculation
 
-            projbands_dir_list.append(
-                os.path.join(
-                    project_dir, os.path.join(stress_dir, f"{compound_name}.projbands")
-                )
-            )  # The output of Quantum ESPRESSO nscf calculation
+        projbands_dir_list.append(
+            os.path.join(
+                project_dir, os.path.join(stress_dir, f"{compound_name}.projbands")
+            )
+        )  # The output of Quantum ESPRESSO nscf calculation
 
-            bands_dir_list.append(
-                os.path.join(project_dir, os.path.join(stress_dir, f"{compound_name}.bands.gnu"))
-            )  # The output of Quantum ESPRESSO bands calculation
+        bands_dir_list.append(
+            os.path.join(
+                project_dir, os.path.join(stress_dir, f"{compound_name}.bands.gnu")
+            )
+        )  # The output of Quantum ESPRESSO bands calculation
 
-            scf_output_dir_list.append(
-                os.path.join(
-                    project_dir, os.path.join(stress_dir, f"{compound_name}_scf.pw.out")
-                )
-            )  # The output of Quantum ESPRESSO scf calculation
+        scf_output_dir_list.append(
+            os.path.join(
+                project_dir, os.path.join(stress_dir, f"{compound_name}_scf.pw.out")
+            )
+        )  # The output of Quantum ESPRESSO scf calculation
 
 # Getting the number of bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
 
-# List of band numbers for spin-orbit and non spin-orbit case
+#List of band numbers for spin-orbit and non spin-orbit case
 number_of_bands_list = []
 
 for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
+    
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
     try:
         # Reading the output of Quantum ESPRESSO pw.x bands calculation
@@ -200,28 +207,29 @@ in the directory of the project.'
             )
             exit(1)
 
-# Getting the Fermi energy from Quantum ESPRESSO calculation
-# ----------------------------------------------------------------------------------------------------------------------------
+print(number_of_bands_list)
 
-# List of Fermi energies for spin-orbit and non spin-orbit case
+#Getting the Fermi energy from Quantum ESPRESSO calculation
+#----------------------------------------------------------------------------------------------------------------------------
+
+#List of Fermi energies for spin-orbit and non spin-orbit case
 fermi_energy_list = []
 
-for scf_output_dir, nscf_output_dir, flag in zip(
-    scf_output_dir_list, nscf_output_dir_list, spin_orbit_flag
-):
+for scf_output_dir, flag in zip(scf_output_dir_list, spin_orbit_flag):
+    
     print("Getting Fermi energy...")
-    print(f"Reading {compound_name}_nscf{flag}.pw.out...")
+    print(f"Reading {compound_name}_scf{flag}.pw.out...")
     try:
         # Reading the output of Quantum ESPRESSO nscf calculation
-        nscf_output_file = open(nscf_output_dir, "r")
-        nscf_calculation_output = nscf_output_file.read()
-        nscf_output_file.close()
+        scf_output_file = open(scf_output_dir, "r")
+        scf_calculation_output = scf_output_file.read()
+        scf_output_file.close()
 
         # Getting fermi energy from the calculation output
         Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
         Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
         Fermi_energy_matches = Fermi_energy_regex_object.finditer(
-            nscf_calculation_output
+            scf_calculation_output
         )
 
         fermi_energy = float(
@@ -237,40 +245,9 @@ for scf_output_dir, nscf_output_dir, flag in zip(
         if flag == "_soc":
             print("Spin-orbit was set to be skipped. Continuing...")
             continue
-        if os.path.exists(scf_output_dir):
-            try:
-                print("No nscf calculation found.\n")
-                print(f"Reading {compound_name}_scf{flag}.pw.out...")
-
-                # Reading the output of Quantum ESPRESSO scf calculation
-                scf_output_file = open(scf_output_dir, "r")
-                scf_calculation_output = scf_output_file.read()
-                scf_output_file.close()
-
-                # Getting the number of calculated bands from the calculation output
-                Fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d\.\d+)"
-                Fermi_energy_regex_object = re.compile(Fermi_energy_regex_pattern)
-                Fermi_energy_matches = Fermi_energy_regex_object.finditer(
-                    scf_calculation_output
-                )
-
-                fermi_energy = float(
-                    next(Fermi_energy_matches).group(1)
-                )  # Accessing the value of the iterator
-                fermi_energy_list.append(fermi_energy)
-
-                print(
-                    f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n"
-                )
-            except FileNotFoundError:
-                print(
-                    f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or \
-in the directory of the project.'
-                )
-                exit(1)
-        else:
+        else:                
             print(
-                f'File "{compound_name}_nscf{flag}.pw.out" does not exist. Make sure the file name is correct or \
+                f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or \
 in the directory of the project.'
             )
             exit(1)
@@ -282,9 +259,12 @@ in the directory of the project.'
 number_of_atomic_states_list = []
 kpdos_calculation_output_list = []
 
+print(list(zip(kpdos_output_dir_list, projbands_dir_list, fermi_energy_list, spin_orbit_flag)))
+
 for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(
     kpdos_output_dir_list, projbands_dir_list, fermi_energy_list, spin_orbit_flag
 ):
+        
     print(f"Reading {compound_name}{flag}.kpdos.out...")
     print("Getting the number of bands...")
 
@@ -571,7 +551,6 @@ for projbands_dir, bands_dir, number_of_bands, fermi_energy in zip(
 # Calculating the total weights
 # ----------------------------------------------------------------------------------------------------------------------------
 
-
 # Calculates the weights of the specified orbitals from the projbands data
 def calculate_total_weights(data, atomic_state_indices, number_of_bands):
     total_orbital_weights = np.zeros(len(data[:, 0]))
@@ -747,98 +726,117 @@ compound_name_latex += r"$"
 # Plotting the data
 # ----------------------------------------------------------------------------------------------------------------------------
 
-if not include_stress:
-    stress_amount_list = ["1"]
+if include_stress:
+    stress_amount_list.insert(0, "1")
 else:
+    stress_amount_list = ["1", "1_soc"]
 
-    for (
-        atomic_projection_plot_info,
-        flag,
-        k_points,
-        Energy,
-        k_points_proj,
-        Energy_proj,
-        number_of_bands,
-        spin_orbit_state,
-        stress_amount
-    ) in zip(
-        atomic_projection_plot_info_list,
-        spin_orbit_flag,
-        k_points_list,
-        Energy_list,
-        k_points_proj_list,
-        Energy_proj_list,
-        number_of_bands_list,
-        [False, True],
-        stress_amount_list
-    ):
-        plt.style.use("ggplot")
+for (
+    atomic_projection_plot_info,
+    k_points,
+    Energy,
+    k_points_proj,
+    Energy_proj,
+    number_of_bands,
+    flag,
+    stress_amount
+) in zip(
+    atomic_projection_plot_info_list,
+    k_points_list,
+    Energy_list,
+    k_points_proj_list,
+    Energy_proj_list,
+    number_of_bands_list,
+    spin_orbit_flag,
+    stress_amount_list
+):
 
-        fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
+    plt.style.use("ggplot")
 
-        fig.set_figheight(6)
-        fig.set_figwidth(12)
+    fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
 
-        if spin_orbit_state:
-            fig.suptitle(
-                "Projected Band Structure for "
-                + compound_name_latex
-                + "with Spin-Orbit Coupling"
-            )
-        else:
-            if include_stress:
-                fig.suptitle(
-                    "Projected Band Structure for "
-                    + compound_name_latex
-                    + "with "
-                    + rf"${stress_amount}a_0$"
-                )
-            else:
+    fig.set_figheight(6)
+    fig.set_figwidth(12)
+
+    if flag == "_soc":
+        fig.suptitle(
+            "Projected Band Structure for "
+            + compound_name_latex
+            + "with Spin-Orbit Coupling"
+        )
+    else:
+        if include_stress:
+            if stress_amount == "1":
                 fig.suptitle(
                     "Projected Band Structure for "
                     + compound_name_latex
                     + "without Spin-Orbit Coupling"
                 )
-
-        init_plot(axs[0], "k", "E (eV)", "TOTAL", high_symmetry_k_points, k_labels)
-        bands_label = plot_bands(axs[0], k_points, Energy, "total", "blue")
-        axs[0].legend(
-            handles=[
-                bands_label,
-            ]
-        )
-
-        for element in atomic_projection_plot_info.keys():
-            legend_labels = []
-
-            for i in range(len(atomic_projection_plot_info[element]["projected_orbitals"])):
-                init_plot(
-                    axs[atomic_projection_plot_info[element]["index"]],
-                    "k",
-                    "E (eV)",
-                    element,
-                    high_symmetry_k_points,
-                    k_labels,
+            else:
+                fig.suptitle(
+                    "Projected Band Structure for "
+                    + compound_name_latex
+                    + f"with {stress_amount.replace('_', '.')}"
+                    + r"$a_0$"
                 )
+        else:
+            fig.suptitle(
+                "Projected Band Structure for "
+                + compound_name_latex
+                + "without Spin-Orbit Coupling"
+            )
 
+    init_plot(axs[0], "k", "E (eV)", "TOTAL", high_symmetry_k_points, k_labels)
+    bands_label = plot_bands(axs[0], k_points, Energy, "total", "blue")
+    axs[0].legend(
+        handles=[
+            bands_label,
+        ]
+    )
+
+    for element in atomic_projection_plot_info.keys():
+        legend_labels = []
+
+        for i in range(len(atomic_projection_plot_info[element]["projected_orbitals"])):
+            init_plot(
+                axs[atomic_projection_plot_info[element]["index"]],
+                "k",
+                "E (eV)",
+                element,
+                high_symmetry_k_points,
+                k_labels,
+            )
+
+            if flag == "_soc":
                 label = plot_projbands(
                     axs[atomic_projection_plot_info[element]["index"]],
                     k_points_proj,
                     Energy_proj,
                     atomic_projection_plot_info[element]["orbital_weights"][i],
                     number_of_bands,
-                    spin_orbit_state,
+                    True,
+                    atomic_projection_plot_info[element]["projected_orbitals"][i],
+                    atomic_projection_plot_info[element]["plot_colors"][i],
+                )
+            else:
+                label = plot_projbands(
+                    axs[atomic_projection_plot_info[element]["index"]],
+                    k_points_proj,
+                    Energy_proj,
+                    atomic_projection_plot_info[element]["orbital_weights"][i],
+                    number_of_bands,
+                    False,
                     atomic_projection_plot_info[element]["projected_orbitals"][i],
                     atomic_projection_plot_info[element]["plot_colors"][i],
                 )
 
-                legend_labels.append(label)
+            legend_labels.append(label)
 
-            axs[atomic_projection_plot_info[element]["index"]].legend(handles=legend_labels)
+        axs[atomic_projection_plot_info[element]["index"]].legend(handles=legend_labels)
 
-        plt.ylim(-3, 3)
-        if include_stress:
-            plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png"))
-        else:
-            plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}.png"))
-        plt.show()
+    plt.ylim(-3, 3)
+    if include_stress:
+        plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png"))
+    else:
+        plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}.png"))
+    plt.show()
