@@ -1031,8 +1031,8 @@ for (
         axs[atomic_projection_plot_info[element]["index"]].legend(loc="lower center", handles=legend_labels)
 
     plt.ylim(-3, 3)
-    # if include_stress:
-    #     plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png"))
-    # else:
-    #     plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}_testing.png"))
+    if include_stress:
+        plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png"))
+    else:
+        plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}.png"))
     plt.show()
