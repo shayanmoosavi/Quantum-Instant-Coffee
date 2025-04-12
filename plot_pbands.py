@@ -4,9 +4,6 @@ from subprocess import CalledProcessError, run
 from sys import argv
 import matplotlib.pyplot as plt
 import numpy as np
-from math import sqrt
-
-# from matplotlib.collections import LineCollection
 
 
 # Usage: the following python script should be run with command line arguments in the following way:
@@ -21,25 +18,29 @@ from math import sqrt
 
 print("Initializing...\n")
 
+# Validating correct arguments
+if len(argv) < 2:
+    print("Error: Missing compound name argument")
+    print("Usage: python plot_pbands.py <compound_name>")
+    exit(1)
+
 compound_name = argv[1]  # Taking the name of the compound of interest
 fermi_energy = 0.0
 number_of_bands = 0  # Declaring the variable
 root_dir = os.path.abspath("../")  # The root directory of the project
-project_dir = os.path.join(root_dir, argv[1])  # The calculation directory
+project_dir = os.path.join(root_dir, compound_name)  # The calculation directory
 
-include_stress_input = input(
-    'Do you want to plot strain analysis instead? Type "yes" to plot strain analysis and "no" to plot normal projected bands. '
-)
+while True:
+    include_stress_input = input(
+        'Do you want to plot strain analysis instead? Type "yes" to plot strain analysis and "no" to plot normal projected bands. '
+    ).lower()
 
-# Initializing the list in order to avoid having it empty and preventing from proper iteration
-stress_dir_list = ["1", "1_soc"]
+    if include_stress_input in ["yes", "no"]:
+        include_stress = (include_stress_input == "yes")
+        break
+    else:
+        print("Invalid input!")
 
-if include_stress_input == "yes":
-    include_stress = True
-else:
-    include_stress = False
-
-# The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
 if include_stress:
 
     # Directory of scf calculation
@@ -53,17 +54,23 @@ if include_stress:
     ]
 
     stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
-For example 1_30 means the coordinates are stretched by 30%. Provide a space seperated list of DFT calculations with the specified strees amounts
-like "1_<percent-of-stretch-1> 1_<percent-of-stretch-2> 1_<percent-of-stretch-2> ... ":
+For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
+(e.g., 1_10 1_15 1_20):
 """)
 
-    stress_amount_list = stress_amount_list_input.split(" ")
+    # Cleaning up user input and error handling
+    stress_amount_list = [amount for amount in stress_amount_list_input.split() if amount.strip()]
 
-    stress_dir_list.clear()
-    for stress_amount in stress_amount_list:
-        stress_dir_list.append(os.path.join(project_dir, f"strain/{stress_amount}"))
+    # List should not be empty
+    if not stress_amount_list:
+        print("Error: No valid strain amounts provided.")
+        exit(1)
 
+    stress_dir_list = [os.path.join(project_dir, f"strain/{stress_amount}") for stress_amount in stress_amount_list]
+
+    # The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
     spin_orbit_flag = ["" for i in range(len(stress_amount_list) + 1)]
+
     # Skipping the spin-orbit case when plotting strain analysis
     skip_soc = True
 
@@ -96,29 +103,29 @@ for scf_dir, pband_dir, flag in zip(
 
     pw_bands_output_dir_list.append(
         os.path.join(
-            project_dir, os.path.join(pband_dir, f"{compound_name}_bands{flag}.pw.out")
-        )
-    )  # The output of Quantum ESPRESSO pw bands calculation
+            pband_dir, f"{compound_name}_bands{flag}.pw.out"
+        )  # The output of Quantum ESPRESSO pw bands calculation
+    )
 
     kpdos_output_dir_list.append(
         os.path.join(
-            project_dir, os.path.join(pband_dir, f"{compound_name}{flag}.kpdos.out")
+            pband_dir, f"{compound_name}{flag}.kpdos.out"
         )
     )  # The output of Quantum ESPRESSO kpdos calculation
 
     projbands_dir_list.append(
         os.path.join(
-            project_dir, os.path.join(pband_dir, f"{compound_name}{flag}.projbands")
+            pband_dir, f"{compound_name}{flag}.projbands"
         )
     )  # The output of Quantum ESPRESSO nscf calculation
 
     bands_dir_list.append(
-        os.path.join(project_dir, os.path.join(pband_dir, f"{compound_name}.bands.gnu"))
+        os.path.join(pband_dir, f"{compound_name}.bands.gnu")
     )  # The output of Quantum ESPRESSO bands calculation
 
     scf_output_dir_list.append(
         os.path.join(
-            project_dir, os.path.join(scf_dir, f"{compound_name}_scf{flag}.pw.out")
+            scf_dir, f"{compound_name}_scf{flag}.pw.out"
         )
     )  # The output of Quantum ESPRESSO scf calculation
 
@@ -127,32 +134,31 @@ if include_stress:
 
         pw_bands_output_dir_list.append(
             os.path.join(
-                project_dir,
-                os.path.join(stress_dir, f"{compound_name}_bands.pw.out"),
+                stress_dir, f"{compound_name}_bands.pw.out"
             )
         )  # The output of Quantum ESPRESSO pw bands calculation
 
         kpdos_output_dir_list.append(
             os.path.join(
-                project_dir, os.path.join(stress_dir, f"{compound_name}.kpdos.out")
+                stress_dir, f"{compound_name}.kpdos.out"
             )
         )  # The output of Quantum ESPRESSO kpdos calculation
 
         projbands_dir_list.append(
             os.path.join(
-                project_dir, os.path.join(stress_dir, f"{compound_name}.projbands")
+                stress_dir, f"{compound_name}.projbands"
             )
         )  # The output of Quantum ESPRESSO nscf calculation
 
         bands_dir_list.append(
             os.path.join(
-                project_dir, os.path.join(stress_dir, f"{compound_name}.bands.gnu")
+                stress_dir, f"{compound_name}.bands.gnu"
             )
         )  # The output of Quantum ESPRESSO bands calculation
 
         scf_output_dir_list.append(
             os.path.join(
-                project_dir, os.path.join(stress_dir, f"{compound_name}_scf.pw.out")
+                stress_dir, f"{compound_name}_scf.pw.out"
             )
         )  # The output of Quantum ESPRESSO scf calculation
 
@@ -163,7 +169,7 @@ if include_stress:
 number_of_bands_list = []
 
 for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
-    
+
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
     try:
         # Reading the output of Quantum ESPRESSO pw.x bands calculation
@@ -208,8 +214,6 @@ in the directory of the project.'
             )
             exit(1)
 
-print(number_of_bands_list)
-
 #Getting the Fermi energy from Quantum ESPRESSO calculation
 #----------------------------------------------------------------------------------------------------------------------------
 
@@ -217,7 +221,7 @@ print(number_of_bands_list)
 fermi_energy_list = []
 
 for scf_output_dir, flag in zip(scf_output_dir_list, spin_orbit_flag):
-    
+
     print("Getting Fermi energy...")
     print(f"Reading {compound_name}_scf{flag}.pw.out...")
     try:
@@ -246,7 +250,7 @@ for scf_output_dir, flag in zip(scf_output_dir_list, spin_orbit_flag):
         if flag == "_soc":
             print("Spin-orbit was set to be skipped. Continuing...")
             continue
-        else:                
+        else:
             print(
                 f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or \
 in the directory of the project.'
@@ -263,7 +267,7 @@ kpdos_calculation_output_list = []
 for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(
     kpdos_output_dir_list, projbands_dir_list, fermi_energy_list, spin_orbit_flag
 ):
-        
+
     print(f"Reading {compound_name}{flag}.kpdos.out...")
     print("Getting the number of bands...")
 
@@ -365,14 +369,14 @@ while failure:
             "s": {
 
                 "orbital_numbers": [
-                    "l=0 m= 1", 
-                    "l=0 j=0.5 m_j=-0.5", 
+                    "l=0 m= 1",
+                    "l=0 j=0.5 m_j=-0.5",
                     "l=0 j=0.5 m_j= 0.5"
                     ],
 
                 "orbital_coefficients": [
-                    1, 
-                    1/2, 
+                    1,
+                    1/2,
                     1/2
                 ]
             },
@@ -392,14 +396,14 @@ while failure:
                 ],
 
                 "orbital_coefficients": [
-                    1, 
-                    1, 
                     1,
-                    1, 
-                    1, 
                     1,
-                    1, 
-                    1, 
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
                     1
                 ]
             },
@@ -412,18 +416,18 @@ while failure:
                     "l=1 j=0.5 m_j= 0.5",
                     # "l=1 j=1.5 m_j=-0.5",
                     "l=1 j=1.5 m_j= 0.5"
-                ], 
+                ],
                 "orbital_coefficients": [
                     1,
-                    # 1/6, 
+                    # 1/6,
                     1/3, # 1/6,
-                    # 1/3, 
+                    # 1/3,
                     2/3 # 1/3
                 ]
             },
 
             "px": {
-                
+
                 "orbital_numbers": [
                     "l=1 m= 2",
                     "l=1 j=0.5 m_j=-0.5",
@@ -436,12 +440,12 @@ while failure:
 
                 "orbital_coefficients": [
                     1,
-                    2/6, # 1/12, 
-                    # 1/12, 
+                    2/6, # 1/12,
+                    # 1/12,
                     # 1/6,
                     1/6,
                     # 1/4,
-                    3/6 # 1/4 
+                    3/6 # 1/4
                 ]
             },
             "py": {
@@ -458,12 +462,12 @@ while failure:
 
                 "orbital_coefficients": [
                     1,
-                    2/6, # 1/12, 
-                    # 1/12, 
+                    2/6, # 1/12,
+                    # 1/12,
                     # 1/6,
                     1/6,
                     # 1/4,
-                    3/6 # 1/4 
+                    3/6 # 1/4
                 ]
             },
 
@@ -488,21 +492,21 @@ while failure:
                 ],
 
                 "orbital_coefficients": [
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1,    
-                    1    
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
                 ]
             },
 
@@ -514,7 +518,7 @@ while failure:
                     "l=2 j=1.5 m_j= 0.5",
                     # "l=2 j=2.5 m_j=-0.5",
                     "l=2 j=2.5 m_j= 0.5"
-                ], 
+                ],
                 "orbital_coefficients": [
                     1,
                     2/5,
@@ -553,7 +557,7 @@ while failure:
                     "l=2 j=2.5 m_j=-0.5",
                     # "l=2 j=2.5 m_j= 0.5",
                     "l=2 j=2.5 m_j= 1.5"
-                ], 
+                ],
                 "orbital_coefficients": [
                     1,
                     3/10,
@@ -634,7 +638,7 @@ while failure:
                     else:
                         atomic_projection_info[f"{atomic_projection[0]}-px+py"]["indices"].extend(projection_indices_list)
                         atomic_projection_info[f"{atomic_projection[0]}-px+py"]["indices"].sort()
-                        
+
                     #     atomic_projection_info.update(
                     #     {
                     #         f"{atomic_projection[0]}-px+py": {
@@ -760,7 +764,7 @@ for atomic_projection_info, projbands_data, number_of_bands in zip(
 
     for atomic_projection, projection_info in atomic_projection_info.items():
         total_orbital_weight = calculate_total_weights(
-            projbands_data, projection_info["indices"], projection_info["coefficients"], 
+            projbands_data, projection_info["indices"], projection_info["coefficients"],
             number_of_bands
         )
 
@@ -769,11 +773,11 @@ for atomic_projection_info, projbands_data, number_of_bands in zip(
         if orbital == "px" or orbital == "py":
 
             if f"{atom}-px+py" not in atomic_projection_weights_info.keys():
-                
+
                 atomic_projection_weights_info.update(
                     {f"{atom}-px+py": total_orbital_weight}
                 )
-                
+
         else:
             atomic_projection_weights_info.update(
                     {f"{atomic_projection}": total_orbital_weight}
