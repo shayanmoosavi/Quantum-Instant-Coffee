@@ -1,5 +1,6 @@
 """Functions for handling user input."""
 
+
 def get_pbands_type():
     """Get the projected bands type (e.g. strained projected bands or normal projected bands) from user input."""
     while True:
@@ -12,6 +13,7 @@ def get_pbands_type():
         else:
             print("Invalid input!")
 
+
 def get_strain_amounts():
     """Get strain amounts from user input."""
     stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
@@ -20,9 +22,13 @@ For example 1_30 means the coordinates are stretched by 30%. Provide a space sep
 """)
 
     # Cleaning up user input and error handling
-    stress_amount_list = [amount for amount in stress_amount_list_input.split() if amount.strip()]
+    stress_amount_list = [
+        amount for amount in stress_amount_list_input.split() if amount.strip()
+    ]
 
     # List should not be empty
     if not stress_amount_list:
         print("Error: No valid strain amounts provided.")
         exit(1)
+
+    return stress_amount_list
