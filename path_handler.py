@@ -156,12 +156,6 @@ def build_file_paths(
         scf_dir_list = [os.path.join(project_dir, dir_structure["scf"])]
         pbands_dir_list = [os.path.join(project_dir, dir_structure["projected_bands"])]
 
-        # Add paths for each strain amount
-        stress_dir_list = [
-            os.path.join(project_dir, f"{dir_structure['strain']}/{amount}")
-            for amount in stress_amounts
-        ]
-
         # The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
         spin_orbit_flag = [""]
         skip_soc = True
@@ -198,39 +192,39 @@ def build_file_paths(
                 bands_paths,
             )
 
-        else:
-            # For normal projected bands
-            spin_orbit_flag = ["", "_soc"]
-            skip_soc = False
+    else:
+        # For normal projected bands
+        spin_orbit_flag = ["", "_soc"]
+        skip_soc = False
 
-            scf_dir_list = [
-                os.path.join(project_dir, dir_structure["scf"]),
-                os.path.join(project_dir, dir_structure["spin_orbit_scf"]),
-            ]
+        scf_dir_list = [
+            os.path.join(project_dir, dir_structure["scf"]),
+            os.path.join(project_dir, dir_structure["scf_soc"]),
+        ]
 
-            pbands_dir_list = [
-                os.path.join(project_dir, dir_structure["projected_bands"]),
-                os.path.join(project_dir, dir_structure["spin_orbit_projected_bands"]),
-            ]
+        pbands_dir_list = [
+            os.path.join(project_dir, dir_structure["projected_bands"]),
+            os.path.join(project_dir, dir_structure["projected_bands_soc"]),
+        ]
 
-            add_paths_for_directories(
-                scf_dir_list,
-                pbands_dir_list,
-                spin_orbit_flag,
-                compound_name,
-                file_patterns,
-                pw_bands_output_paths,
-                kpdos_output_paths,
-                scf_output_paths,
-                projbands_paths,
-                bands_paths,
-            )
+        add_paths_for_directories(
+            scf_dir_list,
+            pbands_dir_list,
+            spin_orbit_flag,
+            compound_name,
+            file_patterns,
+            pw_bands_output_paths,
+            kpdos_output_paths,
+            scf_output_paths,
+            projbands_paths,
+            bands_paths,
+        )
 
-        return {
-            "pw_bands_output_paths": pw_bands_output_paths,
-            "kpdos_output_paths": kpdos_output_paths,
-            "scf_output_paths": scf_output_paths,
-            "projbands_paths": projbands_paths,
-            "bands_paths": bands_paths,
-            "skip_soc": skip_soc,
-        }
+    return {
+        "pw_bands_output_paths": pw_bands_output_paths,
+        "kpdos_output_paths": kpdos_output_paths,
+        "scf_output_paths": scf_output_paths,
+        "projbands_paths": projbands_paths,
+        "bands_paths": bands_paths,
+        "skip_soc": skip_soc,
+    }

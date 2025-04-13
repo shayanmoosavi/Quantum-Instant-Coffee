@@ -36,13 +36,12 @@ while True:
     ).lower()
 
     if include_stress_input in ["yes", "no"]:
-        include_stress = (include_stress_input == "yes")
+        include_stress = include_stress_input == "yes"
         break
     else:
         print("Invalid input!")
 
 if include_stress:
-
     # Directory of scf calculation
     scf_dir_list = [
         os.path.join(project_dir, "scf"),
@@ -59,14 +58,19 @@ For example 1_30 means the coordinates are stretched by 30%. Provide a space sep
 """)
 
     # Cleaning up user input and error handling
-    stress_amount_list = [amount for amount in stress_amount_list_input.split() if amount.strip()]
+    stress_amount_list = [
+        amount for amount in stress_amount_list_input.split() if amount.strip()
+    ]
 
     # List should not be empty
     if not stress_amount_list:
         print("Error: No valid strain amounts provided.")
         exit(1)
 
-    stress_dir_list = [os.path.join(project_dir, f"strain/{stress_amount}") for stress_amount in stress_amount_list]
+    stress_dir_list = [
+        os.path.join(project_dir, f"strain/{stress_amount}")
+        for stress_amount in stress_amount_list
+    ]
 
     # The flag that comes after the file name. Namely, "_soc" for spin-orbit case and nothing otherwise
     spin_orbit_flag = ["" for i in range(len(stress_amount_list) + 1)]
@@ -97,10 +101,7 @@ scf_output_dir_list = []
 projbands_dir_list = []
 bands_dir_list = []
 
-for scf_dir, pband_dir, flag in zip(
-    scf_dir_list, pbands_dir_list, spin_orbit_flag
-):
-
+for scf_dir, pband_dir, flag in zip(scf_dir_list, pbands_dir_list, spin_orbit_flag):
     pw_bands_output_dir_list.append(
         os.path.join(
             pband_dir, f"{compound_name}_bands{flag}.pw.out"
@@ -108,15 +109,11 @@ for scf_dir, pband_dir, flag in zip(
     )
 
     kpdos_output_dir_list.append(
-        os.path.join(
-            pband_dir, f"{compound_name}{flag}.kpdos.out"
-        )
+        os.path.join(pband_dir, f"{compound_name}{flag}.kpdos.out")
     )  # The output of Quantum ESPRESSO kpdos calculation
 
     projbands_dir_list.append(
-        os.path.join(
-            pband_dir, f"{compound_name}{flag}.projbands"
-        )
+        os.path.join(pband_dir, f"{compound_name}{flag}.projbands")
     )  # The output of Quantum ESPRESSO nscf calculation
 
     bands_dir_list.append(
@@ -124,52 +121,38 @@ for scf_dir, pband_dir, flag in zip(
     )  # The output of Quantum ESPRESSO bands calculation
 
     scf_output_dir_list.append(
-        os.path.join(
-            scf_dir, f"{compound_name}_scf{flag}.pw.out"
-        )
+        os.path.join(scf_dir, f"{compound_name}_scf{flag}.pw.out")
     )  # The output of Quantum ESPRESSO scf calculation
 
 if include_stress:
     for stress_dir in stress_dir_list:
-
         pw_bands_output_dir_list.append(
-            os.path.join(
-                stress_dir, f"{compound_name}_bands.pw.out"
-            )
+            os.path.join(stress_dir, f"{compound_name}_bands.pw.out")
         )  # The output of Quantum ESPRESSO pw bands calculation
 
         kpdos_output_dir_list.append(
-            os.path.join(
-                stress_dir, f"{compound_name}.kpdos.out"
-            )
+            os.path.join(stress_dir, f"{compound_name}.kpdos.out")
         )  # The output of Quantum ESPRESSO kpdos calculation
 
         projbands_dir_list.append(
-            os.path.join(
-                stress_dir, f"{compound_name}.projbands"
-            )
+            os.path.join(stress_dir, f"{compound_name}.projbands")
         )  # The output of Quantum ESPRESSO nscf calculation
 
         bands_dir_list.append(
-            os.path.join(
-                stress_dir, f"{compound_name}.bands.gnu"
-            )
+            os.path.join(stress_dir, f"{compound_name}.bands.gnu")
         )  # The output of Quantum ESPRESSO bands calculation
 
         scf_output_dir_list.append(
-            os.path.join(
-                stress_dir, f"{compound_name}_scf.pw.out"
-            )
+            os.path.join(stress_dir, f"{compound_name}_scf.pw.out")
         )  # The output of Quantum ESPRESSO scf calculation
 
 # Getting the number of bands from Quantum ESPRESSO calculation
 # ----------------------------------------------------------------------------------------------------------------------------
 
-#List of band numbers for spin-orbit and non spin-orbit case
+# List of band numbers for spin-orbit and non spin-orbit case
 number_of_bands_list = []
 
 for bands_output_dir, flag in zip(pw_bands_output_dir_list, spin_orbit_flag):
-
     print(f"Reading {compound_name}_bands{flag}.pw.out...")
     try:
         # Reading the output of Quantum ESPRESSO pw.x bands calculation
@@ -214,14 +197,13 @@ in the directory of the project.'
             )
             exit(1)
 
-#Getting the Fermi energy from Quantum ESPRESSO calculation
-#----------------------------------------------------------------------------------------------------------------------------
+# Getting the Fermi energy from Quantum ESPRESSO calculation
+# ----------------------------------------------------------------------------------------------------------------------------
 
-#List of Fermi energies for spin-orbit and non spin-orbit case
+# List of Fermi energies for spin-orbit and non spin-orbit case
 fermi_energy_list = []
 
 for scf_output_dir, flag in zip(scf_output_dir_list, spin_orbit_flag):
-
     print("Getting Fermi energy...")
     print(f"Reading {compound_name}_scf{flag}.pw.out...")
     try:
@@ -267,7 +249,6 @@ kpdos_calculation_output_list = []
 for kpdos_output_dir, projbands_dir, fermi_energy, flag in zip(
     kpdos_output_dir_list, projbands_dir_list, fermi_energy_list, spin_orbit_flag
 ):
-
     print(f"Reading {compound_name}{flag}.kpdos.out...")
     print("Getting the number of bands...")
 
@@ -365,24 +346,15 @@ while failure:
 
         # Atomic orbitals and their corresponding orbital numbers
         orbital_info = {
-
             "s": {
-
                 "orbital_numbers": [
                     "l=0 m= 1",
                     "l=0 j=0.5 m_j=-0.5",
-                    "l=0 j=0.5 m_j= 0.5"
-                    ],
-
-                "orbital_coefficients": [
-                    1,
-                    1/2,
-                    1/2
-                ]
+                    "l=0 j=0.5 m_j= 0.5",
+                ],
+                "orbital_coefficients": [1, 1 / 2, 1 / 2],
             },
-
             "p": {
-
                 "orbital_numbers": [
                     "l=1 m= 1",
                     "l=1 m= 2",
@@ -394,40 +366,25 @@ while failure:
                     "l=1 j=1.5 m_j= 0.5",
                     "l=1 j=1.5 m_j= 1.5",
                 ],
-
-                "orbital_coefficients": [
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1
-                ]
+                "orbital_coefficients": [1, 1, 1, 1, 1, 1, 1, 1, 1],
             },
-
             "pz": {
-
                 "orbital_numbers": [
                     "l=1 m= 1",
                     # "l=1 j=0.5 m_j=-0.5",
                     "l=1 j=0.5 m_j= 0.5",
                     # "l=1 j=1.5 m_j=-0.5",
-                    "l=1 j=1.5 m_j= 0.5"
+                    "l=1 j=1.5 m_j= 0.5",
                 ],
                 "orbital_coefficients": [
                     1,
                     # 1/6,
-                    1/3, # 1/6,
+                    1 / 3,  # 1/6,
                     # 1/3,
-                    2/3 # 1/3
-                ]
+                    2 / 3,  # 1/3
+                ],
             },
-
             "px": {
-
                 "orbital_numbers": [
                     "l=1 m= 2",
                     "l=1 j=0.5 m_j=-0.5",
@@ -435,21 +392,19 @@ while failure:
                     # "l=1 j=1.5 m_j=-1.5",
                     "l=1 j=1.5 m_j=-0.5",
                     # "l=1 j=1.5 m_j= 0.5",
-                    "l=1 j=1.5 m_j= 1.5"
+                    "l=1 j=1.5 m_j= 1.5",
                 ],
-
                 "orbital_coefficients": [
                     1,
-                    2/6, # 1/12,
+                    2 / 6,  # 1/12,
                     # 1/12,
                     # 1/6,
-                    1/6,
+                    1 / 6,
                     # 1/4,
-                    3/6 # 1/4
-                ]
+                    3 / 6,  # 1/4
+                ],
             },
             "py": {
-
                 "orbital_numbers": [
                     "l=1 m= 3",
                     "l=1 j=0.5 m_j=-0.5",
@@ -457,22 +412,19 @@ while failure:
                     # "l=1 j=1.5 m_j=-1.5",
                     "l=1 j=1.5 m_j=-0.5",
                     # "l=1 j=1.5 m_j= 0.5",
-                    "l=1 j=1.5 m_j= 1.5"
+                    "l=1 j=1.5 m_j= 1.5",
                 ],
-
                 "orbital_coefficients": [
                     1,
-                    2/6, # 1/12,
+                    2 / 6,  # 1/12,
                     # 1/12,
                     # 1/6,
-                    1/6,
+                    1 / 6,
                     # 1/4,
-                    3/6 # 1/4
-                ]
+                    3 / 6,  # 1/4
+                ],
             },
-
             "d": {
-
                 "orbital_numbers": [
                     "l=2 m= 1",
                     "l=2 m= 2",
@@ -488,44 +440,20 @@ while failure:
                     "l=2 j=2.5 m_j=-0.5",
                     "l=2 j=2.5 m_j= 0.5",
                     "l=2 j=2.5 m_j= 1.5",
-                    "l=2 j=2.5 m_j= 2.5"
+                    "l=2 j=2.5 m_j= 2.5",
                 ],
-
-                "orbital_coefficients": [
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1
-                ]
+                "orbital_coefficients": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             },
-
             "dz2": {
-
                 "orbital_numbers": [
                     "l=2 m= 1",
                     # "l=2 j=1.5 m_j=-0.5",
                     "l=2 j=1.5 m_j= 0.5",
                     # "l=2 j=2.5 m_j=-0.5",
-                    "l=2 j=2.5 m_j= 0.5"
+                    "l=2 j=2.5 m_j= 0.5",
                 ],
-                "orbital_coefficients": [
-                    1,
-                    2/5,
-                    3/5
-                ]
+                "orbital_coefficients": [1, 2 / 5, 3 / 5],
             },
-
             "dxz": {
                 "orbital_numbers": [
                     "l=2 m= 2",
@@ -536,15 +464,9 @@ while failure:
                     # "l=2 j=2.5 m_j=-1.5",
                     "l=2 j=2.5 m_j=-0.5",
                     # "l=2 j=2.5 m_j= 0.5",
-                    "l=2 j=2.5 m_j= 1.5"
+                    "l=2 j=2.5 m_j= 1.5",
                 ],
-                "orbital_coefficients": [
-                    1,
-                    3/10,
-                    1/10,
-                    2/10,
-                    4/10
-                ]
+                "orbital_coefficients": [1, 3 / 10, 1 / 10, 2 / 10, 4 / 10],
             },
             "dyz": {
                 "orbital_numbers": [
@@ -556,15 +478,9 @@ while failure:
                     # "l=2 j=2.5 m_j=-1.5",
                     "l=2 j=2.5 m_j=-0.5",
                     # "l=2 j=2.5 m_j= 0.5",
-                    "l=2 j=2.5 m_j= 1.5"
+                    "l=2 j=2.5 m_j= 1.5",
                 ],
-                "orbital_coefficients": [
-                    1,
-                    3/10,
-                    1/10,
-                    2/10,
-                    4/10
-                ]
+                "orbital_coefficients": [1, 3 / 10, 1 / 10, 2 / 10, 4 / 10],
             },
             "dx2y2": {
                 "orbital_numbers": [
@@ -574,14 +490,9 @@ while failure:
                     # "l=2 j=2.5 m_j=-2.5",
                     "l=2 j=2.5 m_j=-1.5",
                     # "l=2 j=2.5 m_j= 1.5",
-                    "l=2 j=2.5 m_j= 2.5"
+                    "l=2 j=2.5 m_j= 2.5",
                 ],
-                "orbital_coefficients": [
-                    1,
-                    4/10,
-                    1/10,
-                    5/10
-                ]
+                "orbital_coefficients": [1, 4 / 10, 1 / 10, 5 / 10],
             },
             "dxy": {
                 "orbital_numbers": [
@@ -591,15 +502,10 @@ while failure:
                     # "l=2 j=2.5 m_j=-2.5",
                     "l=2 j=2.5 m_j=-1.5",
                     # "l=2 j=2.5 m_j= 1.5",
-                    "l=2 j=2.5 m_j= 2.5"
+                    "l=2 j=2.5 m_j= 2.5",
                 ],
-                "orbital_coefficients": [
-                    1,
-                    4/10,
-                    1/10,
-                    5/10
-                ]
-            }
+                "orbital_coefficients": [1, 4 / 10, 1 / 10, 5 / 10],
+            },
         }
 
         atomic_projection_info_list = []
@@ -611,7 +517,9 @@ while failure:
             for atomic_projection in atomic_projection_list:
                 projection_indices_list = []
 
-                for orbital_numbers in orbital_info[atomic_projection[1]]["orbital_numbers"]:
+                for orbital_numbers in orbital_info[atomic_projection[1]][
+                    "orbital_numbers"
+                ]:
                     # Getting the index of all atomic states given by user input
                     atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atomic_projection[0]}\s+\), wfc\s+\d+ \({orbital_numbers}\)"
                     atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
@@ -625,19 +533,27 @@ while failure:
 
                 # px and py orbitals have the same contribution
                 if atomic_projection[1] == "px" or atomic_projection[1] == "py":
-                    if f"{atomic_projection[0]}-px+py" not in atomic_projection_info.keys():
-
+                    if (
+                        f"{atomic_projection[0]}-px+py"
+                        not in atomic_projection_info.keys()
+                    ):
                         atomic_projection_info.update(
-                        {
-                            f"{atomic_projection[0]}-px+py": {
-                                "indices": projection_indices_list,
-                                "coefficients": orbital_info[atomic_projection[1]]["orbital_coefficients"]
+                            {
+                                f"{atomic_projection[0]}-px+py": {
+                                    "indices": projection_indices_list,
+                                    "coefficients": orbital_info[atomic_projection[1]][
+                                        "orbital_coefficients"
+                                    ],
+                                }
                             }
-                        }
-                    )
+                        )
                     else:
-                        atomic_projection_info[f"{atomic_projection[0]}-px+py"]["indices"].extend(projection_indices_list)
-                        atomic_projection_info[f"{atomic_projection[0]}-px+py"]["indices"].sort()
+                        atomic_projection_info[f"{atomic_projection[0]}-px+py"][
+                            "indices"
+                        ].extend(projection_indices_list)
+                        atomic_projection_info[f"{atomic_projection[0]}-px+py"][
+                            "indices"
+                        ].sort()
 
                     #     atomic_projection_info.update(
                     #     {
@@ -650,33 +566,51 @@ while failure:
 
                 # dxz and dyz orbitals have the same contribution
                 elif atomic_projection[1] == "dxz" or atomic_projection[1] == "dyz":
-                    if f"{atomic_projection[0]}-dxz+dyz" not in atomic_projection_info.keys():
+                    if (
+                        f"{atomic_projection[0]}-dxz+dyz"
+                        not in atomic_projection_info.keys()
+                    ):
                         atomic_projection_info.update(
                             {
                                 f"{atomic_projection[0]}-dxz+dyz": {
-                                "indices": projection_indices_list,
-                                "coefficients": orbital_info[atomic_projection[1]]["orbital_coefficients"]
+                                    "indices": projection_indices_list,
+                                    "coefficients": orbital_info[atomic_projection[1]][
+                                        "orbital_coefficients"
+                                    ],
                                 }
                             }
                         )
                     else:
-                        atomic_projection_info[f"{atomic_projection[0]}-dxz+dyz"]["indices"].extend(projection_indices_list)
-                        atomic_projection_info[f"{atomic_projection[0]}-dxz+dyz"]["indices"].sort()
+                        atomic_projection_info[f"{atomic_projection[0]}-dxz+dyz"][
+                            "indices"
+                        ].extend(projection_indices_list)
+                        atomic_projection_info[f"{atomic_projection[0]}-dxz+dyz"][
+                            "indices"
+                        ].sort()
 
                 # dx2y2 and dxy orbitals have the same contribution
                 elif atomic_projection[1] == "dx2y2" or atomic_projection[1] == "dxy":
-                    if f"{atomic_projection[0]}-dx2y2+dxy" not in atomic_projection_info.keys():
+                    if (
+                        f"{atomic_projection[0]}-dx2y2+dxy"
+                        not in atomic_projection_info.keys()
+                    ):
                         atomic_projection_info.update(
                             {
                                 f"{atomic_projection[0]}-dx2y2+dxy": {
-                                "indices": projection_indices_list,
-                                "coefficients": orbital_info[atomic_projection[1]]["orbital_coefficients"]
+                                    "indices": projection_indices_list,
+                                    "coefficients": orbital_info[atomic_projection[1]][
+                                        "orbital_coefficients"
+                                    ],
                                 }
                             }
                         )
                     else:
-                        atomic_projection_info[f"{atomic_projection[0]}-dx2y2+dxy"]["indices"].extend(projection_indices_list)
-                        atomic_projection_info[f"{atomic_projection[0]}-dx2y2+dxy"]["indices"].sort()
+                        atomic_projection_info[f"{atomic_projection[0]}-dx2y2+dxy"][
+                            "indices"
+                        ].extend(projection_indices_list)
+                        atomic_projection_info[f"{atomic_projection[0]}-dx2y2+dxy"][
+                            "indices"
+                        ].sort()
 
                 # else:
                 #     atomic_projection_info.update(
@@ -690,7 +624,9 @@ while failure:
                         {
                             f"{atomic_projection[0]}-{atomic_projection[1]}": {
                                 "indices": projection_indices_list,
-                                "coefficients": orbital_info[atomic_projection[1]]["orbital_coefficients"]
+                                "coefficients": orbital_info[atomic_projection[1]][
+                                    "orbital_coefficients"
+                                ],
                             }
                         }
                     )
@@ -730,11 +666,13 @@ for projbands_dir, bands_dir, number_of_bands, fermi_energy in zip(
 # Calculating the total weights
 # ----------------------------------------------------------------------------------------------------------------------------
 
+
 # Calculates the weights of the specified orbitals from the projbands data
-def calculate_total_weights(data, atomic_state_indices, atomic_state_coefficients, number_of_bands):
+def calculate_total_weights(
+    data, atomic_state_indices, atomic_state_coefficients, number_of_bands
+):
     total_orbital_weights = np.zeros(len(data[:, 0]))
     for atomic_state_index in atomic_state_indices:
-
         # The first 4 columns are not the weights
         for coefficient in atomic_state_coefficients:
             total_orbital_weights += coefficient * data[:, atomic_state_index + 3]
@@ -764,24 +702,24 @@ for atomic_projection_info, projbands_data, number_of_bands in zip(
 
     for atomic_projection, projection_info in atomic_projection_info.items():
         total_orbital_weight = calculate_total_weights(
-            projbands_data, projection_info["indices"], projection_info["coefficients"],
-            number_of_bands
+            projbands_data,
+            projection_info["indices"],
+            projection_info["coefficients"],
+            number_of_bands,
         )
 
-        atom, orbital = atomic_projection.split('-')
+        atom, orbital = atomic_projection.split("-")
 
         if orbital == "px" or orbital == "py":
-
             if f"{atom}-px+py" not in atomic_projection_weights_info.keys():
-
                 atomic_projection_weights_info.update(
                     {f"{atom}-px+py": total_orbital_weight}
                 )
 
         else:
             atomic_projection_weights_info.update(
-                    {f"{atomic_projection}": total_orbital_weight}
-                )
+                {f"{atomic_projection}": total_orbital_weight}
+            )
 
     atomic_projection_weights_info_list.append(atomic_projection_weights_info)
 
@@ -873,7 +811,6 @@ for atomic_projection_weights_info in atomic_projection_weights_info_list:
         atomic_projections_list = []
 
         for orbital, orbital_plot_color in orbital_plot_color_info.items():
-
             atomic_projection = f"{unique_elements_list[i]}-{orbital}"
 
             if atomic_projection in atomic_projection_weights_info.keys():
@@ -938,7 +875,7 @@ for (
     Energy_proj,
     number_of_bands,
     flag,
-    stress_amount
+    stress_amount,
 ) in zip(
     atomic_projection_plot_info_list,
     k_points_list,
@@ -947,9 +884,8 @@ for (
     Energy_proj_list,
     number_of_bands_list,
     spin_orbit_flag,
-    stress_amount_list
+    stress_amount_list,
 ):
-
     # plt.style.use("ggplot")
 
     fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
@@ -1032,11 +968,15 @@ for (
 
             legend_labels.append(label)
 
-        axs[atomic_projection_plot_info[element]["index"]].legend(loc="lower center", handles=legend_labels)
+        axs[atomic_projection_plot_info[element]["index"]].legend(
+            loc="lower center", handles=legend_labels
+        )
 
     plt.ylim(-3, 3)
     if include_stress:
-        plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png"))
+        plt.savefig(
+            os.path.join(project_dir, f"{compound_name}_projbands{stress_amount}.png")
+        )
     else:
         plt.savefig(os.path.join(project_dir, f"{compound_name}_projbands{flag}.png"))
     plt.show()
