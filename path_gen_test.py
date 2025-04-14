@@ -24,7 +24,6 @@ def initialize_calculation():
         project_dir, compound_name, include_stress, config, stress_amounts
     )
 
-    # Set important variables
     fermi_energy = 0.0
     number_of_bands = 0
 
@@ -41,7 +40,7 @@ def initialize_calculation():
 
 calculation = initialize_calculation()
 
-# Checking if all requred files exist
+# Checking if all required files exist
 failure = False
 for dir_list in list(calculation["paths"].values())[:-1]:
     for dir in dir_list:
