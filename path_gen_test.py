@@ -7,7 +7,7 @@ import input_handler
 import path_handler
 
 
-def initialize_calculation():
+def prepare_paths():
     print("Initializing...\n")
 
     config = load_config()
@@ -38,7 +38,7 @@ def initialize_calculation():
     }
 
 
-calculation = initialize_calculation()
+calculation = prepare_paths()
 
 # Checking if all required files exist
 failure = False
