@@ -24,13 +24,8 @@ def prepare_paths():
         project_dir, compound_name, include_stress, config, stress_amounts
     )
 
-    fermi_energy = 0.0
-    number_of_bands = 0
-
     return {
         "compound_name": compound_name,
-        "fermi_energy": fermi_energy,
-        "number_of_bands": number_of_bands,
         "project_dir": project_dir,
         "include_stress": include_stress,
         "paths": paths,
@@ -38,29 +33,31 @@ def prepare_paths():
     }
 
 
-calculation = prepare_paths()
+if __name__ == "__main__":
+    calculation = prepare_paths()
 
-# Checking if all required files exist
-failure = False
-for dir_list in list(calculation["paths"].values())[:-1]:
-    for dir in dir_list:
-        if not os.path.exists(dir):
-            print(f"path '{dir}' does not exist!")
-            failure = True
-        else:
-            print(f"path '{dir}' exists.")
+    # Checking if all required files exist
+    failure = False
+    for dir_list in list(calculation["paths"].values())[:-1]:
+        for dir in dir_list:
+            if not os.path.exists(dir):
+                print(f"path '{dir}' does not exist!")
+                failure = True
+            else:
+                print(f"path '{dir}' exists.")
 
-if failure:
-    print("Test failed!")
-    exit(1)
-else:
-    print("Test passed!")
+    if failure:
+        print("Test failed!")
+        exit(1)
+    else:
+        print("Test passed!")
 
-print("Test information for debugging: \n")
+    print("Test information for debugging: \n")
 
-print(f"compound_name: {calculation['compound_name']}")
-print(f"fermi_energy: {calculation['fermi_energy']}")
-print(f"number_of_bands: {calculation['number_of_bands']}")
-print(f"project_dir: {calculation['project_dir']}")
-print(f"include_stress: {calculation['include_stress']}")
-print(f"stress_amounts: {calculation['stress_amounts']}")
+    print(f"compound_name: {calculation['compound_name']}")
+    print(f"fermi_energy: {calculation['fermi_energy']}")
+    print(f"number_of_bands: {calculation['number_of_bands']}")
+    print(f"project_dir: {calculation['project_dir']}")
+    print(f"include_stress: {calculation['include_stress']}")
+    print(f"stress_amounts: {calculation['stress_amounts']}")
+    print(f"paths: {calculation['paths']}")
