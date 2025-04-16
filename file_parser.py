@@ -4,7 +4,7 @@ import re
 import json
 
 
-def extract_band_number(file_path, compound_name, flag):
+def extract_band_number(file_path, compound_name, flag, atom=None, orbital=None):
     """
     Extract the number of bands from a Quantum ESPRESSO bands calculation output file.
 
@@ -12,6 +12,8 @@ def extract_band_number(file_path, compound_name, flag):
         file_path (str): Path to the bands output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
+        atom: Added for function signature compatibility
+        orbital: Added for function signature compatibility
 
     Returns:
         int: Number of bands
@@ -50,7 +52,7 @@ def extract_band_number(file_path, compound_name, flag):
         raise
 
 
-def extract_fermi_energy(file_path, compound_name, flag):
+def extract_fermi_energy(file_path, compound_name, flag, atom=None, orbital=None):
     """
     Extract the Fermi energy from a Quantum ESPRESSO SCF calculation output file.
 
@@ -58,6 +60,8 @@ def extract_fermi_energy(file_path, compound_name, flag):
         file_path (str): Path to the SCF output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
+        atom: Added for function signature compatibility
+        orbital: Added for function signature compatibility
 
     Returns:
         float: Fermi energy in eV
@@ -92,7 +96,7 @@ def extract_fermi_energy(file_path, compound_name, flag):
         raise
 
 
-def extract_number_of_atomic_states(file_path, compound_name, flag):
+def extract_number_of_atomic_states(file_path, compound_name, flag, atom=None, orbital=None):
     """
     Extract the number of atomic states from a Quantum ESPRESSO KPDOS calculation output file.
 
@@ -100,6 +104,8 @@ def extract_number_of_atomic_states(file_path, compound_name, flag):
         file_path (str): Path to the kpdos output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
+        atom: Added for function signature compatibility
+        orbital: Added for function signature compatibility
 
     Returns:
         int: Number of atomic states
@@ -140,23 +146,23 @@ def extract_number_of_atomic_states(file_path, compound_name, flag):
         raise
 
 
-def extract_atomic_states(file_path, compound_name, flag, atom, orbital):
+def extract_atomic_states_info(file_path, compound_name, flag, atom, orbital):
     """
-        Extract the atomic states from a Quantum ESPRESSO KPDOS calculation output file.
+    Extract the atomic states info from a Quantum ESPRESSO KPDOS calculation output file.
 
-        Args:
-            file_path (str): Path to the kpdos output file
-            compound_name (str): Name of the compound
-            flag (str): Suffix for the file name (e.g., "_soc" or "")
-            atom (str): Atomic symbol
-            orbital (str): Orbital type (e.g., "s", "p", "d")
+    Args:
+        file_path (str): Path to the kpdos output file
+        compound_name (str): Name of the compound
+        flag (str): Suffix for the file name (e.g., "_soc" or "")
+        atom (str): Atomic symbol
+        orbital (str): Orbital type (e.g., "s", "p", "d")
 
-        Returns:
-            dict: Dictionary containing the indices and orbital weights for the specified atom and orbital
+    Returns:
+        dict: Dictionary containing the indices and orbital weights for the specified atom and orbital
 
-        Raises:
-            FileNotFoundError: If the file does not exist
-            ValueError: If the atomic state cannot be extracted
+    Raises:
+        FileNotFoundError: If the file does not exist
+        ValueError: If the atomic state cannot be extracted
     """
     print(f"Getting atomic state {atom}-{orbital}...")
 
@@ -166,37 +172,52 @@ def extract_atomic_states(file_path, compound_name, flag, atom, orbital):
 
         orbital_info = json.load(open("orbital_info.json", "r"))
 
-        # Getting the index of all atomic states given by user input
-        atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital}\)"
-        atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
+        # Orbitals with the same contribution
+        same_orbitals = {
+            "px": "px+py",
+            "py": "px+py",
+            "dxz": "dxz+dyz",
+            "dyz": "dxz+dyz",
+            "dx2y2": "dx2y2+dxy",
+            "dxy": "dx2y2+dxy"
+        }
 
-        try:
-            projection_indices_list = [int(atomic_state.group(1)) for atomic_state
-                                       in atomic_state_regex_object.finditer(kpdos_calculation_output)]
-            projection_indices_list.sort()
+        projection_indices_list = []
 
-            # Orbitals with the same contribution
-            same_orbitals = {
-                "px": "px+py",
-                "py": "px+py",
-                "dxz": "dxz+dyz",
-                "dyz": "dxz+dyz",
-                "dx2y2": "dx2y2+dxy",
-                "dxy": "dx2y2+dxy"
-            }
-            key = f"{atom}-{same_orbitals[orbital]}"
-
-            return {
-                key: {
-                    "indices": projection_indices_list,
-                    "coefficients": orbital_info[orbital]["orbital_coefficients"]
-                }
-            }
-
-        except StopIteration:
+        # Validating the orbital exists in orbital info file
+        if orbital not in orbital_info:
             raise ValueError(
-                f"Could not find atomic state information in {file_path}"
+                f"The orbital '{orbital}' is not defined in 'orbital_info.json'. Please check the file.")
+
+        # Getting the index of all atomic states given by user input
+        for orbital_number in orbital_info[orbital]['orbital_numbers']:
+            atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital_number}\)"
+            atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
+
+            projection_indices_list.extend([int(atomic_state.group(1)) for atomic_state
+                                       in atomic_state_regex_object.finditer(kpdos_calculation_output)])
+        projection_indices_list.sort()
+
+        if orbital in same_orbitals:
+            key = f"{atom}-{same_orbitals[orbital]}"
+        else:
+            key = f"{atom}-{orbital}"
+
+        if not projection_indices_list:
+            raise ValueError(
+                f"Could not find atomic state information for {atom}-{orbital} in {file_path}"
             )
+
+        return {
+            key: {
+                "indices": projection_indices_list,
+                "coefficients": orbital_info[orbital]["orbital_coefficients"]
+            }
+        }
+
+    except ValueError:
+        print("There was an error in extracting the atomic state information.")
+        raise
 
     except FileNotFoundError:
         print(
