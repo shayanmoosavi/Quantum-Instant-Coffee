@@ -368,10 +368,10 @@ def prepare_dft_info(init_config):
     )
 
     # Updating configuration
-    init_config["number_of_bands"], init_config["number_of_bands_soc"] = number_of_bands_list
-    init_config["fermi_energy"], init_config["fermi_energy_soc"] = fermi_energy_list
-    init_config["number_of_atomic_states"], init_config["number_of_atomic_states_soc"] = number_of_atomic_states_list
-    init_config["atomic_states_info"], init_config["atomic_states_info_soc"] = atomic_states_info_list
+    init_config["number_of_bands_list"] = number_of_bands_list
+    init_config["fermi_energy_list"] = fermi_energy_list
+    init_config["number_of_atomic_states_list"] = number_of_atomic_states_list
+    init_config["atomic_states_info_list"] = atomic_states_info_list
 
     projbands_generation_success_list = generate_projected_bands(
         init_config["paths"],
@@ -391,17 +391,33 @@ if __name__ == "__main__":
     config = prepare_paths()
     config = prepare_dft_info(config)
     print("DFT information prepared successfully.\n")
-    print(f"Number of bands: {config['number_of_bands']}")
-    print(f"Number of bands (SOC)): {config['number_of_bands_soc']}")
-    print(f"Fermi energy: {config['fermi_energy']}")
-    print(f"Fermi energy (SOC): {config['fermi_energy_soc']}")
-    print(f"Number of atomic states: {config['number_of_atomic_states']}")
-    print(f"Number of atomic states (SOC): {config['number_of_atomic_states_soc']}")
+    if config["include_stress"]:
+        for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
+                [None] + config["stress_amounts"],
+                config["number_of_bands_list"],
+                config["fermi_energy_list"],
+                config["number_of_atomic_states_list"],
+                config["atomic_states_info_list"]
+        ):
+            print(f"\nStress amount: {stress_amount}")
+            print(f"Number of bands: {number_of_bands}")
+            print(f"Fermi energy: {fermi_energy}")
+            print(f"Number of atomic states: {number_of_atomic_states}")
+            print("\nAtomic states info:")
+            for atomic_state, info in atomic_states_info.items():
+                print(f"{atomic_state}: {info}")
 
-    print("\nAtomic states info:")
-    for atomic_state, info in config["atomic_states_info"].items():
-        print(f"{atomic_state}: {info}")
-
-    print("\nAtomic states info (SOC):")
-    for atomic_state, info in config["atomic_states_info_soc"].items():
-        print(f"{atomic_state}: {info}")
+    else:
+        for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
+                config["number_of_bands_list"],
+                config["fermi_energy_list"],
+                config["number_of_atomic_states_list"],
+                config["atomic_states_info_list"],
+                ["", "(SOC)"]
+        ):
+            print(f"Number of bands {flag}: {number_of_bands}")
+            print(f"Fermi energy {flag}: {fermi_energy}")
+            print(f"Number of atomic states {flag}: {number_of_atomic_states}")
+            print(f"\nAtomic states info {flag}:")
+            for atomic_state, info in atomic_states_info.items():
+                print(f"{atomic_state}: {info}")
