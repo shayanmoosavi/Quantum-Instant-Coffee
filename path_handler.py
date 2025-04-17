@@ -1,19 +1,41 @@
-"""Functions for managing file paths."""
+"""Module for managing file paths."""
 
 import os
+from sys import argv
+from config import load_config
+from input_handler import get_pbands_type, get_strain_amounts
 
 
-def validate_command_line_args(argv):
-    """Validate command line arguments."""
-    if len(argv) < 2:
+def validate_command_line_args(args):
+    """
+    Validate command line arguments.
+
+    Args:
+    args (list): List of command line arguments.
+
+    Returns:
+        str: The compound name provided as a command line argument.
+
+    Raises:
+        SystemExit: If the compound name argument is missing.
+    """
+    if len(args) < 2:
         print("Error: Missing compound name argument")
-        print("Usage: python plot_pbands.py <compound_name>")
+        print("Usage: python <script>.py <compound_name>")
         exit(1)
-    return argv[1]
+    return args[1]
 
 
 def get_project_directory(compound_name):
-    """Get the project directory."""
+    """
+    Get the project directory for the given compound.
+
+    Args:
+        compound_name (str): Name of the compound.
+
+    Returns:
+        str: The absolute path to the project directory.
+    """
     root_dir = os.path.abspath("../")  # The root directory of the project
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
@@ -30,8 +52,23 @@ def add_paths_for_directories(
     projbands_paths,
     bands_paths,
 ):
-    """Add paths for the given directories."""
+    """
+    Add file paths for SCF and projected bands directories.
+
+    Args:
+        scf_dir_list (list): List of SCF directories.
+        pbands_dir_list (list): List of projected bands directories.
+        spin_orbit_flag (list): List of spin-orbit flags.
+        compound_name (str): Name of the compound.
+        file_patterns (dict): Dictionary of file name patterns.
+        pw_bands_output_paths (list): List to store PW bands output paths.
+        kpdos_output_paths (list): List to store KPDOS output paths.
+        scf_output_paths (list): List to store SCF output paths.
+        projbands_paths (list): List to store projbands paths.
+        bands_paths (list): List to store bands output paths.
+    """
     for scf_dir, pband_dir, flag in zip(scf_dir_list, pbands_dir_list, spin_orbit_flag):
+
         # The output of Quantum ESPRESSO PW Bands calculation
         pw_bands_output_paths.append(
             os.path.join(
@@ -91,8 +128,19 @@ def add_strain_paths(
     projbands_paths,
     bands_paths,
 ):
-    """Add paths for strain analysis."""
+    """
+    Add file paths for strain analysis.
 
+    Args:
+        stress_dir (str): Directory for strain analysis.
+        compound_name (str): Name of the compound.
+        file_patterns (dict): Dictionary of file name patterns.
+        pw_bands_output_paths (list): List to store PW bands output paths.
+        kpdos_output_paths (list): List to store KPDOS output paths.
+        scf_output_paths (list): List to store SCF output paths.
+        projbands_paths (list): List to store projbands paths.
+        bands_paths (list): List to store bands output paths.
+    """
     # The output of Quantum ESPRESSO PW Bands calculation
     pw_bands_output_paths.append(
         os.path.join(
@@ -138,8 +186,19 @@ def add_strain_paths(
 def build_file_paths(
     project_dir, compound_name, include_stress, config, stress_amounts=None
 ):
-    """Build file paths based on the analysis type."""
+    """
+    Build file paths based on the analysis type.
 
+    Args:
+        project_dir (str): Path to the project directory.
+        compound_name (str): Name of the compound.
+        include_stress (bool): Whether to include stress analysis.
+        config (dict): Configuration dictionary.
+        stress_amounts (list, optional): List of strain amounts. Defaults to None.
+
+    Returns:
+        dict: Dictionary containing lists of file paths and a skip SOC flag.
+    """
     # Initializing paths lists
     pw_bands_output_paths = []
     kpdos_output_paths = []
@@ -228,3 +287,66 @@ def build_file_paths(
         "bands_paths": bands_paths,
         "skip_soc": skip_soc,
     }
+
+
+def prepare_paths():
+    """
+    Prepare paths for the Quantum ESPRESSO calculations.
+
+    Returns:
+        dict: Dictionary containing compound name, project directory, stress inclusion flag, paths, and stress amounts.
+    """
+    print("Initializing...\n")
+
+    config = load_config()
+
+    compound_name = validate_command_line_args(argv)
+
+    project_dir = get_project_directory(compound_name)
+
+    include_stress = get_pbands_type()
+
+    stress_amounts = get_strain_amounts() if include_stress else None
+
+    paths = build_file_paths(
+        project_dir, compound_name, include_stress, config, stress_amounts
+    )
+
+    return {
+        "compound_name": compound_name,
+        "project_dir": project_dir,
+        "include_stress": include_stress,
+        "paths": paths,
+        "stress_amounts": stress_amounts,
+    }
+
+
+# Test to ensure the module works as expected
+if __name__ == "__main__":
+    calculation = prepare_paths()
+
+    # Checking if all required files exist
+    failure = False
+    for paths in list(calculation["paths"].values())[:-1]:
+        for path in paths:
+            if not os.path.exists(path):
+                print(f"path '{path}' does not exist!")
+                failure = True
+            else:
+                print(f"path '{path}' exists.")
+
+    if failure:
+        print("Test failed!")
+        exit(1)
+    else:
+        print("Test passed!")
+
+    print("Test information for debugging: \n")
+
+    print(f"Compound Name: {calculation['compound_name']}")
+    print(f"Project Directory: {calculation['project_dir']}")
+    print(f"Include Stress: {calculation['include_stress']}")
+    print(f"Stress Amounts: {calculation['stress_amounts']}")
+    print("\nDirectory Structure:")
+    for key, value in calculation["paths"].items():
+        print(f"{key}: {value}")

@@ -1,6 +1,8 @@
 """Module for collecting data from Quantum ESPRESSO output files."""
+
 from file_parser import *
 from input_handler import get_atomic_states
+from path_handler import prepare_paths
 
 class SpinOrbitHandler:
     """
@@ -236,3 +238,82 @@ def collect_atomic_states_info(paths, compound_name, spin_orbit_flag, skip_soc=F
         atomic_states_info_list.append(atomic_states_info)
 
     return atomic_states_info_list
+
+
+def prepare_dft_info(init_config):
+    """
+    Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
+
+    Args:
+        init_config (dict): Initial configuration dictionary containing paths, compound name, and other settings.
+
+    Returns:
+        dict: Updated configuration dictionary with extracted DFT information.
+    """
+    # Determine which spin_orbit_flag to use
+    if init_config["include_stress"]:
+        # For strain analysis, we need one flag for each strain amount plus the base case
+        spin_orbit_flag = ["" for _ in range(len(init_config["stress_amounts"]) + 1)] if init_config["stress_amounts"] else [""]
+    else:
+        spin_orbit_flag = ["", "_soc"]
+
+    # Extracting band numbers
+    number_of_bands_list = collect_band_numbers(
+        init_config["paths"],
+        init_config["compound_name"],
+        spin_orbit_flag,
+        init_config["paths"]["skip_soc"]
+    )
+
+    # Extracting Fermi energies
+    fermi_energy_list = collect_fermi_energies(
+        init_config["paths"],
+        init_config["compound_name"],
+        spin_orbit_flag,
+        init_config["paths"]["skip_soc"]
+    )
+
+    # Extracting number of atomic states
+    number_of_atomic_states_list = collect_number_of_atomic_states(
+        init_config["paths"],
+        init_config["compound_name"],
+        spin_orbit_flag,
+        init_config["paths"]["skip_soc"]
+    )
+
+    # Extracting atomic states information
+    atomic_states_info_list = collect_atomic_states_info(
+        init_config["paths"],
+        init_config["compound_name"],
+        spin_orbit_flag,
+        init_config["paths"]["skip_soc"]
+    )
+
+    # Updating configuration
+    init_config["number_of_bands"], init_config["number_of_bands_soc"] = number_of_bands_list
+    init_config["fermi_energy"], init_config["fermi_energy_soc"] = fermi_energy_list
+    init_config["number_of_atomic_states"], init_config["number_of_atomic_states_soc"] = number_of_atomic_states_list
+    init_config["atomic_states_info"], init_config["atomic_states_info_soc"] = atomic_states_info_list
+
+    return init_config
+
+
+# Test to ensure the module works as expected
+if __name__ == "__main__":
+    config = prepare_paths()
+    config = prepare_dft_info(config)
+    print("DFT information prepared successfully.\n")
+    print(f"Number of bands: {config['number_of_bands']}")
+    print(f"Number of bands (SOC)): {config['number_of_bands_soc']}")
+    print(f"Fermi energy: {config['fermi_energy']}")
+    print(f"Fermi energy (SOC): {config['fermi_energy_soc']}")
+    print(f"Number of atomic states: {config['number_of_atomic_states']}")
+    print(f"Number of atomic states (SOC): {config['number_of_atomic_states_soc']}")
+
+    print("\nAtomic states info:")
+    for atomic_state, info in config["atomic_states_info"].items():
+        print(f"{atomic_state}: {info}")
+
+    print("\nAtomic states info (SOC):")
+    for atomic_state, info in config["atomic_states_info_soc"].items():
+        print(f"{atomic_state}: {info}")
