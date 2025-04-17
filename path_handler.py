@@ -65,7 +65,7 @@ def add_paths_for_directories(
         kpdos_output_paths (list): List to store KPDOS output paths.
         scf_output_paths (list): List to store SCF output paths.
         projbands_paths (list): List to store projbands paths.
-        bands_paths (list): List to store bands output paths.
+        bands_paths (list): List to store bands calculation paths.
     """
     for scf_dir, pband_dir, flag in zip(scf_dir_list, pbands_dir_list, spin_orbit_flag):
 
@@ -139,7 +139,7 @@ def add_strain_paths(
         kpdos_output_paths (list): List to store KPDOS output paths.
         scf_output_paths (list): List to store SCF output paths.
         projbands_paths (list): List to store projbands paths.
-        bands_paths (list): List to store bands output paths.
+        bands_paths (list): List to store bands calculation paths.
     """
     # The output of Quantum ESPRESSO PW Bands calculation
     pw_bands_output_paths.append(
