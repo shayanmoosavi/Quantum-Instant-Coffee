@@ -3,6 +3,9 @@
 from file_parser import *
 from input_handler import get_atomic_states
 from path_handler import prepare_paths
+import os
+from subprocess import CalledProcessError, run
+
 
 class SpinOrbitHandler:
     """
@@ -240,6 +243,81 @@ def collect_atomic_states_info(paths, compound_name, spin_orbit_flag, skip_soc=F
     return atomic_states_info_list
 
 
+def run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir):
+    """
+    Execute the AWK script to generate projected bands data.
+
+    Args:
+        number_of_atomic_states (int): Number of atomic states
+        fermi_energy (float): Fermi energy value
+        kpdos_output_dir (str): KPDOS output path
+        projbands_dir (str): Path to generate the projbands file
+
+    Raises:
+        CalledProcessError: If the AWK script execution fails
+    """
+    print("Calculating projected bands...")
+
+    awk_command = (
+        f"awk -v firststate=1 "
+        f"-v laststate={number_of_atomic_states} "
+        f"-v ef={fermi_energy} "
+        f"-f ./projwfc_to_bands.awk {kpdos_output_dir} > {projbands_dir}"
+    )
+
+    run(awk_command, shell=True, check=True, capture_output=True)
+
+
+def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_list):
+    """
+    Generate projected bands data if not already present.
+
+    This function checks if the projected bands file already exists. If it does not,
+    it runs an AWK script to generate the file. The function tracks the success or
+    failure of the generation process for each file.
+
+    Args:
+        paths (dict): A dictionary containing file paths, including:
+            - "kpdos_output_paths" (list): List of KPDOS output file paths.
+            - "projbands_paths" (list): List of paths where projbands files should be generated.
+        number_of_atomic_states_list (list): A list of integers representing the number of atomic states for each calculation output
+        fermi_energy_list (list): A list of floats representing the Fermi energy values for each calculation output.
+    Returns:
+        list: A list of boolean values indicating the success (True) or failure (False)
+              of the projected bands generation for each file.
+    """
+
+    # List to track whether the projbands generation was successful for each file
+    projbands_generation_success_list = []
+
+    # Iterating over the KPDOS output paths and corresponding projbands paths
+    for (projbands_dir, kpdos_output_dir,
+         number_of_atomic_states, fermi_energy) in zip(
+        paths["kpdos_output_paths"], paths["projbands_paths"],
+        number_of_atomic_states_list, fermi_energy_list
+    ):
+
+        # Checking if the projbands file already exists
+        if os.path.exists(projbands_dir):
+            print(f"File {projbands_dir} already exists!")
+            projbands_generation_success_list.append(True)
+            continue
+
+        try:
+            # Running the AWK script to generate the projbands file
+            run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir)
+            print("Projected bands calculation completed successfully.")
+            projbands_generation_success_list.append(True)
+
+        except CalledProcessError as e:
+            # Handling errors during the AWK script execution
+            print("Error calculating projected bands:")
+            print(e.stderr.decode("utf-8"))
+            projbands_generation_success_list.append(False)
+
+    return projbands_generation_success_list
+
+
 def prepare_dft_info(init_config):
     """
     Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
@@ -294,6 +372,16 @@ def prepare_dft_info(init_config):
     init_config["fermi_energy"], init_config["fermi_energy_soc"] = fermi_energy_list
     init_config["number_of_atomic_states"], init_config["number_of_atomic_states_soc"] = number_of_atomic_states_list
     init_config["atomic_states_info"], init_config["atomic_states_info_soc"] = atomic_states_info_list
+
+    projbands_generation_success_list = generate_projected_bands(
+        init_config["paths"],
+        number_of_atomic_states_list,
+        fermi_energy_list
+    )
+
+    if not all(projbands_generation_success_list):
+        print("Error: Some projbands files were not generated successfully.")
+        exit(1)
 
     return init_config
 
