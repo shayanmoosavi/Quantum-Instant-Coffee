@@ -293,7 +293,7 @@ def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_l
     # Iterating over the KPDOS output paths and corresponding projbands paths
     for (projbands_dir, kpdos_output_dir,
          number_of_atomic_states, fermi_energy) in zip(
-        paths["kpdos_output_paths"], paths["projbands_paths"],
+        paths["projbands_paths"], paths["kpdos_output_paths"],
         number_of_atomic_states_list, fermi_energy_list
     ):
 
