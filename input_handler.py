@@ -69,10 +69,10 @@ def get_atomic_states():
     supported_orbitals = ('s', 'p', 'd', 'pz', 'px', 'py', 'dz2', 'dxz', 'dyz', 'dx2y2', 'dxy')
 
     print(f"""
-    The supported orbitals are:
-    {', '.join(supported_orbitals)}
-    The projection list should be in pairs of <element name>-<orbital> separated by a single space.
-    Example usage: O-s C-p Fe-d
+The supported orbitals are:
+{', '.join(supported_orbitals)}
+The projection list should be in pairs of <element name>-<orbital> separated by a single space.
+Example usage: O-s C-p Fe-d
     """)
 
     # Loop to repeatedly prompt the user until valid input is provided
