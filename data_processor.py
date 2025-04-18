@@ -116,7 +116,7 @@ class AtomicProjectionProcessor:
         Returns:
             list: A list of unique elements.
         """
-        elements = [proj[0] for proj in self.atomic_projection_list]
+        elements = [proj.split('-')[0] for proj in self.atomic_projection_list]
         return [item for i, item in enumerate(elements) if item not in elements[:i]]
 
     @staticmethod
@@ -215,14 +215,19 @@ def process_band_data(config, projbands_dir_list, bands_dir_list, number_of_band
         energy_list.append(energy)
         atomic_projection_weights_info_list.append(weights_info)
 
-        # Updating the configuration with the processed data
-        config["projbands_data_list"] = projbands_data_list,
-        config["k_points_proj_list"] = k_points_proj_list,
-        config["k_points_list"] = k_points_list,
-        config["energy_proj_list"] = energy_proj_list,
-        config["energy_list"] = energy_list,
-        config["atomic_projection_weights_info_list"] = atomic_projection_weights_info_list
-        config["atomic_projection_list"] = atomic_projection_list
+    # Get unique elements from the atomic projection list
+    unique_elements_list = projection_processor.get_unique_elements()
+
+    # Updating the configuration with the processed data
+    config["projbands_data_list"] = projbands_data_list
+    config["k_points_proj_list"] = k_points_proj_list
+    config["k_points_list"] = k_points_list
+    config["energy_proj_list"] = energy_proj_list
+    config["energy_list"] = energy_list
+    config["atomic_projection_weights_info_list"] = atomic_projection_weights_info_list
+    config["atomic_projection_list"] = atomic_projection_list
+    config["unique_elements_list"] = unique_elements_list
+
 
     return config
 
@@ -244,3 +249,4 @@ if __name__ == "__main__":
         config["atomic_states_info_list"][0].keys()
     )
     print("Data processed successfully and ready for plotting.")
+    print(f"Elements: {config['unique_elements_list']}")
