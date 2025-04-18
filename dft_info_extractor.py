@@ -331,15 +331,15 @@ def prepare_dft_info(init_config):
     # Determine which spin_orbit_flag to use
     if init_config["include_stress"]:
         # For strain analysis, we need one flag for each strain amount plus the base case
-        spin_orbit_flag = ["" for _ in range(len(init_config["stress_amounts"]) + 1)] if init_config["stress_amounts"] else [""]
+        spin_orbit_flags = ["" for _ in range(len(init_config["stress_amounts"]) + 1)] if init_config["stress_amounts"] else [""]
     else:
-        spin_orbit_flag = ["", "_soc"]
+        spin_orbit_flags = ["", "_soc"]
 
     # Extracting band numbers
     number_of_bands_list = collect_band_numbers(
         init_config["paths"],
         init_config["compound_name"],
-        spin_orbit_flag,
+        spin_orbit_flags,
         init_config["paths"]["skip_soc"]
     )
 
@@ -347,7 +347,7 @@ def prepare_dft_info(init_config):
     fermi_energy_list = collect_fermi_energies(
         init_config["paths"],
         init_config["compound_name"],
-        spin_orbit_flag,
+        spin_orbit_flags,
         init_config["paths"]["skip_soc"]
     )
 
@@ -355,7 +355,7 @@ def prepare_dft_info(init_config):
     number_of_atomic_states_list = collect_number_of_atomic_states(
         init_config["paths"],
         init_config["compound_name"],
-        spin_orbit_flag,
+        spin_orbit_flags,
         init_config["paths"]["skip_soc"]
     )
 
@@ -363,7 +363,7 @@ def prepare_dft_info(init_config):
     atomic_states_info_list = collect_atomic_states_info(
         init_config["paths"],
         init_config["compound_name"],
-        spin_orbit_flag,
+        spin_orbit_flags,
         init_config["paths"]["skip_soc"]
     )
 
@@ -372,6 +372,7 @@ def prepare_dft_info(init_config):
     init_config["fermi_energy_list"] = fermi_energy_list
     init_config["number_of_atomic_states_list"] = number_of_atomic_states_list
     init_config["atomic_states_info_list"] = atomic_states_info_list
+    init_config["spin_orbit_flags"] = ["" if flag == "" else "SOC" for flag in spin_orbit_flags]
 
     projbands_generation_success_list = generate_projected_bands(
         init_config["paths"],
