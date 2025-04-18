@@ -1,4 +1,9 @@
-"""Functions for handling user input."""
+"""Functions for handling user input.
+
+This module provides utility functions to interact with the user for input
+related to plotting projected bands. It includes functions to select the type
+of bands to plot, input strain amounts, and specify atomic states for projection.
+"""
 
 
 def get_pbands_type():

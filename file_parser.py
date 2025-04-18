@@ -1,4 +1,10 @@
-"""Module for parsing Quantum ESPRESSO output files."""
+"""Module for parsing Quantum ESPRESSO output files.
+
+This module provides functions to extract information from Quantum ESPRESSO
+output files, such as the number of bands, Fermi energy, number of atomic states,
+and atomic state details. These functions are designed to handle specific file
+formats and extract relevant data using regular expressions.
+"""
 
 import re
 import json

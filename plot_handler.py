@@ -411,7 +411,9 @@ def plot_band_structure(updated_config, save_fig=True, test_module=False):
     # Extracting configuration values
     compound_name = updated_config["compound_name"]
     spin_orbit_flags = updated_config.get("spin_orbit_flags", [False] * len(updated_config["energy_list"]))
-    stress_amount_list = (["1"] + updated_config["stress_amounts"]) if updated_config["include_stress"] else ["1"] * len(updated_config["energy_list"])
+    stress_amount_list = (["1"] + updated_config["stress_amounts"]) if updated_config["include_stress"] else [
+                                                                                                                 "1"] * len(
+        updated_config["energy_list"])
 
     if test_module:
         # Debug mode: Printing projection information for verification
@@ -494,7 +496,6 @@ if __name__ == "__main__":
         3. Process band data for plotting.
         4. Call the `plot_band_structure` function to generate plots.
     """
-
     config = prepare_paths()
     config = prepare_dft_info(config)
     config = process_band_data(

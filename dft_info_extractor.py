@@ -1,4 +1,8 @@
-"""Module for collecting data from Quantum ESPRESSO output files."""
+"""Module for collecting data from Quantum ESPRESSO output files.
+
+This module provides functions and classes to extract and process data from Quantum ESPRESSO output files.
+It includes functionality for handling spin-orbit coupling (SOC), collecting DFT data, and generating projected bands.
+"""
 
 from file_parser import *
 from input_handler import get_atomic_states
@@ -389,6 +393,12 @@ def prepare_dft_info(init_config):
 
 # Test to ensure the module works as expected
 if __name__ == "__main__":
+    """
+    Main entry point for testing the module.
+
+    This script validates that the prepare_dft_info has executed successfully and prints the extracted 
+    information if successful.
+    """
     config = prepare_paths()
     config = prepare_dft_info(config)
     print("DFT information prepared successfully.\n")
