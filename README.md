@@ -17,7 +17,7 @@ The input files will be generated both with and without considering spin-orbit c
 
 Current toolkit:
 - `init_calc.py`
-- `plot_pbands.py`
+- `plot_projected_bands.py`
 - `plot_pdos.py` (coming soon)
 - `compare_bands.py` 
 
@@ -63,13 +63,13 @@ The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, wh
 └── <name-of-the-compound>_wannier.win
 ```
 
-After successfully executing `init_calc.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `plot_pbands.py` script using the following command:
+After successfully executing `init_calc.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `plot_projected_bands.py` script using the following command:
 
 ```bash
-python plot_pbands.py <name-of-the-compound>
+python plot_projected_bands.py <name-of-the-compound>
 ```
 
-After successfully executing `plot_pbands.py`, the script will plot the projected bands for every atom in the structure.
+After successfully executing `plot_projected_bands.py`, the script will plot the projected bands for every atom in the structure.
 
 To compare the wannier interpolated bands with DFT bands, run the following command:
 
