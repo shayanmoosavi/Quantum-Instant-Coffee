@@ -78,7 +78,7 @@ def add_paths_for_directories(
         pw_bands_output_paths.append(
             os.path.join(
                 pband_dir,
-                file_patterns["bands_output"].format(
+                file_patterns["pw_bands_output"].format(
                     compound_name=compound_name, flag=flag
                 ),
             )
@@ -150,7 +150,7 @@ def add_strain_paths(
     pw_bands_output_paths.append(
         os.path.join(
             stress_dir,
-            file_patterns["bands_output"].format(compound_name=compound_name, flag=""),
+            file_patterns["pw_bands_output"].format(compound_name=compound_name, flag=""),
         )
     )
 
@@ -213,7 +213,7 @@ def build_file_paths(
 
     # Getting directory structure from config
     dir_structure = config["directory_structure"]
-    file_patterns = config["file_patterns"]
+    file_patterns = config["file_patterns"]["output"]
 
     if include_stress:
         # For strain analysis
