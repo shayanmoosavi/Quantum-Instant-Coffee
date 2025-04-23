@@ -344,7 +344,7 @@ def prepare_dft_info(init_config):
         init_config["paths"],
         init_config["compound_name"],
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        init_config["skip_soc"]
     )
 
     # Extracting Fermi energies
@@ -352,7 +352,7 @@ def prepare_dft_info(init_config):
         init_config["paths"],
         init_config["compound_name"],
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        init_config["skip_soc"]
     )
 
     # Extracting number of atomic states
@@ -360,7 +360,7 @@ def prepare_dft_info(init_config):
         init_config["paths"],
         init_config["compound_name"],
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        init_config["skip_soc"]
     )
 
     # Extracting atomic states information
@@ -368,7 +368,7 @@ def prepare_dft_info(init_config):
         init_config["paths"],
         init_config["compound_name"],
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        init_config["skip_soc"]
     )
 
     # Updating configuration
