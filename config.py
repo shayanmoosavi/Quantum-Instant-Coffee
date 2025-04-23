@@ -2,7 +2,8 @@
 
 This module provides functions to manage and load configuration settings
 for the project. It supports loading configurations from a JSON file and
-provides default settings if the file is not found.
+provides default settings if the file is not found. It also validates the
+configuration structure to ensure correctness.
 """
 
 from dataclasses import dataclass
@@ -13,19 +14,43 @@ from config_validation import validate_config_structure, ConfigValidationError
 
 @dataclass
 class FilePatterns:
-    """Represents file naming patterns."""
+    """
+    Represents file naming patterns for input and output files.
+
+    Attributes:
+        input (Dict[str, str]): A dictionary of input file patterns.
+        output (Dict[str, str]): A dictionary of output file patterns.
+    """
     input: Dict[str, str]
     output: Dict[str, str]
 
 @dataclass
 class ProjectConfig:
-    """Represents the complete project configuration."""
+    """
+    Represents the complete project configuration.
+
+    Attributes:
+        directory_structure (Dict[str, str]): A dictionary defining the directory structure.
+        file_patterns (FilePatterns): An instance of FilePatterns containing input and output patterns.
+    """
     directory_structure: Dict[str, str]
     file_patterns: FilePatterns
 
     @classmethod
     def from_json(cls, config_file: str = "config.json") -> 'ProjectConfig':
-        """Load configuration from JSON file."""
+        """
+        Load configuration from a JSON file and validate its structure.
+
+        Args:
+            config_file (str): Path to the JSON configuration file. Defaults to "config.json".
+
+        Returns:
+            ProjectConfig: An instance of ProjectConfig with the loaded configuration.
+
+        Raises:
+            ConfigValidationError: If the configuration structure is invalid.
+            json.JSONDecodeError: If the JSON file is not properly formatted.
+        """
         try:
             with open(config_file, "r") as f:
                 config_dict = json.load(f)
@@ -44,7 +69,15 @@ class ProjectConfig:
 
     @classmethod
     def get_default_config(cls) -> 'ProjectConfig':
-        """Get default configuration."""
+        """
+        Get the default configuration for the project.
+
+        Returns:
+            ProjectConfig: An instance of ProjectConfig with default settings.
+
+        Raises:
+            ConfigValidationError: If the default configuration structure is invalid.
+        """
         config = cls(
             directory_structure={
                 "scf": "scf",  # Directory for self-consistent field (SCF) calculations
@@ -89,7 +122,18 @@ class ProjectConfig:
         return config
 
 def load_config(config_file: str = "config.json") -> ProjectConfig:
-    """Load project configuration."""
+    """
+    Load and validate the project configuration.
+
+    Args:
+        config_file (str): Path to the JSON configuration file. Defaults to "config.json".
+
+    Returns:
+        ProjectConfig: An instance of ProjectConfig with the loaded or default configuration.
+
+    Raises:
+        ConfigValidationError: If the configuration structure is invalid.
+    """
     try:
         return ProjectConfig.from_json(config_file)
     except ConfigValidationError as e:
