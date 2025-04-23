@@ -5,6 +5,119 @@ related to plotting projected bands. It includes functions to select the type
 of bands to plot, input strain amounts, and specify atomic states for projection.
 """
 
+import os
+import re
+
+
+def select_pseudopotentials(pseudo_files, element_name, relativistic=False):
+    """
+    Prompts the user to select a pseudopotential file from a list.
+
+    Args:
+        pseudo_files (list): A list of pseudopotential file names.
+        element_name (str): The name of the element.
+        relativistic (bool, optional): Whether the pseudopotentials are relativistic.
+                                     Defaults to False.
+
+    Returns:
+        str: The selected pseudopotential file name.
+    """
+
+    print(f"\nFinding {'relativistic' if relativistic else 'non-relativistic'} pseudopotential files for {element_name}:")
+    if not pseudo_files:
+        print(
+            f"ERROR: No pseudopotentials found for {element_name}. Make sure they exist in the specified directory and rerun this script"
+        )
+        exit(1)
+    else:
+        print(f"Found the following pseudopotential files for {element_name}:")
+        for i, filename in enumerate(pseudo_files):
+            print(f"{i + 1}: {filename}")
+        selected_index = int(input("Which one do you want? Enter the number associated with it: ")) - 1
+        return pseudo_files[selected_index]
+
+
+def get_pseudopotential_files(element_names):
+    """
+    Gets the pseudopotential file paths from the user, searches for the files,
+    and lets the user select the appropriate ones.
+
+    Args:
+        element_names (list): A list of element names in the compound.
+
+    Returns:
+        tuple: A tuple containing:
+            - dict: A dictionary of selected non-relativistic pseudopotential file paths.
+            - dict: A dictionary of selected relativistic pseudopotential file paths.
+    """
+
+    pseudo_list = {}
+    rel_pseudo_list = {}
+
+    # Get non-relativistic pseudopotentials
+    success = False
+    while not success:
+        pseudo_dir_input = input(
+            "Enter the directory of your non-relativistic or scalar relativistic Pseudopotential files: "
+        )
+        pseudo_dir_path = os.path.abspath(pseudo_dir_input)
+        if os.path.exists(pseudo_dir_path):
+            success = True
+        else:
+            print("Directory does not exist! Write the correct path or press q to quit.")
+            pseudo_dir_input = input()
+            if pseudo_dir_input == "q":
+                exit()
+            elif os.path.exists(os.path.abspath(pseudo_dir_input)):
+                pseudo_dir_path = os.path.abspath(pseudo_dir_input)
+                success = True
+            else:
+                print("Invalid input or wrong directory path! Try again.")
+
+    for element_name in element_names:
+        pseudo_files = []
+        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+        for filename in os.listdir(pseudo_dir_path):
+            if pseudo_regex_object.fullmatch(filename):
+                pseudo_files.append(filename)
+        selected_pseudo = select_pseudopotentials(pseudo_files, element_name)
+        pseudo_list[element_name] = os.path.join(pseudo_dir_path, selected_pseudo)
+
+    # Get relativistic pseudopotentials
+    success = False
+    while not success:
+        rel_pseudo_dir_input = input("Enter the directory of your relativistic Pseudopotential files: ")
+        rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
+        if os.path.exists(rel_pseudo_dir_path):
+            success = True
+        else:
+            print("Directory does not exist! Write the correct path or press q to quit.")
+            rel_pseudo_dir_input = input()
+            if rel_pseudo_dir_input == "q":
+                exit()
+            elif os.path.exists(os.path.abspath(rel_pseudo_dir_input)):
+                rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
+                success = True
+            else:
+                print("Invalid input or wrong directory path! Try again.")
+
+    for element_name in element_names:
+        rel_pseudo_files = []
+        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+        for filename in os.listdir(rel_pseudo_dir_path):
+            if pseudo_regex_object.fullmatch(filename):
+                rel_pseudo_files.append(filename)
+        selected_pseudo = select_pseudopotentials(
+            rel_pseudo_files, element_name, relativistic=True
+        )
+        rel_pseudo_list[element_name] = os.path.join(
+            rel_pseudo_dir_path, selected_pseudo
+        )
+
+    return pseudo_list, rel_pseudo_list
+
 
 def get_pbands_type():
     """
@@ -27,7 +140,7 @@ def get_pbands_type():
             print("Invalid input!")
 
 
-def get_strain_amounts():
+def get_strain_amounts(is_input = False):
     """
     Prompt the user to input strain amounts for DFT calculations.
 
@@ -39,22 +152,43 @@ def get_strain_amounts():
         list: A list of strings representing the strain amounts, e.g., ['1_10', '1_15', '1_20'].
     """
 
-    while True:
-        stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
+    if is_input:
+        if input("Do you want to create strain analysis directories? (yes/no): ").strip().lower() == "yes":
+            while True:
+                stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
 For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
 (e.g., 1_10 1_15 1_20):
 """)
 
-        # Cleaning up user input and error handling
-        stress_amount_list = [
-            amount for amount in stress_amount_list_input.split() if amount.strip()
-        ]
+                # Cleaning up user input and error handling
+                stress_amount_list = [
+                    amount for amount in stress_amount_list_input.split() if amount.strip()
+                ]
 
-        # List should not be empty
-        if not stress_amount_list:
-            print("Error: No valid strain amounts provided.")
+                # List should not be empty
+                if not stress_amount_list:
+                    print("Error: No valid strain amounts provided.")
+                else:
+                    return stress_amount_list
         else:
-            return stress_amount_list
+            return None
+    else:
+        while True:
+            stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
+For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
+(e.g., 1_10 1_15 1_20):
+""")
+
+            # Cleaning up user input and error handling
+            stress_amount_list = [
+                amount for amount in stress_amount_list_input.split() if amount.strip()
+            ]
+
+            # List should not be empty
+            if not stress_amount_list:
+                print("Error: No valid strain amounts provided.")
+            else:
+                return stress_amount_list
 
 
 def get_atomic_states():
