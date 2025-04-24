@@ -39,6 +39,8 @@ def validate_directory_structure(directory_structure: Dict[str, str]) -> None:
         "scf_soc",
         "projected_bands",
         "projected_bands_soc",
+        "pseudo",
+        "pseudo_rel"
     }
 
     # Check for missing required directories
@@ -93,6 +95,8 @@ def validate_file_patterns(patterns: Dict[str, Dict[str, str]]) -> None:
                 raise ConfigValidationError(f"Pattern {pattern_name} must be a string")
             if "{compound_name}" not in pattern:
                 raise ConfigValidationError(f"Pattern {pattern_name} must contain {{compound_name}} placeholder")
+            if "{flag}" not in pattern and pattern_name != "bands_gnu":
+                raise ConfigValidationError(f"Pattern {pattern_name} must contain {{flag}} placeholder")
 
 def validate_config_structure(config: Dict[str, Any]) -> None:
     """

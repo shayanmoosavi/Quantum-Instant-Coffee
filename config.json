@@ -6,7 +6,9 @@
     "projected_bands_soc": "spin_orbit/projected_bands",
     "wannier": "wannier",
     "wannier_soc": "spin_orbit/wannier",
-    "strain": "strain"
+    "strain": "strain",
+    "pseudo": "../Pseudopotentials",
+    "pseudo_rel": "../Pseudopotentials_rel"
   },
   "file_patterns": {
     "input": {

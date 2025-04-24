@@ -87,6 +87,8 @@ class ProjectConfig:
                 "wannier": "wannier",  # Directory for Wannier calculations
                 "wannier_soc": "spin_orbit/wannier",  # Directory for spin-orbit Wannier calculations
                 "strain": "strain",  # Directory for strain-related data
+                "pseudo": "../Pseudopotentials", # Directory for pseudopotential files
+                "pseudo_rel": "../Pseudopotentials_rel" # Directory for relativistic pseudopotential files
             },
             file_patterns=FilePatterns(
                 input={

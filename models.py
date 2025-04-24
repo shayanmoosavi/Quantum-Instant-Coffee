@@ -48,7 +48,9 @@ class ProjectSetup:
     """Represents the complete project setup."""
     compound_name: str
     project_dir: str
+    pseudo_dir: str
     calculation_dirs: List[str]
     compound_data: CompoundData
     include_stress: bool
     stress_amounts: Optional[List[str]] = None
+    rel_pseudo_dir: Optional[str] = None
