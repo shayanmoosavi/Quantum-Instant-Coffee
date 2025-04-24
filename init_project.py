@@ -11,7 +11,7 @@ Functions:
         and parses compound information.
     main: Entry point for the script, handling command-line arguments and project initialization.
 """
-
+import os.path
 from sys import argv
 from typing import Optional, List
 from models import CompoundData, ProjectSetup
@@ -82,10 +82,12 @@ def initialize_project(
     return ProjectSetup(
         compound_name=compound_name,
         project_dir=project_dir,
+        pseudo_dir=os.path.abspath(config.directory_structure["pseudo"]),
         calculation_dirs=calculation_dirs,
         compound_data=compound_data,
         include_stress=include_stress,
-        stress_amounts=stress_amounts
+        stress_amounts=stress_amounts,
+        rel_pseudo_dir=os.path.abspath(config.directory_structure["pseudo_rel"])
     )
 
 
@@ -123,6 +125,8 @@ if __name__ == "__main__":
         print("\nInitialization complete. Here's a summary:")
         print(f"  Compound: {project.compound_name}")
         print(f"  Project directory: {project.project_dir}")
+        print(f"  Pseudopotential directory: {project.pseudo_dir}")
+        print(f"  Relativistic Pseudopotential directory: {project.rel_pseudo_dir}")
         print(f"  Calculation directories: {project.calculation_dirs}")
         print(f"  Elements: {project.compound_data.element_names}")
         print(f"  Atomic labels: {project.compound_data.atomic_labels}")

@@ -37,7 +37,11 @@ def select_pseudopotentials(pseudo_files, element_name, relativistic=False):
         return pseudo_files[selected_index]
 
 
-def get_pseudopotential_files(element_names):
+def get_pseudopotential_files(element_names,
+                              pseudo_path = "../Pseudopotentials",
+                              *,
+                              relativistic = False,
+                              rel_pseudo_path = None):
     """
     Gets the pseudopotential file paths from the user, searches for the files,
     and lets the user select the appropriate ones.
@@ -47,76 +51,55 @@ def get_pseudopotential_files(element_names):
 
     Returns:
         tuple: A tuple containing:
-            - dict: A dictionary of selected non-relativistic pseudopotential file paths.
-            - dict: A dictionary of selected relativistic pseudopotential file paths.
+            - dict: A dictionary of selected non-relativistic pseudopotential file names.
+            - dict: A dictionary of selected relativistic pseudopotential file names.
     """
 
     pseudo_list = {}
     rel_pseudo_list = {}
 
     # Get non-relativistic pseudopotentials
-    success = False
-    while not success:
-        pseudo_dir_input = input(
-            "Enter the directory of your non-relativistic or scalar relativistic Pseudopotential files: "
-        )
-        pseudo_dir_path = os.path.abspath(pseudo_dir_input)
-        if os.path.exists(pseudo_dir_path):
-            success = True
-        else:
-            print("Directory does not exist! Write the correct path or press q to quit.")
-            pseudo_dir_input = input()
-            if pseudo_dir_input == "q":
-                exit()
-            elif os.path.exists(os.path.abspath(pseudo_dir_input)):
-                pseudo_dir_path = os.path.abspath(pseudo_dir_input)
-                success = True
-            else:
-                print("Invalid input or wrong directory path! Try again.")
+    pseudo_dir_path = os.path.abspath(pseudo_path)
+    if os.path.exists(pseudo_dir_path):
+        for element_name in element_names:
+            pseudo_files = []
+            pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+            pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+            for filename in os.listdir(pseudo_dir_path):
+                if pseudo_regex_object.fullmatch(filename):
+                    pseudo_files.append(filename)
+            selected_pseudo = select_pseudopotentials(pseudo_files, element_name)
+            pseudo_list[element_name] = selected_pseudo
 
-    for element_name in element_names:
-        pseudo_files = []
-        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
-        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
-        for filename in os.listdir(pseudo_dir_path):
-            if pseudo_regex_object.fullmatch(filename):
-                pseudo_files.append(filename)
-        selected_pseudo = select_pseudopotentials(pseudo_files, element_name)
-        pseudo_list[element_name] = os.path.join(pseudo_dir_path, selected_pseudo)
+    else:
+        print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+        exit(1)
 
     # Get relativistic pseudopotentials
-    success = False
-    while not success:
-        rel_pseudo_dir_input = input("Enter the directory of your relativistic Pseudopotential files: ")
-        rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
+    if relativistic:
+
+        rel_pseudo_dir_path = os.path.abspath(rel_pseudo_path)
         if os.path.exists(rel_pseudo_dir_path):
-            success = True
+
+            for element_name in element_names:
+                rel_pseudo_files = []
+                pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+                pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
+                for filename in os.listdir(rel_pseudo_dir_path):
+                    if pseudo_regex_object.fullmatch(filename):
+                        rel_pseudo_files.append(filename)
+                selected_pseudo = select_pseudopotentials(
+                    rel_pseudo_files, element_name, relativistic=True
+                )
+                rel_pseudo_list[element_name] = selected_pseudo
         else:
-            print("Directory does not exist! Write the correct path or press q to quit.")
-            rel_pseudo_dir_input = input()
-            if rel_pseudo_dir_input == "q":
-                exit()
-            elif os.path.exists(os.path.abspath(rel_pseudo_dir_input)):
-                rel_pseudo_dir_path = os.path.abspath(rel_pseudo_dir_input)
-                success = True
-            else:
-                print("Invalid input or wrong directory path! Try again.")
+            print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+            exit(1)
 
-    for element_name in element_names:
-        rel_pseudo_files = []
-        pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
-        pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
-        for filename in os.listdir(rel_pseudo_dir_path):
-            if pseudo_regex_object.fullmatch(filename):
-                rel_pseudo_files.append(filename)
-        selected_pseudo = select_pseudopotentials(
-            rel_pseudo_files, element_name, relativistic=True
-        )
-        rel_pseudo_list[element_name] = os.path.join(
-            rel_pseudo_dir_path, selected_pseudo
-        )
+        return pseudo_list, rel_pseudo_list
 
-    return pseudo_list, rel_pseudo_list
+    else:
+        return pseudo_list
 
 
 def get_pbands_type():

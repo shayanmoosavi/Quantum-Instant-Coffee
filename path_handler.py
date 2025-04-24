@@ -267,6 +267,9 @@ def create_directories(project_dir, dir_structure, include_stress=False, stress_
 
             if not include_stress and calculation == "strain":
                 continue  # Skip creation of strain directories if not needed
+            if calculation in ["pseudo", "pseudo_rel"]:
+                # Skipping the creation of Pseudopotential directories as it needs to exist before running this script
+                continue
 
             if include_stress:
                 if calculation == "strain":
