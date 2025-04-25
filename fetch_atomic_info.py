@@ -15,7 +15,7 @@ import pandas as pd
 
 
 # Fetching the webpage
-def fetch_elements_data(url = "https://iupac.qmul.ac.uk/AtWt/"):
+def fetch_elements_data(url="https://iupac.qmul.ac.uk/AtWt/"):
     """
     Fetches the atomic weights, names, and labels of elements from the IUPAC website.
 
@@ -37,7 +37,7 @@ def fetch_elements_data(url = "https://iupac.qmul.ac.uk/AtWt/"):
         exit(1)
 
     # Parse the HTML
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(response.text, "html.parser")
 
     # Locate the table with atomic data
     table_2_name = soup.find("a", {"name": "02"})
@@ -78,20 +78,23 @@ def process_elements_data(html_data):
     data.set_index("Atomic Number", inplace=True)
 
     # Cleaning up the data
-    #------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------
 
     # Remove unstable element weights enclosed in brackets
-    data["Atomic Weight"] = data["Atomic Weight"].str.replace(r"\[.*?]", '', regex=True)
+    data["Atomic Weight"] = data["Atomic Weight"].str.replace(r"\[.*?]", "", regex=True)
 
     # Remove uncertainty in atomic weights
-    data["Atomic Weight"] = data["Atomic Weight"].str.replace(r"(?<=\d)\(\d+\.?\d*\)", '', regex=True)
+    data["Atomic Weight"] = data["Atomic Weight"].str.replace(
+        r"(?<=\d)\(\d+\.?\d*\)", "", regex=True
+    )
 
     # Removing whitespaces and leftover characters from previous cleaning
-    data["Atomic Weight"] = data["Atomic Weight"].str.replace(r"\s+|\(|_", '', regex=True)
-
+    data["Atomic Weight"] = data["Atomic Weight"].str.replace(
+        r"\s+|\(|_", "", regex=True
+    )
 
     # Convert the atomic weights to numeric values and drop invalid rows
-    data["Atomic Weight"] = pd.to_numeric(data["Atomic Weight"], errors='coerce')
+    data["Atomic Weight"] = pd.to_numeric(data["Atomic Weight"], errors="coerce")
     data.dropna(subset=["Atomic Weight"], inplace=True)
 
     return data
@@ -113,7 +116,7 @@ def create_sqlite_database(data):
     Returns:
     bool: True if database was created, False if it already exists.
     """
-    db_path = 'elements.db'
+    db_path = "elements.db"
 
     # Check if database exists and has data
     if os.path.exists(db_path):
@@ -133,7 +136,7 @@ def create_sqlite_database(data):
 
     # Create SQLite database
     print("Creating SQLite database...")
-    conn = sqlite3.connect('elements.db')
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -148,13 +151,17 @@ def create_sqlite_database(data):
 
     # Insert data into the elements table
     for index, row in data.iterrows():
-        cursor.execute("""
+        cursor.execute(
+            """
         INSERT OR REPLACE INTO elements (atomic_number, symbol, name, atomic_weight)
         VALUES (?, ?, ?, ?)
-        """, (index, row["Symbol"], row["Element Name"], row["Atomic Weight"]))
+        """,
+            (index, row["Symbol"], row["Element Name"], row["Atomic Weight"]),
+        )
 
     conn.commit()
     conn.close()
+    return True
 
 
 if __name__ == "__main__":
@@ -170,5 +177,23 @@ if __name__ == "__main__":
 
     if success:
         print("Data fetched and stored in elements.db successfully.")
+        conn = sqlite3.connect("elements.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM elements;
+            """)
+
+        rows = cursor.fetchall()
+
+        if rows:
+            print(f"Found {len(rows)} elements in the database")
+
+            # Print the first few results
+            for i, row in enumerate(rows[:5]):
+                print(f"Element {row[0]}: {row[1]} ({row[2]}) - Weight: {row[3]}")
+
+        else:
+            print("Query returned no results")
+
     else:
         print("Database already exists and contains data. No changes made.")

@@ -289,6 +289,9 @@ def create_directories(project_dir, dir_structure, include_stress=False, stress_
 
         print("Successfully created calculation directories.\n", flush=True)
 
+        # Changing the directory to the root directory of the script
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
         return calculation_dirs  # Return the list of created directories
 
     except OSError as e:
