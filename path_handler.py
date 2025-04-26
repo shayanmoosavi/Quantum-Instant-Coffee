@@ -71,12 +71,16 @@ def append_file_paths(file_paths, calculation, path, compound_name, file_pattern
         keys (list): List of keys for which paths need to be appended.
     """
     for key in keys:
-        if key not in file_paths[calculation]:
-            file_paths[calculation][key] = []
-        file_paths[calculation][key].append(os.path.join(
-            path,
-            file_patterns[key].format(compound_name=compound_name, flag=flag)
-        ))
+        try:
+            if key not in file_paths[calculation]:
+                file_paths[calculation][key] = []
+            file_paths[calculation][key].append(os.path.join(
+                path,
+                file_patterns[key].format(compound_name=compound_name, flag=flag)
+            ))
+        except KeyError:
+            print(f"Key '{key}' not found in provided config. Skipping...")
+            continue
 
 
 def add_paths_for_directories(
@@ -114,11 +118,12 @@ def add_paths_for_directories(
             continue
         elif calculation in ["wannier", "wannier_soc"] and not is_input:
             continue
-
+        elif calculation in ["pseudo", "pseudo_rel"]:
+            continue
         elif calculation in ["scf", "scf_soc"]:
 
             append_file_paths(file_paths, calculation, path, compound_name, file_patterns,
-                              flag, ["vc_relax_input", "scf_input"] if is_input else
+                              flag, ["relax_input", "vc_relax_input", "scf_input"] if is_input else
                               ["scf_output"])
 
         elif calculation in ["projected_bands", "projected_bands_soc"]:
@@ -126,6 +131,10 @@ def add_paths_for_directories(
             append_file_paths(file_paths, calculation, path, compound_name, file_patterns,
                               flag, ["pw_bands_input", "kpdos_input", "bands_input"] if is_input else
                               ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
+
+        elif calculation in ["pdos", "pdos_soc"]:
+            append_file_paths(file_paths, calculation, path, compound_name, file_patterns,
+                              flag, ["nscf_input", "pdos_input"] if is_input else ["nscf_output"])
 
         else:
             if is_input:
@@ -142,7 +151,7 @@ def build_file_paths(
     Args:
         project_dir (str): Path to the project directory.
         compound_name (str): Name of the compound.
-        config (dict): Configuration dictionary.
+        config (ProjectConfig): Project configuration object containing directory structure and file patterns.
         is_input (bool): Whether to build paths for input files.
         include_stress (bool): Whether to include stress analysis.
         stress_amounts (list, optional): List of strain amounts. Defaults to None.
@@ -151,8 +160,8 @@ def build_file_paths(
         dict: Structured file paths for the calculations.
     """
     if is_input:
-        dir_structure = config["directory_structure"]
-        file_patterns = config["file_patterns"]["input"]
+        dir_structure = config.directory_structure
+        file_patterns = config.file_patterns.input
         calculation_dirs = {calculation: os.path.join(project_dir, path) for calculation, path in dir_structure.items()}
         input_file_paths = {calculation: {} for calculation in dir_structure.keys()}
         add_paths_for_directories(calculation_dirs, compound_name, file_patterns, input_file_paths, is_input,
@@ -160,11 +169,14 @@ def build_file_paths(
 
         paths = {key: value for key, value in input_file_paths.items() if value}
         structured_paths = {
+            "relax_input_paths": [],
             "vc_relax_input_paths": [],
             "scf_input_paths": [],
             "pw_bands_input_paths": [],
             "kpdos_input_paths": [],
             "bands_input_paths": [],
+            "nscf_input_paths": [],
+            "pdos_input_paths": [],
             **(
                 {
                     "nscf_wannier_input_paths": [],
@@ -175,9 +187,16 @@ def build_file_paths(
         }
 
         for key, value in paths.items():
+
+            if key in ["pseudo", "pseudo_rel"]:
+                continue # Skip pseudopotential directories
+
             if key in ["scf", "scf_soc"] and not (include_stress and "soc" in key):
-                for path_type in ["vc_relax_input", "scf_input"]:
-                    structured_paths[f"{path_type}_paths"].append(value[path_type][0])
+                for path_type in [ "relax_input", "vc_relax_input", "scf_input"]:
+                    if not value[path_type]:
+                        print(f"Warning: No {path_type} found in {key} directory.")
+                    else:
+                        structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
             elif key == "strain" and include_stress:
 
@@ -185,19 +204,29 @@ def build_file_paths(
                     for path_type in ["pw_bands_input", "kpdos_input", "bands_input"]:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][i])
 
+            elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
+                for path_type in ["nscf_input", "pdos_input"]:
+                    if not value[path_type]:
+                        print(f"Warning: No {path_type} found in {key} directory.")
+                    else:
+                        structured_paths[f"{path_type}_paths"].append(value[path_type][0])
+
             elif (not (include_stress and "soc" in key)) and key not in ["wannier", "wannier_soc"]:
                 for path_type in ["pw_bands_input", "kpdos_input", "bands_input"]:
                     structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
             elif key in ["wannier", "wannier_soc"] and not include_stress:
                 for path_type in ["nscf_wannier_input", "pw2wan_input", "wannier_input"]:
-                    structured_paths[f"{path_type}_paths"].append(value[path_type][0])
+                    if not value[path_type]:
+                        print(f"Warning: No {path_type} found in {key} directory.")
+                    else:
+                        structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
         return structured_paths
 
     else:
-        dir_structure = config["directory_structure"]
-        file_patterns = config["file_patterns"]["output"]
+        dir_structure = config.directory_structure
+        file_patterns = config.file_patterns.output
         calculation_dirs = {calculation: os.path.join(project_dir, path) for calculation, path in dir_structure.items()}
         output_file_paths = {calculation: {} for calculation in dir_structure.keys()}
         add_paths_for_directories(calculation_dirs, compound_name, file_patterns, output_file_paths, is_input,
@@ -400,7 +429,7 @@ if __name__ == "__main__":
 
         # Checking if all required files exist
         failure = False
-        for paths in list(calculation["paths"].values())[:-1]:
+        for paths in list(calculation["paths"].values()):
             for path in paths:
                 if not os.path.exists(path):
                     print(f"path '{path}' does not exist!")
