@@ -36,9 +36,9 @@ def get_poscar_data(poscar_file):
     counter = 0
     for match in coordinates_matches:
         if counter < 3:
-            lattice_vectors.append(f"{match.group(1)}  {match.group(2)}  {match.group(3)}")
+            lattice_vectors.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
         else:
-            atomic_positions.append(f"{match.group(1)}  {match.group(2)}  {match.group(3)}")
+            atomic_positions.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
         counter += 1
 
     return lattice_vectors, atomic_positions
