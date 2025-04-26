@@ -1,0 +1,401 @@
+"""Module to generate input files for Quantum ESPRESSO calculations.
+
+This module provides functions to generate various sections of input files
+required for Quantum ESPRESSO calculations. It includes functionality for
+creating sections such as CONTROL, SYSTEM, ELECTRONS, ATOMIC_SPECIES,
+ATOMIC_POSITIONS, CELL_PARAMETERS, and K_POINTS. Additionally, it provides
+utilities for retrieving atomic weights from a database and generating the
+complete input file.
+
+The module is designed to handle both relativistic and non-relativistic
+calculations and supports flexible configuration of input parameters.
+"""
+
+import os
+from sys import argv
+import sqlite3
+from subprocess import run, CalledProcessError
+from file_parser import get_poscar_data
+from init_project import initialize_project
+from input_handler import get_strain_amounts, get_pseudopotential_files
+from path_handler import validate_command_line_args
+
+
+class InputGenerationError(Exception):
+    """Custom exception for input file generation errors."""
+    pass
+
+
+def get_atomic_weights(element_names):
+    """
+    Retrieves the atomic weights for the given element names.
+
+    Args:
+        element_names (list): List of element names.
+
+    Returns:
+        list: List of atomic weights corresponding to the element names.
+    """
+    if not element_names:
+        raise ValueError("Element names list cannot be empty.")
+    try:
+        conn = sqlite3.connect("elements.db")
+        cursor = conn.cursor()
+        atomic_weights = []
+
+        for element in element_names:
+            cursor.execute("""
+            SELECT atomic_weight FROM elements WHERE symbol=?;""", (element,))
+            result = cursor.fetchone()
+            atomic_weights.append(result[0] if result else None)
+
+        return atomic_weights
+    except sqlite3.Error as e:
+        raise InputGenerationError(f"Database error: {str(e)}")
+
+    finally:
+        if conn:
+            conn.close()
+
+def generate_control_section(
+        calculation_type,
+        pseudo_dir,
+        project_dir,
+        compound_name,
+        *,
+        etot_conv_thr=1e-8,
+        forc_conv_thr=1e-6,
+        relativistic=False,
+):
+    """
+    Generates the &CONTROL section of the input file.
+
+    Args:
+        calculation_type (str): The type of calculation (e.g., 'vc-relax', 'scf').
+        pseudo_dir (str): Path to the pseudopotential directory.
+        project_dir (str): Path to the project directory.
+        compound_name (str): Name of the compound.
+        relativistic (bool, optional): Whether the calculation is relativistic.
+                                     Defaults to False.
+
+    Returns:
+        str: The &CONTROL section of the input file.
+    """
+
+    pseudo_dir_path = os.path.join(
+        "../../" if relativistic else "../", os.path.relpath(pseudo_dir, project_dir))
+
+    return f"""&CONTROL
+    calculation      = '{calculation_type}'
+    outdir           = './out'
+    pseudo_dir       = '{pseudo_dir_path}'
+    prefix           = '{compound_name}'
+    verbosity        = 'high'
+    etot_conv_thr    = {etot_conv_thr}
+    forc_conv_thr    = {forc_conv_thr}
+    tprnfor          = .true.
+    tstress          = .true.
+/
+"""
+
+
+def generate_system_section(
+        number_of_atoms,
+        atom_types,
+        *,
+        ecutwfc=50,
+        ecutrho=500,
+        number_of_bands=None,
+        relativistic=False,
+):
+    """
+    Generates the &SYSTEM section of the input file.
+
+    Args:
+        number_of_atoms (int): The number of atoms in the system.
+        atom_types (int): The number of distinct atom types.
+        number_of_bands (int, optional): The number of bands. Required for NSCF and Bands calculations.
+                                        Defaults to None.
+        relativistic (bool, optional): Whether the calculation is relativistic.
+                                     Defaults to False.
+
+    Returns:
+        str: The &SYSTEM section of the input file.
+    """
+
+    system_section = f"""&SYSTEM
+    ibrav            = 0
+    nat              = {number_of_atoms}
+    ntyp             = {atom_types}
+    ecutwfc          = {ecutwfc}
+    ecutrho          = {ecutrho}
+"""
+
+    if number_of_bands is not None:
+        system_section += f"    nbnd             = {number_of_bands}\n"
+    if relativistic:
+        system_section += """    lspinorb         = .true.
+    noncolin         = .true.
+/
+"""
+    else:
+        system_section += "/\n"
+
+    return system_section
+
+
+def generate_electrons_section(
+        *, relativistic=False, conv_thr=1e-9, electron_maxstep=500
+):
+    """
+    Generates the &ELECTRONS section of the input file.
+
+    Args:
+        relativistic (bool, optional): Whether the calculation is relativistic.
+                             Defaults to False.
+        conv_thr (float): The convergence threshold for the electronic self-consistent field.
+        electron_maxstep (int): The maximum number of electronic self-consistent field iterations.
+
+
+    Returns:
+        str: The &ELECTRONS section of the input file.
+    """
+
+    electrons_section = f"""&ELECTRONS
+    conv_thr         = {conv_thr}
+    electron_maxstep = {electron_maxstep}
+"""
+
+    if relativistic:
+        electrons_section += """    mixing_beta      = 0.4
+    startingpot      = 'file'
+/
+"""
+        return electrons_section
+
+    else:
+        electrons_section += "/\n"
+        return electrons_section
+
+
+def generate_atomic_species_section(element_names, pseudo_list, atomic_weights):
+    """
+    Generates the ATOMIC_SPECIES section of the input file.
+
+    Args:
+        element_names (list): List of element names.
+        pseudo_list (dict): Dictionary of element names with their corresponding pseudopotential files.
+
+    Returns:
+        str: The ATOMIC_SPECIES section of the input file.
+    """
+
+    atomic_species_section = "ATOMIC_SPECIES\n"
+    for element, weight, pseudo in zip(element_names, atomic_weights, pseudo_list.values()):
+        atomic_species_section += f"{element:<2}   {weight:>8.4f}    {pseudo}\n"
+
+    return atomic_species_section
+
+
+def generate_atomic_positions_section(atomic_labels, atomic_positions):
+    """
+    Generates the ATOMIC_POSITIONS section of the input file.
+
+    Args:
+        atomic_labels (list): List of atomic labels.
+        atomic_positions (list): List of atomic positions.
+
+    Returns:
+        str: The ATOMIC_POSITIONS section of the input file.
+    """
+
+    atomic_positions_section = "ATOMIC_POSITIONS crystal\n"
+    for element, position in zip(atomic_labels, atomic_positions):
+        atomic_positions_section += f"{element:<2}    {position}\n"
+
+    return atomic_positions_section
+
+
+def generate_cell_parameters_section(lattice_vectors):
+    """
+    Generates the CELL_PARAMETERS section of the input file.
+
+    Args:
+        lattice_vectors (list): List of lattice vectors.
+
+    Returns:
+        str: The CELL_PARAMETERS section of the input file.
+    """
+
+    cell_parameters_section = "CELL_PARAMETERS angstrom\n"
+    for vector in lattice_vectors:
+        cell_parameters_section += f"    {vector}\n"
+
+    return cell_parameters_section
+
+
+def generate_k_points_section(calculation_type, k_mesh_density):
+    """
+    Generates the K_POINTS section of the input file.
+
+    Args:
+        calculation_type (str): The calculation type (e.g., 'scf', 'bands').
+        k_mesh_density (tuple): The K-point mesh density.
+
+    Returns
+        str: The K_POINTS section of the input file.
+    """
+    valid_calc_types = ("vc-relax", "scf", "bands", "nscf")
+
+    if calculation_type not in valid_calc_types:
+        raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
+                         f"Valid types are: {', '.join(valid_calc_types)}")
+
+    if len(k_mesh_density) != 3:
+        raise ValueError("k_mesh_density must be a tuple of three integers.")
+
+    if calculation_type in ["vc-relax", "scf"]:
+        k_points_section = "K_POINTS automatic\n"
+        k_points_section += f" {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} 0 0 0\n"
+
+        return k_points_section
+    elif calculation_type == "bands":
+        k_points_section = """K_POINTS crystal_b
+4
+    0.0000000000    0.0000000000    0.0000000000    120 ! Gamma
+    0.5000000000    0.0000000000    0.0000000000    120 ! M
+    0.3333333333    0.3333333333    0.0000000000    120 ! K
+    0.0000000000    0.0000000000    0.0000000000      0 ! Gamma
+"""
+        return k_points_section
+
+    elif calculation_type == "nscf":
+        is_wannier = input("Is this a wannier calculation? (y/n): ").strip().lower()
+
+        if is_wannier not in ["y", "n"]:
+            raise ValueError("Invalid input. Please enter 'y' for yes or 'n' for no.")
+
+        if is_wannier == "n":
+            k_points_section = "K_POINTS automatic\n"
+            k_points_section += f" {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} 0 0 0\n"
+
+            return k_points_section
+
+        else:
+            try:
+                k_points_section = run(f"./kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
+                                       shell=True, check=True, capture_output=True).stdout.decode("utf-8")
+                return k_points_section
+            except CalledProcessError as e:
+                raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
+
+
+def generate_input_file(calculation_type,
+                        project,
+                        atomic_weights,
+                        pseudo_list,
+                        atomic_positions,
+                        lattice_vectors,
+                        relativistic=False,
+                        rel_pseudo_list=None):
+    """
+    Generates the complete input file for Quantum ESPRESSO.
+
+    Args:
+        calculation_type (str): The type of calculation (e.g., 'vc-relax', 'scf').
+        project (ProjectSetup): Project setup object containing project information.
+        atomic_weights (list): List of atomic weights.
+        pseudo_list (list): List of pseudopotential files.
+        atomic_positions (list): List of atomic positions.
+        lattice_vectors (list): List of lattice vectors.
+        relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
+
+    Returns:
+        str: The complete input file for Quantum ESPRESSO.
+    """
+    input_file_content = generate_control_section(calculation_type,
+                                                  project.pseudo_dir
+                                                  if not relativistic
+                                                  else project.rel_pseudo_dir,
+                                                  project.project_dir,
+                                                  project.compound_name,
+                                                  relativistic=relativistic)
+    if calculation_type in ["nscf", "bands"]:
+        while True:
+            try:
+                number_of_bands = int(
+                    input(f"Enter the number of bands for {calculation_type}: ")
+                )
+                if number_of_bands <= 0:
+                    raise ValueError("Number of bands must be a positive integer.")
+                input_file_content += generate_system_section(project.compound_data.number_of_atoms, project.compound_data.atom_types,
+                                                          number_of_bands=number_of_bands, relativistic=relativistic)
+                break
+            except ValueError as e:
+                print("Error in generating SYSTEM section:", str(e))
+                continue
+    else:
+        input_file_content += generate_system_section(project.compound_data.number_of_atoms,
+                                                      project.compound_data.atom_types, relativistic=relativistic)
+
+    input_file_content += generate_electrons_section(relativistic=relativistic)
+    input_file_content += generate_atomic_species_section(project.compound_data.element_names,
+                                                          rel_pseudo_list if relativistic else pseudo_list, atomic_weights)
+
+    input_file_content += generate_atomic_positions_section(project.compound_data.atomic_labels, atomic_positions)
+    input_file_content += generate_cell_parameters_section(lattice_vectors)
+
+    while True:
+        try:
+            k_mesh_density = tuple(
+                        map(
+                            int,
+                            input(
+                                f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type}: "
+                            ).split(),
+                        )
+                    )
+
+            input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
+
+            return input_file_content
+        except ValueError as e:
+            print("Error in generating K_POINTS section:", str(e))
+            continue
+        except InputGenerationError as e:
+            print("Fatal error in generating K_POINTS section:", str(e))
+            exit(1)
+
+if __name__ == "__main__":
+    if len(argv) < 3:
+        print("Usage: python script.py <compound_name> <poscar_file>")
+        exit(1)
+
+    # Validate command-line arguments for input file generation
+    compound_name, poscar_file = validate_command_line_args(argv)
+
+    # Get the list of strain amounts for input files
+    stress_amounts = get_strain_amounts(is_input=True)
+    include_stress = True if stress_amounts else False
+
+    project = initialize_project(compound_name, include_stress, stress_amounts)
+
+    pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
+                                            project.pseudo_dir, relativistic=True, rel_pseudo_path=project.rel_pseudo_dir
+                                            )
+
+    atomic_weights = get_atomic_weights(project.compound_data.element_names)
+    lattice_vectors, atomic_positions = get_poscar_data(poscar_file)
+
+    scf_input = generate_input_file(
+        calculation_type="nscf",
+        project = project,
+        atomic_weights=atomic_weights,
+        pseudo_list=pseudo_list,
+        atomic_positions=atomic_positions,
+        lattice_vectors=lattice_vectors,
+        relativistic=True,
+        rel_pseudo_list=rel_pseudo_list
+    )
+
+    print(scf_input)
