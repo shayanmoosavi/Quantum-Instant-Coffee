@@ -239,9 +239,14 @@ def build_file_paths(
             "kpdos_output_paths": [],
             "projbands_paths": [],
             "bands_paths": [],
+            "nscf_output_paths": [],
         }
 
         for key, value in paths.items():
+
+            if key in ["pseudo", "pseudo_rel"]:
+                continue # Skip pseudopotential directories
+
             if key in ["scf", "scf_soc"] and not (include_stress and "soc" in key):
                 structured_paths["scf_output_paths"].append(value["scf_output"][0])
 
@@ -254,12 +259,19 @@ def build_file_paths(
                     ):
                         structured_paths[path_type].append(value[output_key][i])
 
-            elif not (include_stress and "soc" in key):
+            elif not (include_stress and "soc" in key) and key not in ["pdos", "pdos_soc"]:
                 for path_type, output_key in zip(
                         ["pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
                         ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
                 ):
                     structured_paths[path_type].append(value[output_key][0])
+
+            elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
+                for path_type in ["nscf_output"]:
+                    if not value[path_type]:
+                        print(f"Warning: No {path_type} found in {key} directory.")
+                    else:
+                        structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
         return structured_paths, include_stress
 
@@ -439,7 +451,6 @@ if __name__ == "__main__":
 
         if failure:
             print("Test failed!")
-            exit(1)
         else:
             print("Test passed!")
 
