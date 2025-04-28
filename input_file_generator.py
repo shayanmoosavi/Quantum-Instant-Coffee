@@ -445,6 +445,80 @@ def generate_bands_input_file(compound_name):
 /"""
 
 
+def write_input_files(project, skip_soc = False):
+    """
+    Write generated input file templates to their respective directories.
+
+    Args:
+        project (ProjectSetup): ProjectSetup object containing project information
+        skip_soc (bool): Whether to write SOC files or not
+    """
+
+    compound_name = project.compound_name
+
+    pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
+                                                             project.pseudo_dir, relativistic=True,
+                                                             rel_pseudo_path=project.rel_pseudo_dir
+                                                             )
+
+    atomic_weights = get_atomic_weights(project.compound_data.element_names)
+    lattice_vectors, atomic_positions = get_poscar_data(project.poscar_file)
+
+    # Map input patterns to their generator functions
+    generator_map = {
+        "relax_input": lambda rel: generate_pw_input_file("relax", project, atomic_weights,
+                                                            pseudo_list, atomic_positions, lattice_vectors,
+                                                          relativistic=rel, rel_pseudo_list=rel_pseudo_list if rel else None),
+        "vc_relax_input": lambda rel: generate_pw_input_file("vc-relax", project, atomic_weights,
+                                                             pseudo_list, atomic_positions, lattice_vectors,
+                                                             relativistic=rel,
+                                                             rel_pseudo_list=rel_pseudo_list if rel else None),
+        "scf_input": lambda rel: generate_pw_input_file("scf", project, atomic_weights,
+                                                        pseudo_list, atomic_positions, lattice_vectors,
+                                                        relativistic=rel,
+                                                        rel_pseudo_list=rel_pseudo_list if rel else None),
+        "nscf_input": lambda rel: generate_pw_input_file("nscf", project, atomic_weights,
+                                                         pseudo_list, atomic_positions, lattice_vectors,
+                                                         relativistic=rel,
+                                                         rel_pseudo_list=rel_pseudo_list if rel else None),
+        "pw_bands_input": lambda rel: generate_pw_input_file("bands", project, atomic_weights,
+                                                             pseudo_list, atomic_positions, lattice_vectors,
+                                                             relativistic=rel,
+                                                             rel_pseudo_list=rel_pseudo_list if rel else None),
+        "pdos_input": lambda _: generate_pdos_input_file(compound_name),
+        "kpdos_input": lambda _: generate_kpdos_input_file(compound_name),
+        "bands_input": lambda _: generate_bands_input_file(compound_name),
+        "nscf_wannier_input": lambda rel: generate_pw_input_file("nscf", project, atomic_weights,
+                                                                 rel_pseudo_list if rel else pseudo_list,
+                                                                 atomic_positions, lattice_vectors, relativistic=rel)
+    }
+
+    for key, paths in project.input_paths.items():
+        input_type = key.replace("_paths", "")
+        if input_type in generator_map.keys():
+
+            # Generate the input files using the appropriate generator function
+            if not project.include_stress:
+                for path, relativistic in zip(paths, [False, True]):
+                    file_name = path.split("/")[-1]
+                    if "_soc" in file_name and skip_soc:
+                        print(f"Skipping SOC file generation for {file_name}", flush=True)
+                        continue
+                    input_src = generator_map[input_type](relativistic)
+                    with open(path, "w") as file:
+                        file.write(input_src)
+                    print(f"Wrote {file_name} at:\n    {path}", flush=True)
+            else:
+                for path in paths:
+                    file_name = path.split("/")[-1]
+                    input_src = generator_map[input_type](False)
+                    with open(path, "w") as file:
+                        file.write(input_src)
+                    print(f"Wrote {file_name} at:\n    {path}", flush=True)
+
+    print("\nInput files have been generated successfully.")
+
+
 if __name__ == "__main__":
     """
     Main entry point for the script.
