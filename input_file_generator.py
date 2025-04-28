@@ -17,8 +17,7 @@ import sqlite3
 from subprocess import run, CalledProcessError
 from file_parser import get_poscar_data
 from init_project import initialize_project
-from input_handler import get_strain_amounts, get_pseudopotential_files
-from path_handler import validate_command_line_args
+from input_handler import get_pseudopotential_files
 
 
 class InputGenerationError(Exception):
@@ -75,6 +74,8 @@ def generate_control_section(
         pseudo_dir (str): Path to the pseudopotential directory.
         project_dir (str): Path to the project directory.
         compound_name (str): Name of the compound.
+        etot_conv_thr (float, optional): Energy convergence threshold. Defaults to 1e-8.
+        forc_conv_thr (float, optional): Force convergence threshold. Defaults to 1e-6.
         relativistic (bool, optional): Whether the calculation is relativistic.
                                      Defaults to False.
 
@@ -114,6 +115,8 @@ def generate_system_section(
     Args:
         number_of_atoms (int): The number of atoms in the system.
         atom_types (int): The number of distinct atom types.
+        ecutwfc (int, optional): Plane-wave cutoff energy in Ry. Defaults to 50.
+        ecutrho (int, optional): Charge density cutoff energy in Ry. Defaults to 500.
         number_of_bands (int, optional): The number of bands. Required for NSCF and Bands calculations.
                                         Defaults to None.
         relativistic (bool, optional): Whether the calculation is relativistic.
@@ -245,14 +248,14 @@ def generate_k_points_section(calculation_type, k_mesh_density):
     Returns
         str: The K_POINTS section of the input file.
     """
-    valid_calc_types = ("vc-relax", "scf", "bands", "nscf")
+    valid_calc_types = ("relax", "vc-relax", "scf", "bands", "nscf")
 
     if calculation_type not in valid_calc_types:
         raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
                          f"Valid types are: {', '.join(valid_calc_types)}")
 
     if len(k_mesh_density) != 3:
-        raise ValueError("k_mesh_density must be a tuple of three integers.")
+        raise ValueError("k_mesh_density must be three integers separated by spaces.")
 
     if calculation_type in ["vc-relax", "scf"]:
         k_points_section = "K_POINTS automatic\n"
@@ -290,16 +293,16 @@ def generate_k_points_section(calculation_type, k_mesh_density):
                 raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
 
 
-def generate_input_file(calculation_type,
-                        project,
-                        atomic_weights,
-                        pseudo_list,
-                        atomic_positions,
-                        lattice_vectors,
-                        relativistic=False,
-                        rel_pseudo_list=None):
+def generate_pw_input_file(calculation_type,
+                           project,
+                           atomic_weights,
+                           pseudo_list,
+                           atomic_positions,
+                           lattice_vectors,
+                           relativistic=False,
+                           rel_pseudo_list=None):
     """
-    Generates the complete input file for Quantum ESPRESSO.
+    Generates the complete pw.x input file for Quantum ESPRESSO.
 
     Args:
         calculation_type (str): The type of calculation (e.g., 'vc-relax', 'scf').
@@ -339,6 +342,12 @@ def generate_input_file(calculation_type,
                                                       project.compound_data.atom_types, relativistic=relativistic)
 
     input_file_content += generate_electrons_section(relativistic=relativistic)
+    if calculation_type in ["relax", "vc-relax"]:
+        input_file_content += """&IONS
+/
+&CELL
+    cell_dofree      = 'ibrav'
+/"""
     input_file_content += generate_atomic_species_section(project.compound_data.element_names,
                                                           rel_pseudo_list if relativistic else pseudo_list, atomic_weights)
 
@@ -366,28 +375,92 @@ def generate_input_file(calculation_type,
             print("Fatal error in generating K_POINTS section:", str(e))
             exit(1)
 
+
+def generate_pdos_input_file(compound_name, *, delta=0.01):
+    """
+    Generates the input file for projected density of states (PDOS) calculations.
+
+    Args:
+        compound_name (str): The name of the compound.
+        delta (float, optional): The energy resolution for the PDOS calculation. Defaults to 0.01.
+
+    Returns:
+        str: The formatted PDOS input file content.
+    """
+    return f"""&PROJWFC
+    outdir          = './out'
+    prefix          = '{compound_name}'
+    filpdos         = '{compound_name}'
+    DeltaE          = {delta}
+ /"""
+
+
+def generate_kpdos_input_file(compound_name, *, delta=0.01):
+    """
+    Generates the input file for k-resolved projected density of states (k-PDOS) calculations.
+
+    Args:
+        compound_name (str): The name of the compound.
+        delta (float, optional): The energy resolution for the k-PDOS calculation. Defaults to 0.01.
+
+    Returns:
+        str: The formatted k-PDOS input file content.
+    """
+    return f"""&PROJWFC
+    outdir       = './out'
+    prefix       = '{compound_name}'
+    DeltaE       = {delta}
+    kresolveddos = .true.
+    filpdos      = '{compound_name}.k'
+    lsym         = .false.
+    filproj      = '{compound_name}.proj.dat'
+/"""
+
+
+def generate_bands_input_file(compound_name):
+    """
+    Generates the input file for band structure calculations.
+
+    Args:
+        compound_name (str): The name of the compound.
+
+    Returns:
+        str: The formatted band structure input file content.
+    """
+    return f"""&BANDS
+    outdir       = './out'
+    prefix       = '{compound_name}'
+    filband      = '{compound_name}.bands'
+    lsym         = .true.
+    filband      = '{compound_name}.bands'
+/"""
+
+
 if __name__ == "__main__":
-    if len(argv) < 3:
-        print("Usage: python script.py <compound_name> <poscar_file>")
-        exit(1)
+    """
+    Main entry point for the script.
 
-    # Validate command-line arguments for input file generation
-    compound_name, poscar_file = validate_command_line_args(argv)
+    This block initializes the project, retrieves necessary data, and generates
+    the NSCF input file for Quantum ESPRESSO calculations. It performs the following steps:
+    1. Determines if the script is called for input file generation.
+    2. Initializes the project setup using command-line arguments.
+    3. Retrieves pseudopotential files for the specified elements.
+    4. Fetches atomic weights and POSCAR data (lattice vectors and atomic positions).
+    5. Generates the NSCF input file using the provided data and configuration.
+    6. Prints the generated NSCF input file content.
+    """
 
-    # Get the list of strain amounts for input files
-    stress_amounts = get_strain_amounts(is_input=True)
-    include_stress = True if stress_amounts else False
-
-    project = initialize_project(compound_name, include_stress, stress_amounts)
+    is_input = len(argv) == 3
+    project = initialize_project(argv, is_input)
 
     pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
                                             project.pseudo_dir, relativistic=True, rel_pseudo_path=project.rel_pseudo_dir
                                             )
 
     atomic_weights = get_atomic_weights(project.compound_data.element_names)
-    lattice_vectors, atomic_positions = get_poscar_data(poscar_file)
+    lattice_vectors, atomic_positions = get_poscar_data(project.poscar_file)
 
-    scf_input = generate_input_file(
+    nscf_input = generate_pw_input_file(
         calculation_type="nscf",
         project = project,
         atomic_weights=atomic_weights,
@@ -398,4 +471,4 @@ if __name__ == "__main__":
         rel_pseudo_list=rel_pseudo_list
     )
 
-    print(scf_input)
+    print(nscf_input)
