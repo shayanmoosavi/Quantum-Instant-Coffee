@@ -5,10 +5,8 @@ It includes functionality for validating command-line arguments, creating direct
 and building structured file paths for input and output files.
 """
 
-import os
 from sys import argv
-from config import load_config
-from input_handler import get_pbands_type, get_strain_amounts
+from project_setup import *
 
 
 def validate_command_line_args(args, is_for_plot=False):
@@ -340,80 +338,6 @@ def create_directories(project_dir, dir_structure, include_stress=False, stress_
         return []  # Return an empty list to indicate failure
 
 
-def prepare_paths(is_input=False):
-    """
-    Prepare paths for the Quantum ESPRESSO calculations.
-
-    Args:
-    is_input (bool): Whether to prepare paths for input files. Defaults to False.
-
-    Returns:
-        dict: A dictionary containing the prepared paths and related metadata.
-    """
-    print("Initializing...\n")
-
-    if not is_input:
-
-        # Load configuration for output file paths
-        config = load_config()
-
-        # Validate command-line arguments for plotting
-        compound_name = validate_command_line_args(argv, is_for_plot=True)
-
-        # Get the project directory for the compound
-        project_dir = get_project_directory(compound_name)
-
-        # Determine if strain analysis is included
-        include_stress = get_pbands_type()
-
-        # Get the list of strain amounts if strain analysis is included
-        stress_amounts = get_strain_amounts() if include_stress else None
-
-        # Build file paths for output files
-        paths, skip_soc = build_file_paths(
-            project_dir, compound_name, config, is_input, include_stress, stress_amounts
-        )
-
-        # Return the prepared paths and metadata
-        return {
-            "compound_name": compound_name,
-            "project_dir": project_dir,
-            "include_stress": include_stress,
-            "paths": paths,
-            "skip_soc": skip_soc,
-            "stress_amounts": stress_amounts,
-        }
-
-    else:
-
-        # Load configuration for input file paths
-        config = load_config()
-
-        # Validate command-line arguments for input file generation
-        compound_name, poscar_file = validate_command_line_args(argv)
-
-        # Get the project directory for the compound
-        project_dir = get_project_directory(compound_name)
-
-        # Get the list of strain amounts for input files
-        stress_amounts = get_strain_amounts(is_input)
-        include_stress = True if stress_amounts else False
-
-        # Build file paths for input files
-        paths = build_file_paths(
-            project_dir, compound_name, config, is_input, include_stress, stress_amounts
-        )
-
-        # Return the prepared paths and metadata
-        return {
-            "compound_name": compound_name,
-            "project_dir": project_dir,
-            "include_stress": include_stress,
-            "paths": paths,
-            "stress_amounts": stress_amounts,
-        }
-
-
 # Test to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -421,45 +345,39 @@ if __name__ == "__main__":
     
     Validates the functionality of the `prepare_paths` function and checks if all required files exist.
     """
+    is_input = len(argv) == 3
 
-    if len(argv) == 3:
+    try:
+        # Initialize and prepare project
+        project = initialize_project(argv, is_input)
 
-        # Preparing paths for input files
-        calculation = prepare_paths(is_input=True)
-        print("Test information for debugging: \n")
-        for key, value in calculation.items():
+        # Print summary
+        print("\nInitialization complete. Project information:")
+        print(f"  Compound name: {project.compound_name}")
+        print(f"  Project directory: {project.project_dir}")
+        print(f"  Include stress: {project.include_stress}")
+        if project.include_stress:
+            print(f"  Stress amounts: {project.stress_amounts}")
+        print(f"  Pseudopotential directory: {project.pseudo_dir}")
+        print(f"  Relativistic Pseudopotential directory: {project.rel_pseudo_dir}")
+        if is_input:
+            print(f"  Calculation directories: {project.calculation_dirs}")
+        print(f"  Elements: {project.compound_data.element_names}")
+        print(f"  Atomic labels: {project.compound_data.atomic_labels}")
 
-            if key == "paths":
-                for path_type, paths in value.items():
-                    print(f"{path_type}: {paths}")
-            else:
-                print(f"{key}: {value}")
-    else:
-
-        # Preparing paths for output files
-        calculation = prepare_paths()
-
-        # Checking if all required files exist
-        failure = False
-        for paths in list(calculation["paths"].values()):
-            for path in paths:
-                if not os.path.exists(path):
-                    print(f"path '{path}' does not exist!")
-                    failure = True
-                else:
-                    print(f"path '{path}' exists.")
-
-        if failure:
-            print("Test failed!")
+        if is_input:
+            print("\nInput paths:")
+            for path_type, paths in project.input_paths.items():
+                print(f"  {path_type}: {paths}")
         else:
-            print("Test passed!")
+            print("\nOutput paths:")
+            for path_type, paths in project.output_paths.items():
+                print(f"  {path_type}: {paths}")
 
-        print("Test information for debugging: \n")
+    except ProjectInitializationError as e:
+        print(f"Error during project initialization: {str(e)}")
+        exit(1)
 
-        print(f"Compound Name: {calculation['compound_name']}")
-        print(f"Project Directory: {calculation['project_dir']}")
-        print(f"Include Stress: {calculation['include_stress']}")
-        print(f"Stress Amounts: {calculation['stress_amounts']}")
-        print("\nDirectory Structure:")
-        for key, value in calculation["paths"].items():
-            print(f"{key}: {value}")
+    except Exception as e:
+        print(f"Unexpected Error: {str(e)}")
+        exit(1)
