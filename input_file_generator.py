@@ -332,7 +332,7 @@ def generate_pw_input_file(calculation_type,
         while True:
             try:
                 number_of_bands = int(
-                    input(f"Enter the number of bands for {calculation_type}: ")
+                    input(f"Enter the number of bands for {calculation_type + ('_soc' if relativistic else '')}: ")
                 )
                 if number_of_bands <= 0:
                     raise ValueError("Number of bands must be a positive integer.")
@@ -355,7 +355,8 @@ def generate_pw_input_file(calculation_type,
 /
 """
     input_file_content += generate_atomic_species_section(project.compound_data.element_names,
-                                                          rel_pseudo_list if relativistic else pseudo_list, atomic_weights)
+                                                          rel_pseudo_list if relativistic else pseudo_list,
+                                                          atomic_weights)
     input_file_content += generate_atomic_positions_section(project.compound_data.atomic_labels, atomic_positions)
     input_file_content += generate_cell_parameters_section(lattice_vectors)
 
@@ -366,7 +367,7 @@ def generate_pw_input_file(calculation_type,
                             map(
                                 int,
                                 input(
-                                    f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type}: "
+                                    f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type + ('_soc' if relativistic else '')}: "
                                 ).split(),
                             )
                         )
