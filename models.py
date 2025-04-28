@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Any
 
 
 @dataclass
@@ -42,6 +42,14 @@ class CompoundData:
             atomic_labels=atomic_labels
         )
 
+@dataclass
+class DFTInfo:
+    """Container for DFT calculation results."""
+    number_of_bands: List[int]
+    fermi_energies: List[float]
+    number_of_atomic_states: List[int]
+    atomic_states_info: List[Dict[str, Any]]
+    spin_orbit_flags: List[str]
 
 @dataclass
 class ProjectSetup:
@@ -54,3 +62,11 @@ class ProjectSetup:
     include_stress: bool
     stress_amounts: Optional[List[str]] = None
     rel_pseudo_dir: Optional[str] = None
+    dft_info: Optional[DFTInfo] = None
+    input_paths: Optional[Dict[str, List[str]]] = None
+    output_paths: Optional[Dict[str, List[str]]] = None
+    skip_soc: bool = False
+
+    def add_dft_info(self, dft_info: DFTInfo) -> None:
+        """Add DFT calculation results to the project setup."""
+        self.dft_info = dft_info
