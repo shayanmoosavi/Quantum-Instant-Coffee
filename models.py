@@ -62,6 +62,7 @@ class ProjectSetup:
     include_stress: bool
     stress_amounts: Optional[List[str]] = None
     rel_pseudo_dir: Optional[str] = None
+    poscar_file: Optional[str] = None
     dft_info: Optional[DFTInfo] = None
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None

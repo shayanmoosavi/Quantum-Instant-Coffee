@@ -92,7 +92,8 @@ def initialize_project(
             include_stress=include_stress,
             stress_amounts=stress_amounts,
             rel_pseudo_dir=os.path.abspath(config.directory_structure["pseudo_rel"]),
-            input_paths=paths
+            input_paths=paths,
+            poscar_file=poscar_file
         )
 
     else:
