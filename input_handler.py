@@ -33,8 +33,12 @@ def select_pseudopotentials(pseudo_files, element_name, relativistic=False):
         print(f"Found the following pseudopotential files for {element_name}:")
         for i, filename in enumerate(pseudo_files):
             print(f"{i + 1}: {filename}")
-        selected_index = int(input("Which one do you want? Enter the number associated with it: ")) - 1
-        return pseudo_files[selected_index]
+        while True:
+            try:
+                selected_index = int(input("Which one do you want? Enter the number associated with it: ")) - 1
+                return pseudo_files[selected_index]
+            except (IndexError, ValueError):
+                print("Invalid selection! Please select a valid number.")
 
 
 def get_pseudopotential_files(element_names,

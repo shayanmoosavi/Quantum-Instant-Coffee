@@ -1,5 +1,3 @@
-
-
 import os
 from models import CompoundData, ProjectSetup
 from config import load_config
