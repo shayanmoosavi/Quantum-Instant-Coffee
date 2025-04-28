@@ -220,7 +220,7 @@ def build_file_paths(
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
-        return structured_paths
+        return {key: value for key, value in structured_paths.items() if value}
 
     else:
         dir_structure = config.directory_structure
@@ -271,7 +271,7 @@ def build_file_paths(
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
-        return structured_paths, include_stress
+        return {key: value for key, value in structured_paths.items() if value}, include_stress
 
 
 def create_directories(project_dir, dir_structure, include_stress=False, stress_amounts=None):
