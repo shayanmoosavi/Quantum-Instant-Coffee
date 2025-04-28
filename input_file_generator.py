@@ -237,7 +237,7 @@ def generate_cell_parameters_section(lattice_vectors):
     return cell_parameters_section
 
 
-def generate_k_points_section(calculation_type, k_mesh_density):
+def generate_k_points_section(calculation_type, k_mesh_density = None):
     """
     Generates the K_POINTS section of the input file.
 
@@ -254,22 +254,18 @@ def generate_k_points_section(calculation_type, k_mesh_density):
         raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
                          f"Valid types are: {', '.join(valid_calc_types)}")
 
-    if len(k_mesh_density) != 3:
-        raise ValueError("k_mesh_density must be three integers separated by spaces.")
+    try:
+        if len(k_mesh_density) != 3:
+            raise ValueError("k_mesh_density must be three integers separated by spaces.")
 
-    if calculation_type in ["vc-relax", "scf"]:
+    except TypeError:
+        if calculation_type != "bands":
+            raise InputGenerationError(f"K-point mesh density cannot be None for {calculation_type} calculation.")
+
+    if calculation_type in ["relax", "vc-relax", "scf"]:
         k_points_section = "K_POINTS automatic\n"
         k_points_section += f" {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} 0 0 0\n"
 
-        return k_points_section
-    elif calculation_type == "bands":
-        k_points_section = """K_POINTS crystal_b
-4
-    0.0000000000    0.0000000000    0.0000000000    120 ! Gamma
-    0.5000000000    0.0000000000    0.0000000000    120 ! M
-    0.3333333333    0.3333333333    0.0000000000    120 ! K
-    0.0000000000    0.0000000000    0.0000000000      0 ! Gamma
-"""
         return k_points_section
 
     elif calculation_type == "nscf":
@@ -292,6 +288,15 @@ def generate_k_points_section(calculation_type, k_mesh_density):
             except CalledProcessError as e:
                 raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
 
+    elif calculation_type == "bands":
+        k_points_section = """K_POINTS crystal_b
+4
+0.0000000000    0.0000000000    0.0000000000    120 ! Gamma
+0.5000000000    0.0000000000    0.0000000000    120 ! M
+0.3333333333    0.3333333333    0.0000000000    120 ! K
+0.0000000000    0.0000000000    0.0000000000      0 ! Gamma
+"""
+        return k_points_section
 
 def generate_pw_input_file(calculation_type,
                            project,
@@ -347,25 +352,28 @@ def generate_pw_input_file(calculation_type,
 /
 &CELL
     cell_dofree      = 'ibrav'
-/"""
+/
+"""
     input_file_content += generate_atomic_species_section(project.compound_data.element_names,
                                                           rel_pseudo_list if relativistic else pseudo_list, atomic_weights)
-
     input_file_content += generate_atomic_positions_section(project.compound_data.atomic_labels, atomic_positions)
     input_file_content += generate_cell_parameters_section(lattice_vectors)
 
     while True:
         try:
-            k_mesh_density = tuple(
-                        map(
-                            int,
-                            input(
-                                f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type}: "
-                            ).split(),
+            if calculation_type != "bands":
+                k_mesh_density = tuple(
+                            map(
+                                int,
+                                input(
+                                    f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type}: "
+                                ).split(),
+                            )
                         )
-                    )
 
-            input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
+                input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
+            else:
+                input_file_content += generate_k_points_section(calculation_type)
 
             return input_file_content
         except ValueError as e:
