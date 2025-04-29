@@ -4,11 +4,14 @@ This module provides functions and classes to extract and process data from Quan
 It includes functionality for handling spin-orbit coupling (SOC), collecting DFT data, and generating projected bands.
 """
 
-from file_parser import *
-from input_handler import get_atomic_states
-from path_handler import prepare_paths
 import os
+from sys import argv
+from file_parser import *
+from init_project import initialize_project
+from input_handler import get_atomic_states
+from models import DFTInfo
 from subprocess import CalledProcessError, run
+from project_setup import ProjectInitializationError
 
 
 class SpinOrbitHandler:
@@ -322,73 +325,77 @@ def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_l
     return projbands_generation_success_list
 
 
-def prepare_dft_info(init_config):
+def prepare_dft_info(project):
     """
     Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
 
     Args:
-        init_config (dict): Initial configuration dictionary containing paths, compound name, and other settings.
+        project (ProjectSetup):
 
     Returns:
-        dict: Updated configuration dictionary with extracted DFT information.
+        ProjectSetup:
     """
-    # Determine which spin_orbit_flag to use
-    if init_config["include_stress"]:
-        # For strain analysis, we need one flag for each strain amount plus the base case
-        spin_orbit_flags = ["" for _ in range(len(init_config["stress_amounts"]) + 1)] if init_config["stress_amounts"] else [""]
-    else:
-        spin_orbit_flags = ["", "_soc"]
 
-    # Extracting band numbers
+    # Determine spin_orbit_flags based on project configuration
+    spin_orbit_flags = (
+        ["" for _ in range(len(project.stress_amounts) + 1)]
+        if project.include_stress
+        else ["", "_soc"]
+    )
+
+    # # Extracting band numbers
     number_of_bands_list = collect_band_numbers(
-        init_config["paths"],
-        init_config["compound_name"],
+        project.output_paths,
+        project.compound_name,
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        project.skip_soc
     )
 
     # Extracting Fermi energies
-    fermi_energy_list = collect_fermi_energies(
-        init_config["paths"],
-        init_config["compound_name"],
+    fermi_energies = collect_fermi_energies(
+        project.output_paths,
+        project.compound_name,
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        project.skip_soc
     )
 
     # Extracting number of atomic states
     number_of_atomic_states_list = collect_number_of_atomic_states(
-        init_config["paths"],
-        init_config["compound_name"],
+        project.output_paths,
+        project.compound_name,
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        project.skip_soc
     )
 
     # Extracting atomic states information
     atomic_states_info_list = collect_atomic_states_info(
-        init_config["paths"],
-        init_config["compound_name"],
+        project.output_paths,
+        project.compound_name,
         spin_orbit_flags,
-        init_config["paths"]["skip_soc"]
+        project.skip_soc
     )
 
-    # Updating configuration
-    init_config["number_of_bands_list"] = number_of_bands_list
-    init_config["fermi_energy_list"] = fermi_energy_list
-    init_config["number_of_atomic_states_list"] = number_of_atomic_states_list
-    init_config["atomic_states_info_list"] = atomic_states_info_list
-    init_config["spin_orbit_flags"] = ["" if flag == "" else "SOC" for flag in spin_orbit_flags]
-
-    projbands_generation_success_list = generate_projected_bands(
-        init_config["paths"],
-        number_of_atomic_states_list,
-        fermi_energy_list
+    dft_info = DFTInfo(
+        number_of_bands=number_of_bands_list,
+        fermi_energies=fermi_energies,
+        number_of_atomic_states=number_of_atomic_states_list,
+        atomic_states_info=atomic_states_info_list,
+        spin_orbit_flags=spin_orbit_flags
     )
 
-    if not all(projbands_generation_success_list):
-        print("Error: Some projbands files were not generated successfully.")
-        exit(1)
+    # Generate projected bands
+    success = generate_projected_bands(
+        project.output_paths,
+        dft_info.number_of_atomic_states,
+        dft_info.fermi_energies
+    )
 
-    return init_config
+    if not all(success):
+        raise ProjectInitializationError("Some projbands files were not generated successfully.")
+
+    # Add DFT info to project
+    project.add_dft_info(dft_info)
+    return project
 
 
 # Test to ensure the module works as expected
@@ -399,16 +406,22 @@ if __name__ == "__main__":
     This script validates that the prepare_dft_info has executed successfully and prints the extracted 
     information if successful.
     """
-    config = prepare_paths()
-    config = prepare_dft_info(config)
+
+    is_input = len(argv) == 3
+
+    project = initialize_project(argv, is_input)
+    project = prepare_dft_info(project)
+
+    # config = prepare_paths()
+    # config = prepare_dft_info(config)
     print("DFT information prepared successfully.\n")
-    if config["include_stress"]:
+    if project.include_stress:
         for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
-                [None] + config["stress_amounts"],
-                config["number_of_bands_list"],
-                config["fermi_energy_list"],
-                config["number_of_atomic_states_list"],
-                config["atomic_states_info_list"]
+                [None] + project.stress_amounts,
+                project.dft_info.number_of_bands,
+                project.dft_info.fermi_energies,
+                project.dft_info.number_of_atomic_states,
+                project.dft_info.atomic_states_info
         ):
             print(f"\nStress amount: {stress_amount}")
             print(f"Number of bands: {number_of_bands}")
@@ -420,10 +433,10 @@ if __name__ == "__main__":
 
     else:
         for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
-                config["number_of_bands_list"],
-                config["fermi_energy_list"],
-                config["number_of_atomic_states_list"],
-                config["atomic_states_info_list"],
+                project.dft_info.number_of_bands,
+                project.dft_info.fermi_energies,
+                project.dft_info.number_of_atomic_states,
+                project.dft_info.atomic_states_info,
                 ["", "(SOC)"]
         ):
             print(f"Number of bands {flag}: {number_of_bands}")

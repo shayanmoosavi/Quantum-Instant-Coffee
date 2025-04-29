@@ -10,6 +10,40 @@ import re
 import json
 
 
+def get_poscar_data(poscar_file):
+    """
+    Reads the POSCAR file and extracts lattice vectors and atomic positions.
+
+    Args:
+        poscar_file (str): The path to the POSCAR file.
+
+    Returns:
+        tuple: A tuple containing:
+            - list: A list of lattice vectors.
+            - list: A list of atomic positions.
+    """
+
+    with open(poscar_file, "r") as file:
+        poscar_file_content = file.read()
+
+    coordinates_regex_pattern = r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
+    coordinates_regex_object = re.compile(coordinates_regex_pattern)
+    coordinates_matches = coordinates_regex_object.finditer(poscar_file_content)
+
+    lattice_vectors = []
+    atomic_positions = []
+
+    counter = 0
+    for match in coordinates_matches:
+        if counter < 3:
+            lattice_vectors.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
+        else:
+            atomic_positions.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
+        counter += 1
+
+    return lattice_vectors, atomic_positions
+
+
 def extract_band_number(file_path, compound_name, flag, atom=None, orbital=None):
     """
     Extract the number of bands from a Quantum ESPRESSO bands calculation output file.

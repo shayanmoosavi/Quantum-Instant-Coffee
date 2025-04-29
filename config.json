@@ -1,0 +1,40 @@
+{
+  "directory_structure": {
+    "scf": "scf",
+    "scf_soc": "spin_orbit/scf",
+    "projected_bands": "projected_bands",
+    "projected_bands_soc": "spin_orbit/projected_bands",
+    "pdos": "pdos",
+    "pdos_soc": "spin_orbit/pdos",
+    "wannier": "wannier",
+    "wannier_soc": "spin_orbit/wannier",
+    "strain": "strain",
+    "pseudo": "../Pseudopotentials",
+    "pseudo_rel": "../Pseudopotentials_rel"
+  },
+  "file_patterns": {
+    "input": {
+      "relax_input": "{compound_name}_relax{flag}.pw.in",
+      "vc_relax_input": "{compound_name}_vc_relax{flag}.pw.in",
+      "scf_input": "{compound_name}_scf{flag}.pw.in",
+      "pw_bands_input": "{compound_name}_bands{flag}.pw.in",
+      "kpdos_input": "{compound_name}{flag}.kpdos.in",
+      "bands_input": "{compound_name}{flag}.bands.in",
+      "nscf_input": "{compound_name}_nscf{flag}.pw.in",
+      "pdos_input": "{compound_name}{flag}.pdos.in",
+      "nscf_wannier_input": "{compound_name}_nscf_wannier{flag}.pw.in",
+      "pw2wan_input": "{compound_name}{flag}.pw2wan.in",
+      "wannier_input": "{compound_name}_wannier{flag}.win"
+    },
+    "output": {
+      "relax_output": "{compound_name}_relax{flag}.pw.out",
+      "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",
+      "scf_output": "{compound_name}_scf{flag}.pw.out",
+      "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
+      "kpdos_output": "{compound_name}{flag}.kpdos.out",
+      "projbands_output": "{compound_name}{flag}.projbands",
+      "bands_gnu": "{compound_name}.bands.gnu",
+      "nscf_output": "{compound_name}_nscf{flag}.pw.out"
+    }
+  }
+}
