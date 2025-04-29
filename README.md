@@ -78,7 +78,8 @@ python compare_bands.py <name-of-the-compound>
 ```
 
 ## 🏅 Acknowledgements
-- `kmesh.pl` and `projwfc_to_bands.awk` scripts are provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
+- `projwfc_to_bands.awk` script provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
+- `kmesh.pl` script provided by [Wannier90](https://wannier.org/)
 - Logo created with [Banner Maker](https://banner.godori.dev/)
 - Badges created with [Shields.io](https://shields.io/)
 - Logo icon provided by [Flaticon](https://www.flaticon.com/)
