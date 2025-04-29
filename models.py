@@ -13,7 +13,7 @@ Classes:
 import re
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
-
+from numpy import ndarray
 
 @dataclass
 class CompoundData:
@@ -92,6 +92,29 @@ class DFTInfo:
     spin_orbit_flags: List[str]
 
 @dataclass
+class BandData:
+    """Container for band structure calculation data.
+
+    Attributes:
+        projbands_data (List[ndarray]): Projected bands data for each calculation
+        k_points_proj (List[ndarray]): K-points for projected bands
+        k_points (List[ndarray]): K-points for regular bands
+        energy_proj (List[ndarray]): Energy values for projected bands
+        energy (List[ndarray]): Energy values for regular bands
+        atomic_projection_weights (List[Dict]): Orbital weights for each calculation
+        atomic_projections (List[str]): List of atomic projections
+        unique_elements (List[str]): List of unique elements in the projections
+    """
+    projbands_data: List[ndarray]
+    k_points_proj: List[ndarray]
+    k_points: List[ndarray]
+    energy_proj: List[ndarray]
+    energy: List[ndarray]
+    atomic_projection_weights: List[Dict]
+    atomic_projections: List[str]
+    unique_elements: List[str]
+
+@dataclass
 class ProjectSetup:
     """Represents the complete project setup.
 
@@ -120,6 +143,7 @@ class ProjectSetup:
     rel_pseudo_dir: Optional[str] = None
     poscar_file: Optional[str] = None
     dft_info: Optional[DFTInfo] = None
+    band_data: Optional[BandData] = None
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None
     skip_soc: bool = False

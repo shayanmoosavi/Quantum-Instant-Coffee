@@ -2,10 +2,11 @@
 
 import re
 import os
+from sys import argv
 import matplotlib.pyplot as plt
 from data_processor import process_band_data
 from dft_info_extractor import prepare_dft_info
-from path_handler import prepare_paths
+from project_setup import initialize_project
 
 
 class PlotConfig:
@@ -377,50 +378,36 @@ class ProjectionDataProcessor:
         return combined_weights
 
 
-def plot_band_structure(updated_config, save_fig=True, test_module=False):
+def plot_band_structure(project, save_fig=True, test_module=False):
     """
     Plot band structure from processed data.
 
     Args:
-        updated_config (dict): Configuration dictionary containing processed data. Expected keys include:
-            - "atomic_projection_weights_info_list" (list): List of atomic projection weights.
-            - "unique_elements_list" (list): List of unique chemical elements.
-            - "compound_name" (str): Name of the compound.
-            - "spin_orbit_flags" (list, optional): Flags indicating spin-orbit coupling for each dataset.
-            - "stress_amounts" (list, optional): List of stress amounts for each dataset.
-            - "include_stress" (bool): Whether to include stress in the plots.
-            - "k_points_list" (list): List of k-point coordinates for each dataset.
-            - "energy_list" (list): List of energy values for each dataset.
-            - "k_points_proj_list" (list): List of k-point coordinates for projected bands.
-            - "energy_proj_list" (list): List of energy values for projected bands.
-            - "number_of_bands_list" (list): List of the number of bands for each dataset.
-            - "project_dir" (str): Directory to save the plots.
+        project (ProjectSetup): Project configuration and data container
         save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
     # Initializing objects for plotting and processing projection data
     plotter = BandPlotter()
     processor = ProjectionDataProcessor(
-        updated_config["atomic_projection_weights_info_list"],
-        updated_config["unique_elements_list"]
+        project.band_data.atomic_projection_weights,
+        project.band_data.unique_elements
     )
 
     # Process projection data into a structured format
     projection_info_list = processor.process_projections()
 
     # Extracting configuration values
-    compound_name = updated_config["compound_name"]
-    spin_orbit_flags = updated_config.get("spin_orbit_flags", [False] * len(updated_config["energy_list"]))
-    stress_amount_list = (["1"] + updated_config["stress_amounts"]) if updated_config["include_stress"] else [
-                                                                                                                 "1"] * len(
-        updated_config["energy_list"])
+    compound_name = project.compound_name
+    spin_orbit_flags = project.dft_info.spin_orbit_flags if project.dft_info.spin_orbit_flags else [False] * len(project.band_data.energy)
+    stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
 
     if test_module:
         # Debug mode: Printing projection information for verification
         print("\nProjection info list prepared for plotting. Orbital weights are not printed:")
         for projection_info, spin_orbit_flag, stress_amount in zip(projection_info_list, spin_orbit_flags,
                                                                    stress_amount_list):
-            if updated_config["include_stress"]:
+            if project.include_stress:
                 print(f"\nStress amount: {(float(stress_amount.replace('_', '.')) * 100):.2f}%")
             else:
                 if spin_orbit_flag:
@@ -437,11 +424,11 @@ def plot_band_structure(updated_config, save_fig=True, test_module=False):
         for (projection_data, k_points, energy, k_points_proj, energy_proj,
              number_of_bands, spin_orbit, stress_amount) in zip(
             projection_info_list,
-            updated_config["k_points_list"],
-            updated_config["energy_list"],
-            updated_config["k_points_proj_list"],
-            updated_config["energy_proj_list"],
-            updated_config["number_of_bands_list"],
+            project.band_data.k_points_list,
+            project.band_data.energy,
+            project.band_data.k_points_proj,
+            project.band_data.energy_proj,
+            project.dft_info.number_of_bands,
             spin_orbit_flags,
             stress_amount_list):
 
@@ -496,16 +483,10 @@ if __name__ == "__main__":
         3. Process band data for plotting.
         4. Call the `plot_band_structure` function to generate plots.
     """
-    config = prepare_paths()
-    config = prepare_dft_info(config)
-    config = process_band_data(
-        config,
-        config["paths"]["projbands_paths"],
-        config["paths"]["bands_paths"],
-        config["number_of_bands_list"],
-        config["fermi_energy_list"],
-        config["project_dir"],
-        config["atomic_states_info_list"],
-        config["atomic_states_info_list"][0].keys()
-    )
-    plot_band_structure(config, save_fig=False, test_module=True)
+    is_input = len(argv) == 3
+
+    project = initialize_project(argv, is_input)
+    prepare_dft_info(project)
+
+    process_band_data(project)
+    plot_band_structure(project, save_fig=False, test_module=True)

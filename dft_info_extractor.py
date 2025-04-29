@@ -410,10 +410,8 @@ if __name__ == "__main__":
     is_input = len(argv) == 3
 
     project = initialize_project(argv, is_input)
-    project = prepare_dft_info(project)
+    prepare_dft_info(project)
 
-    # config = prepare_paths()
-    # config = prepare_dft_info(config)
     print("DFT information prepared successfully.\n")
     if project.include_stress:
         for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
