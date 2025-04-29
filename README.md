@@ -16,19 +16,19 @@ Quantum Instant Coffee is a collection of Python scripts designed to easily gene
 The input files will be generated both with and without considering spin-orbit coupling and will be organized into their respective directories.
 
 Current toolkit:
-- `init_calc.py`
-- `plot_projected_bands.py`
+- `input_file_writer.py`
+- `projected_bands_plotter.py`
 - `plot_pdos.py` (coming soon)
 - `compare_bands.py` 
 
 ## 📖 Usage
-In order to use these scripts to generate the input files, first clone the repository into the main directory where you want to generate input files. Then, run `init_calc.py` as follows:
+In order to use these scripts to generate the input files, first clone the repository into the main directory where you want to generate input files. Then, run `input_file_writer.py` as follows:
 
 ```bash
-python init_calc.py <name-of-the-compound> <path-to-POSCAR-file>
+python input_file_writer.py <name-of-the-compound> <path-to-POSCAR-file>
 ```
 
-The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `init_calc.py` script will generate a folder named `<name-of-the-compound>`, and within that folder, it will create subfolders with the following structure:
+The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `input_file_writer.py` script will generate a folder named `<name-of-the-compound>`, and within that folder, it will create subfolders with the following structure:
 
 ```bash
 .
@@ -63,13 +63,13 @@ The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, wh
 └── <name-of-the-compound>_wannier.win
 ```
 
-After successfully executing `init_calc.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `plot_projected_bands.py` script using the following command:
+After successfully executing `input_file_writer.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
 
 ```bash
-python plot_projected_bands.py <name-of-the-compound>
+python projected_bands_plotter.py <name-of-the-compound>
 ```
 
-After successfully executing `plot_projected_bands.py`, the script will plot the projected bands for every atom in the structure.
+After successfully executing `projected_bands_plotter.py`, the script will plot the projected bands for every atom in the structure.
 
 To compare the wannier interpolated bands with DFT bands, run the following command:
 
