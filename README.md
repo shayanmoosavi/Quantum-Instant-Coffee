@@ -5,68 +5,106 @@
 <img src="Logo.png" align="center"/>
 </div>
 
+## 📚 Table of Contents
+- [About](#-about)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Features](#-features)
+- [Troubleshooting](#-troubleshooting)
+- [Usage](#-usage)
+- [Configuration](#-configuration)
+- [License](#-license)
+- [Contributing](#-contributing)
+- [Acknowledgements](#-acknowledgements)
+
 ## 💡 About
-Quantum Instant Coffee is a collection of Python scripts designed to easily generate batches of input files needed for the most common [Quantum ESPRESSO](https://www.quantum-espresso.org) and [Wannier90](https://wannier.org/) calculations. The current supported calculations include:
+Quantum Instant Coffee streamlines quantum materials calculations by automatically generating input files for [Quantum ESPRESSO](https://www.quantum-espresso.org) and [Wannier90](https://wannier.org/). It supports essential calculations including:
 
 - **Self-Consistent Field** (scf)
 - **Projected Density of States** (pdos)
 - **Projected Band Structure** (projected_bands)
 - **Wannier interpolated bands** (wannier)
 
-The input files will be generated both with and without considering spin-orbit coupling and will be organized into their respective directories.
+The input files will be generated both with and without considering spin-orbit coupling, with files organized a clear directory structure.
 
-Current toolkit:
-- `input_file_writer.py`
-- `projected_bands_plotter.py`
-- `plot_pdos.py` (coming soon)
-- `compare_bands.py` 
+### 🧰 Toolkit:
+- `input_file_writer.py`: Generates input files for common QE/Wannier90 workflows
+- `projected_bands_plotter.py`: Plots projected band structures
+- `plot_pdos.py`: _Coming soon – under development_
+- `compare_bands.py`: Compares DFT bands with Wannier-interpolated bands 
+
+## 📦 Requirements
+- Tested on Python 3.10
+- Numpy
+- Matplotlib
+- Pandas
+- BeautifulSoup4 (Optional, for fetching the atomic weights table from IUPAC website)
+- Requests (Optional, for fetching the atomic weights table from IUPAC website)
+- lxml (Optional, for fetching the atomic weights table from IUPAC website)
+- [Quantum ESPRESSO](https://www.quantum-espresso.org) (for running the calculations)
+- [Wannier90](https://wannier.org/) (for running the calculations)
+
+## 🔧 Installation
+To install the required packages, you can use pip:
+
+```bash
+pip install numpy matplotlib pandas beautifulsoup4 requests lxml
+```
+
+Then clone the repository:
+
+```bash
+git clone https://github.com/shayanmoosavi/Quantum-Instant-Coffee.git 
+````
+
+Or download the latest release from the releases section of the repository.
+
+## ✨ Features
+
+### Input File Generation
+- Automatically generates all necessary input files for QE and Wannier90
+- Supports both standard and spin-orbit coupling calculations
+- Organizes files in a logical directory structure
+
+### Visualization Tools
+- Projected band structure plotting with customizable projection options
+- PDOS visualization with element-specific contributions (_Under Development_)
+- Comparative analysis of DFT vs Wannier interpolated bands
+
+## 🔍 Troubleshooting
+
+### Missing Pseudopotentials
+If you encounter errors about missing pseudopotentials, ensure you have:
+1. Downloaded the appropriate pseudopotential files
+2. Updated the paths in the generated input files
 
 ## 📖 Usage
-In order to use these scripts to generate the input files, first clone the repository into the main directory where you want to generate input files. Then, run `input_file_writer.py` as follows:
+In order to use these scripts to generate the input files, run `input_file_writer.py` as follows:
 
 ```bash
 python input_file_writer.py <name-of-the-compound> <path-to-POSCAR-file>
 ```
 
-The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `input_file_writer.py` script will generate a folder named `<name-of-the-compound>`, and within that folder, it will create subfolders with the following structure:
+The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `input_file_writer.py` script will generate a folder named `<compound-name>`, and within that folder, it will create subfolders with the following directory structure:
 
-```bash
+```ansi
 .
-├── pdos
-│   ├── <name-of-the-compound>_nscf.pw.in
-│   └── <name-of-the-compound>.pdos.in
-├── projected_bands
-│   ├── <name-of-the-compound>.bands.in
-│   ├── <name-of-the-compound>_bands.pw.in
-│   └── <name-of-the-compound>.kpdos.in
-├── scf
-│   ├── <name-of-the-compound>_scf.pw.in
-│   └── <name-of-the-compound>_vc_relax.pw.in
-├── spin_orbit
-│   ├── pdos
-│   │   ├── <name-of-the-compound>_nscf_soc.pw.in
-│   │   └── <name-of-the-compound>_soc.pdos.in
-│   ├── projected_bands
-│   │   ├── <name-of-the-compound>_bands_soc.pw.in
-│   │   ├── <name-of-the-compound>_soc.bands.in
-│   │   └── <name-of-the-compound>_soc.kpdos.in
-│   ├── scf
-│   │   ├── <name-of-the-compound>_scf_soc.pw.in
-│   │   └── <name-of-the-compound>_vc_relax_soc.pw.in
-│   └── wannier
-│       ├── <name-of-the-compound>_nscf_wannier_soc.pw.in
-│       ├── <name-of-the-compound>_soc.pw2wan.in
-│       └── <name-of-the-compound>_wannier_soc.win
-└── wannier
-├── <name-of-the-compound>_nscf_wannier.pw.in
-├── <name-of-the-compound>.pw2wan.in
-└── <name-of-the-compound>_wannier.win
+└── <compound-name>/
+    ├── scf
+    ├── projected_bands
+    ├── pdos
+    ├── strain
+    ├── spin_orbit/
+    │   ├── scf
+    │   ├── projected_bands
+    │   └── pdos
+    └── wannier
 ```
 
-After successfully executing `input_file_writer.py`, the input files will be mostly ready. The only information missing is the pseudopotential files and atomic weights, which need to be added manually in the input scripts. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
+After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
 
 ```bash
-python projected_bands_plotter.py <name-of-the-compound>
+python projected_bands_plotter.py <compound-name>
 ```
 
 After successfully executing `projected_bands_plotter.py`, the script will plot the projected bands for every atom in the structure.
@@ -74,8 +112,153 @@ After successfully executing `projected_bands_plotter.py`, the script will plot 
 To compare the wannier interpolated bands with DFT bands, run the following command:
 
 ```bash
-python compare_bands.py <name-of-the-compound>
+python compare_bands.py <compound-name>
 ```
+
+## ⚙️ Configuration
+If you want to customize the list of generated input files, you can do so by modifying the `config.json` file. The following keys in the `input` section are 
+optional and can be removed if not needed:
+- `relax_input`: The input file for Quantum ESPRESSO relax calculations
+- `nscf_input`: The input file for Quantum ESPRESSO nscf calculations
+- `pdos_input`: The input file for Quantum ESPRESSO pdos calculations
+- `nscf_wannier_input`: The input file for Quantum ESPRESSO nscf calculations for usage in wannier90
+- `pw2wan_input`: The input file for Quantum ESPRESSO pw2wannier90 calculations
+- `wannier_input`: The input file for wannier90 calculations
+
+The directory structure can also be modified by removing the following optional keys:
+- `pdos`: The directory for pdos calculations
+- `pdos_soc`: The directory for pdos calculations with spin-orbit coupling
+- `wannier`: The directory for wannier calculations
+- `wannier_soc`: The directory for wannier calculations with spin-orbit coupling
+- `strain`: The directory for strain calculations
+
+If you're not happy with the required keys, you can modify the `required_dirs` and `required_patterns` variables in the `config_validation.py` file. 
+The `required_dirs` variable contains the list of required directories, while the `required_patterns` variable contains the list of required patterns 
+for the input files.
+
+The default config:
+```json
+{
+  "directory_structure": {
+    "scf": "scf",
+    "scf_soc": "spin_orbit/scf",
+    "projected_bands": "projected_bands",
+    "projected_bands_soc": "spin_orbit/projected_bands",
+    "pdos": "pdos",
+    "pdos_soc": "spin_orbit/pdos",
+    "wannier": "wannier",
+    "wannier_soc": "spin_orbit/wannier",
+    "strain": "strain",
+    "pseudo": "../Pseudopotentials",
+    "pseudo_rel": "../Pseudopotentials_rel"
+  },
+  "file_patterns": {
+    "input": {
+      "relax_input": "{compound_name}_relax{flag}.pw.in",
+      "vc_relax_input": "{compound_name}_vc_relax{flag}.pw.in",
+      "scf_input": "{compound_name}_scf{flag}.pw.in",
+      "pw_bands_input": "{compound_name}_bands{flag}.pw.in",
+      "kpdos_input": "{compound_name}{flag}.kpdos.in",
+      "bands_input": "{compound_name}{flag}.bands.in",
+      "nscf_input": "{compound_name}_nscf{flag}.pw.in",
+      "pdos_input": "{compound_name}{flag}.pdos.in",
+      "nscf_wannier_input": "{compound_name}_nscf_wannier{flag}.pw.in",
+      "pw2wan_input": "{compound_name}{flag}.pw2wan.in",
+      "wannier_input": "{compound_name}_wannier{flag}.win"
+    },
+    "output": {
+      "relax_output": "{compound_name}_relax{flag}.pw.out",
+      "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",
+      "scf_output": "{compound_name}_scf{flag}.pw.out",
+      "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
+      "kpdos_output": "{compound_name}{flag}.kpdos.out",
+      "projbands_output": "{compound_name}{flag}.projbands",
+      "bands_gnu": "{compound_name}.bands.gnu",
+      "nscf_output": "{compound_name}_nscf{flag}.pw.out"
+    }
+  }
+}
+```
+
+An example of modified `config.json`:
+
+```json
+{
+  "directory_structure": {
+    "scf": "scf",
+    "scf_soc": "spin_orbit/scf",
+    "projected_bands": "projected_bands",
+    "projected_bands_soc": "spin_orbit/projected_bands",
+    "pdos": "pdos",
+    "pdos_soc": "spin_orbit/pdos",
+    "pseudo": "../Pseudopotentials",
+    "pseudo_rel": "../Pseudopotentials_rel"
+  },
+  "file_patterns": {
+    "input": {
+      "vc_relax_input": "{compound_name}_vc_relax{flag}.pw.in",
+      "scf_input": "{compound_name}_scf{flag}.pw.in",
+      "pw_bands_input": "{compound_name}_bands{flag}.pw.in",
+      "kpdos_input": "{compound_name}{flag}.kpdos.in",
+      "bands_input": "{compound_name}{flag}.bands.in",
+      "nscf_input": "{compound_name}_nscf{flag}.pw.in",
+      "pdos_input": "{compound_name}{flag}.pdos.in"
+    },
+    "output": {
+      "relax_output": "{compound_name}_relax{flag}.pw.out",
+      "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",
+      "scf_output": "{compound_name}_scf{flag}.pw.out",
+      "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
+      "kpdos_output": "{compound_name}{flag}.kpdos.out",
+      "projbands_output": "{compound_name}{flag}.projbands",
+      "bands_gnu": "{compound_name}.bands.gnu",
+      "nscf_output": "{compound_name}_nscf{flag}.pw.out"
+    }
+  }
+}
+```
+
+An example of the modified required sections in the `config_validation.py` file:
+
+```python
+required_dirs = {
+    "scf",
+    "scf_soc",
+    "pdos",
+    "pdos_soc",
+    "pseudo",
+    "pseudo_rel"
+}
+
+required_patterns = {
+        "input": {
+            "vc_relax_input",
+            "scf_input",
+            "nscf_input",
+            "pdos_input",
+        },
+        "output": {
+            "vc_relax_output",
+            "scf_output",
+            "pw_bands_output",
+            "kpdos_output",
+            "projbands_output",
+            "bands_gnu"
+        }
+    }
+```
+
+## 📄 License
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 🏅 Acknowledgements
 - `projwfc_to_bands.awk` script provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
