@@ -239,7 +239,8 @@ def generate_cell_parameters_section(lattice_vectors):
 
 def generate_k_points_section(calculation_type, k_mesh_density = None):
     """
-    Generates the K_POINTS section of the input file.
+    Generates the K_POINTS section of the input files for Quantum ESPRESSO or
+    kpoints section of Wannier90 input file.
 
     Args:
         calculation_type (str): The calculation type (e.g., 'scf', 'bands').
@@ -248,7 +249,7 @@ def generate_k_points_section(calculation_type, k_mesh_density = None):
     Returns
         str: The K_POINTS section of the input file.
     """
-    valid_calc_types = ("relax", "vc-relax", "scf", "bands", "nscf")
+    valid_calc_types = ("relax", "vc-relax", "scf", "bands", "nscf", "wannier")
 
     if calculation_type not in valid_calc_types:
         raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
@@ -287,6 +288,15 @@ def generate_k_points_section(calculation_type, k_mesh_density = None):
                 return k_points_section
             except CalledProcessError as e:
                 raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
+
+    elif calculation_type == "wannier":
+
+        try:
+            k_points_section = run(f"./kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
+                                   shell=True, check=True, capture_output=True).stdout.decode("utf-8")
+            return k_points_section
+        except CalledProcessError as e:
+            raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
 
     elif calculation_type == "bands":
         k_points_section = """K_POINTS crystal_b
@@ -445,6 +455,151 @@ def generate_bands_input_file(compound_name):
 /"""
 
 
+def generate_pw2wannier_input_file(compound_name, relativistic = False):
+    """
+    Generates the complete pw2wannier90.x input file for Quantum ESPRESSO.
+
+    Args:
+        compound_name (str): The name of the compound.
+        relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
+
+    Returns:
+        str: The formatted pw2wannier90.x input file content.
+    """
+
+    input_file_content = f"""&inputpp
+  outdir     =  './out'   ! quantum espresso outdir
+  prefix     =  '{compound_name}' ! prefix of the pw.x scf calculation
+  """
+    if relativistic:
+        input_file_content += f"  seedname   =  '{compound_name}_wannier_soc' ! must be same as the file name of win file"
+    else:
+        input_file_content += f"  seedname   =  '{compound_name}_wannier' ! must be same as the file name of win file"
+
+    input_file_content +="""
+  write_amn  =  .true.
+  write_mmn  =  .true.
+/
+"""
+    return input_file_content
+
+def generate_wannier_input_file(element_names,
+                                atomic_positions,
+                                lattice_vectors,
+                                atomic_labels,
+                                relativistic = False,
+                                *,
+                                num_iter = 250,
+                                dis_num_iter = 2500):
+    """
+    Generates the input file for Wannier90.
+
+    Args:
+        element_names (list): List of element names.
+        atomic_positions (list): List of atomic positions.
+        lattice_vectors (list): List of lattice vectors.
+        atomic_labels (list): List of atomic labels.
+        relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
+        num_iter (int, optional): Number of minimization iterations. Defaults to 250.
+        dis_num_iter (int, optional): Number of disentanglement iterations. Defaults to 2500.
+
+    Returns:
+        str: The formatted Wannier90 input file content.
+    """
+    while True:
+        try:
+            number_of_bands = int(
+                input(f"Enter the number of bands for wannier{'_soc' if relativistic else ''}: ")
+            )
+            if number_of_bands <= 0:
+                raise ValueError("Number of bands must be a positive integer.")
+
+            input_file_content = f"""num_bands = {number_of_bands} ! number of bands
+num_wann  = 0 ! Enter the number of wannier projections here
+num_iter  = {num_iter} ! number of minimization iterations
+
+! disentaglement
+! Enter the appropriate energy windows here
+dis_win_min  = 0 ! lower bound of bands to extract
+dis_win_max  = 0 ! upper bound of bands to extract
+!dis_froz_min = 0 ! lower bound of inner window
+!dis_froz_max = 0 ! upper bound of innesr window
+dis_num_iter = {dis_num_iter} ! number of disentanglement iterations
+
+! Writing the tight-binding Hamiltonian
+write_hr = true
+
+! plotting the interpolated band structure
+bands_plot = true
+begin kpoint_path
+G 0.0000000000  0.0000000000  0.0000000000  M 0.5000000000  0.0000000000  0.0000000000
+M 0.5000000000  0.0000000000  0.0000000000  K 0.3333333333  0.3333333333  0.0000000000
+K 0.3333333333  0.3333333333  0.0000000000  G 0.0000000000  0.0000000000  0.0000000000
+end kpoint_path
+
+begin projections  ! Enter the atomic projections here
+"""
+
+            break
+        except ValueError as e:
+            print("Error in generating Wannier90 input file:", str(e))
+            continue
+
+    for element in element_names:
+        input_file_content += f"{element:<2}: proj\n"
+
+    input_file_content += "end projections\n"
+
+    if relativistic:
+        input_file_content += f"""! Required for spin orbit
+spinors = true
+
+begin unit_cell_cart
+angstrom
+"""
+    else:
+        input_file_content += """
+begin unit_cell_cart
+angstrom
+"""
+    for vector in lattice_vectors:
+        input_file_content += f"    {vector}\n"
+
+    input_file_content += """end unit_cell_cart
+
+begin atoms_frac
+"""
+    for label, position in zip(atomic_labels, atomic_positions):
+        input_file_content += f"{label:<2}    {position}\n"
+
+    while True:
+        try:
+            k_mesh_density = tuple(
+                map(
+                    int,
+                    input(
+                        f"Enter K-point mesh density (e.g., '12 12 1') for wannier{'_soc' if relativistic else ''}: "
+                    ).split(),
+                )
+            )
+            break
+        except ValueError as e:
+            print("Error in generating kpoints section:", str(e))
+            continue
+
+    input_file_content += f"""end atoms_frac
+    
+mp_grid = {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}
+
+begin kpoints
+"""
+    input_file_content += generate_k_points_section("wannier", k_mesh_density)
+    input_file_content += "end kpoints\n"
+
+    return input_file_content
+
+
+
 def write_input_files(project, skip_soc = False):
     """
     Write generated input file templates to their respective directories.
@@ -489,8 +644,14 @@ def write_input_files(project, skip_soc = False):
         "kpdos_input": lambda _: generate_kpdos_input_file(compound_name),
         "bands_input": lambda _: generate_bands_input_file(compound_name),
         "nscf_wannier_input": lambda rel: generate_pw_input_file("nscf", project, atomic_weights,
-                                                                 rel_pseudo_list if rel else pseudo_list,
-                                                                 atomic_positions, lattice_vectors, relativistic=rel)
+                                                                 pseudo_list, atomic_positions, lattice_vectors,
+                                                                 relativistic=rel,
+                                                                 rel_pseudo_list=rel_pseudo_list if rel else None),
+        "pw2wan_input": lambda rel: generate_pw2wannier_input_file(compound_name, relativistic=rel),
+        "wannier_input": lambda rel: generate_wannier_input_file(project.compound_data.element_names,
+                                                                    atomic_positions, lattice_vectors,
+                                                                    project.compound_data.atomic_labels,
+                                                                    relativistic=rel)
     }
 
     for key, paths in project.input_paths.items():
@@ -504,6 +665,8 @@ def write_input_files(project, skip_soc = False):
                     if "_soc" in file_name and skip_soc:
                         print(f"Skipping SOC file generation for {file_name}", flush=True)
                         continue
+                    if input_type == "nscf_wannier_input":
+                        print("\n(This is for wannier90 calculation)")
                     input_src = generator_map[input_type](relativistic)
                     with open(path, "w") as file:
                         file.write(input_src)
