@@ -9,18 +9,9 @@ from data_processor import *
 
 
 # Initialization of the configuration
-config = prepare_paths()
-config = prepare_dft_info(config)
-config = process_band_data(
-    config,
-    config["paths"]["projbands_paths"],
-    config["paths"]["bands_paths"],
-    config["number_of_bands_list"],
-    config["fermi_energy_list"],
-    config["project_dir"],
-    config["atomic_states_info_list"],
-    config["atomic_states_info_list"][0].keys()
-)
+project = initialize_project(argv, is_input=False)
+prepare_dft_info(project)
+process_band_data(project)
 
 # Plotting the band structure
-plot_band_structure(config, save_fig=False)
+plot_band_structure(project, save_fig=False)

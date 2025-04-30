@@ -424,7 +424,7 @@ def plot_band_structure(project, save_fig=True, test_module=False):
         for (projection_data, k_points, energy, k_points_proj, energy_proj,
              number_of_bands, spin_orbit, stress_amount) in zip(
             projection_info_list,
-            project.band_data.k_points_list,
+            project.band_data.k_points,
             project.band_data.energy,
             project.band_data.k_points_proj,
             project.band_data.energy_proj,
@@ -441,7 +441,7 @@ def plot_band_structure(project, save_fig=True, test_module=False):
                 else:
                     file_name = f"{compound_name}_projbands.png"
 
-                save_path = os.path.join(updated_config["project_dir"], file_name)
+                save_path = os.path.join(project.project_dir, file_name)
 
                 # Creating and saveing the plot
                 fig, axs = plotter.create_band_structure_plot(
