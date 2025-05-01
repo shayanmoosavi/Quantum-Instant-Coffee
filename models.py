@@ -122,10 +122,13 @@ class WannierSetup:
         fermi_energies: List of Fermi energies
         alat_parameters: List of lattice parameters
         skip_normal: Whether to skip non-SOC calculations
+        comparison_data: Wannier and DFT data for comparison
     """
     fermi_energies: List[float]
     alat_parameters: List[float]
     skip_normal: bool = False
+    comparison_data: Dict[str, List[ndarray]] = None
+
 
 @dataclass
 class ProjectSetup:
