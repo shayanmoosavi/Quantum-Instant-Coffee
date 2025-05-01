@@ -114,8 +114,8 @@ def add_paths_for_directories(
 
         elif calculation == "strain":
             continue
-        elif calculation in ["wannier", "wannier_soc"] and not is_input:
-            continue
+        # elif calculation in ["wannier", "wannier_soc"] and not is_input:
+        #     continue
         elif calculation in ["pseudo", "pseudo_rel"]:
             continue
         elif calculation in ["scf", "scf_soc"]:
@@ -134,10 +134,10 @@ def add_paths_for_directories(
             append_file_paths(file_paths, calculation, path, compound_name, file_patterns,
                               flag, ["nscf_input", "pdos_input"] if is_input else ["nscf_output"])
 
-        else:
-            if is_input:
+        elif calculation in ["wannier", "wannier_soc"]:
                 append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag,
-                                  ["nscf_wannier_input", "pw2wan_input", "wannier_input"])
+                                  ["nscf_wannier_input", "pw2wan_input", "wannier_input"] if is_input
+                                  else ["nscf_wannier_output"])
 
 
 def build_file_paths(
@@ -238,6 +238,7 @@ def build_file_paths(
             "projbands_paths": [],
             "bands_paths": [],
             "nscf_output_paths": [],
+            "nscf_wannier_output_paths": []
         }
 
         for key, value in paths.items():
@@ -257,7 +258,7 @@ def build_file_paths(
                     ):
                         structured_paths[path_type].append(value[output_key][i])
 
-            elif not (include_stress and "soc" in key) and key not in ["pdos", "pdos_soc"]:
+            elif not (include_stress and "soc" in key) and key not in ["pdos", "pdos_soc", "wannier", "wannier_soc"]:
                 for path_type, output_key in zip(
                         ["pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
                         ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
@@ -266,6 +267,13 @@ def build_file_paths(
 
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
                 for path_type in ["nscf_output"]:
+                    if not value[path_type]:
+                        print(f"Warning: No {path_type} found in {key} directory.")
+                    else:
+                        structured_paths[f"{path_type}_paths"].append(value[path_type][0])
+
+            elif key in ["wannier", "wannier_soc"] and not include_stress:
+                for path_type in ["nscf_wannier_output"]:
                     if not value[path_type]:
                         print(f"Warning: No {path_type} found in {key} directory.")
                     else:

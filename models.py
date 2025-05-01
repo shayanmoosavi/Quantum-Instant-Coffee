@@ -115,6 +115,30 @@ class BandData:
     unique_elements: List[str]
 
 @dataclass
+class WannierSetup:
+    """Configuration for Wannier calculations.
+
+    Attributes:
+        compound_name: Name of the compound
+        pbands_paths: List of paths to projected bands directories
+        wannier_paths: List of paths to wannier calculation directories
+        bands_paths: List of paths to band structure files
+        wannier_bands_paths: List of paths to wannier band structure files
+        nscf_output_paths: List of paths to NSCF calculation outputs
+        fermi_energies: List of Fermi energies
+        alat_parameters: List of lattice parameters
+        skip_normal: Whether to skip non-SOC calculations
+    """
+    pbands_paths: List[str]
+    wannier_paths: List[str]
+    bands_paths: List[str]
+    wannier_bands_paths: List[str]
+    nscf_output_paths: List[str]
+    fermi_energies: List[float]
+    alat_parameters: List[float]
+    skip_normal: bool = False
+
+@dataclass
 class ProjectSetup:
     """Represents the complete project setup.
 
