@@ -7,7 +7,7 @@ weights, and processing atomic projections.
 
 from dft_info_extractor import *
 import numpy as np
-from models import BandData
+from models import BandData, ProjectSetup
 
 
 class BandDataProcessor:
@@ -18,7 +18,7 @@ class BandDataProcessor:
         project_dir (str): The directory containing the project files.
     """
 
-    def __init__(self, project_dir):
+    def __init__(self, project_dir: str) -> None:
         """
         Initialize the BandDataProcessor with the project directory.
 
@@ -28,7 +28,7 @@ class BandDataProcessor:
         self.project_dir = project_dir
 
     @staticmethod
-    def load_projected_bands(projbands_dir, number_of_bands):
+    def load_projected_bands(projbands_dir: str, number_of_bands: int) -> tuple:
         """
         Load and process projected bands data from a file.
 
@@ -48,7 +48,7 @@ class BandDataProcessor:
         return projbands_data, k_points_proj, energy_proj
 
     @staticmethod
-    def load_bands(bands_dir, fermi_energy):
+    def load_bands(bands_dir: str, fermi_energy: float) -> tuple:
         """
         Load and process bands data from a file.
 
@@ -76,12 +76,14 @@ class WannierDataProcessor:
         project_dir (str): The directory containing the project files.
     """
 
-    def __init__(self, project_dir):
+    def __init__(self, project_dir: str) -> None:
         """Initialize the WannierDataProcessor with the project directory."""
         self.project_dir = project_dir
 
     @staticmethod
-    def load_wannier_bands(wannier_bands_dir, alat_parameter, fermi_energy):
+    def load_wannier_bands(wannier_bands_dir: str,
+                           alat_parameter: float,
+                           fermi_energy: float) -> tuple:
         """
         Load and process Wannier bands data from a file.
 
@@ -102,7 +104,10 @@ class WeightCalculator:
     """Handles orbital weight calculations for band structure."""
 
     @staticmethod
-    def calculate_total_weights(data, atomic_state_indices, atomic_state_coefficients, number_of_bands):
+    def calculate_total_weights(data: np.ndarray,
+                                atomic_state_indices: list,
+                                atomic_state_coefficients: list,
+                                number_of_bands: int) -> np.ndarray:
         """
         Calculate weights of specified orbitals from projected bands data.
 
@@ -136,7 +141,7 @@ class AtomicProjectionProcessor:
         atomic_projection_list (list): List of atomic projections.
     """
 
-    def __init__(self, atomic_projection_list):
+    def __init__(self, atomic_projection_list: list) -> None:
         """
         Initialize the AtomicProjectionProcessor with a list of atomic projections.
 
@@ -145,7 +150,7 @@ class AtomicProjectionProcessor:
         """
         self.atomic_projection_list = atomic_projection_list
 
-    def get_unique_elements(self):
+    def get_unique_elements(self) -> list:
         """
         Extract unique elements from atomic projections.
 
@@ -156,7 +161,10 @@ class AtomicProjectionProcessor:
         return [item for i, item in enumerate(elements) if item not in elements[:i]]
 
     @staticmethod
-    def process_orbital_weights(atomic_states_info, weight_calculator, projbands_data, number_of_bands):
+    def process_orbital_weights(atomic_states_info: dict,
+                                weight_calculator: WeightCalculator,
+                                projbands_data: np.ndarray,
+                                number_of_bands: int) -> dict:
         """
         Process orbital weights for atomic projections.
 
@@ -194,7 +202,7 @@ class AtomicProjectionProcessor:
         return weights_info
 
 
-def process_band_data(project):
+def process_band_data(project: ProjectSetup) -> ProjectSetup:
     """
     Process all band data and calculate projections.
 
@@ -206,7 +214,7 @@ def process_band_data(project):
     """
     processor = BandDataProcessor(project.project_dir)
     calculator = WeightCalculator()
-    projection_processor = AtomicProjectionProcessor(project.dft_info.atomic_states_info[0].keys())
+    projection_processor = AtomicProjectionProcessor(list(project.dft_info.atomic_states_info[0].keys()))
 
     projbands_data_list = []
     k_points_proj_list = []
@@ -258,7 +266,7 @@ def process_band_data(project):
 
     return project
 
-def process_comparison_data(project):
+def process_comparison_data(project: ProjectSetup) -> ProjectSetup:
     """
     Process Wannier and DFT band structure data.
 

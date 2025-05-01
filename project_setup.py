@@ -3,7 +3,7 @@ from models import CompoundData, ProjectSetup
 from config import load_config
 from input_handler import get_strain_amounts, get_pbands_type
 from path_handler import get_project_directory, create_directories, validate_command_line_args, build_file_paths
-
+from typing import List
 
 class ProjectInitializationError(Exception):
     """
@@ -15,7 +15,7 @@ class ProjectInitializationError(Exception):
     pass
 
 def initialize_project(
-        argv,
+        argv: List[str],
         is_input: bool = True,
         is_wannier: bool = False,
 ) -> ProjectSetup:

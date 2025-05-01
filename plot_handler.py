@@ -19,9 +19,16 @@ Functions:
 import re
 import os
 from sys import argv
+from typing import Dict, Union, List
+import matplotlib.axes
+import matplotlib.collections
 import matplotlib.pyplot as plt
+import numpy as np
+
+from config import ProjectConfig
 from data_processor import process_band_data, process_comparison_data
 from dft_info_extractor import prepare_dft_info, prepare_wannier_info
+from models import ProjectSetup
 from project_setup import initialize_project
 
 
@@ -57,7 +64,7 @@ class CompoundNameFormatter:
     """Formats chemical compound names into LaTeX representation."""
 
     @staticmethod
-    def format_compound_name(compound_name):
+    def format_compound_name(compound_name: str) -> str:
         """Converts a chemical formula into LaTeX format.
 
         Args:
@@ -96,7 +103,7 @@ class BandPlotter:
         config (PlotConfig, optional): Configuration object containing plot parameters
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config: PlotConfig = None) -> None:
         """Initialize the BandPlotter with configuration.
 
         Args:
@@ -105,7 +112,7 @@ class BandPlotter:
         """
         self.config = config or PlotConfig()
 
-    def init_subplot(self, ax, xlabel, ylabel, title):
+    def init_subplot(self, ax: matplotlib.axes.Axes, xlabel: str, ylabel: str, title: str):
         """Initialize a subplot with basic settings.
 
         Args:
@@ -121,7 +128,11 @@ class BandPlotter:
         ax.grid("on")
 
     @staticmethod
-    def plot_bands(ax, xdata, ydata, data_label="data", color="blue"):
+    def plot_bands(ax: matplotlib.axes.Axes,
+                   xdata: np.ndarray,
+                   ydata: np.ndarray,
+                   data_label: str = "data",
+                   color: str = "blue") -> matplotlib.collections.PathCollection:
         """Plot regular band structure.
 
         Args:
@@ -132,7 +143,7 @@ class BandPlotter:
             color (str, optional): Line color. Defaults to "blue"
 
         Returns:
-            matplotlib.lines.Line2D: Label handle for legend
+            matplotlib.collections.PathCollection: Label handle for legend
         """
         label = ax.scatter([], [], label=data_label, color=color)
 
@@ -143,8 +154,14 @@ class BandPlotter:
         return label
 
     @staticmethod
-    def plot_projected_bands(ax, xdata, ydata, orbital_weights, number_of_bands,
-                             spin_orbit=True, data_label="data", color="blue"):
+    def plot_projected_bands(ax: matplotlib.axes.Axes,
+                             xdata: np.ndarray,
+                             ydata: np.ndarray,
+                             orbital_weights: np.ndarray,
+                             number_of_bands: int,
+                             spin_orbit: bool = True,
+                             data_label: str = "data",
+                             color: str = "blue") -> matplotlib.collections.PathCollection:
         """Plot orbital-projected band structure.
 
         Args:
@@ -158,7 +175,7 @@ class BandPlotter:
             color (str, optional): Plot color. Defaults to "blue"
 
         Returns:
-            matplotlib.lines.Line2D: Label handle for legend
+            matplotlib.collections.PathCollection: Label handle for legend
         """
         label = ax.scatter([], [], label=data_label, color=color)
 
@@ -181,9 +198,17 @@ class BandPlotter:
 
         return label
 
-    def create_band_structure_plot(self, compound_name, k_points, energy, k_points_proj,
-                                   energy_proj, projection_data, number_of_bands,
-                                   spin_orbit=False, stress_amount=None, save_path=None):
+    def create_band_structure_plot(self,
+                                   compound_name: str,
+                                   k_points: np.ndarray,
+                                   energy: np.ndarray,
+                                   k_points_proj: np.ndarray,
+                                   energy_proj: np.ndarray,
+                                   projection_data: Dict[str, Dict],
+                                   number_of_bands: int,
+                                   spin_orbit: bool = False,
+                                   stress_amount: str = None,
+                                   save_path: str = None) -> None:
         """Create a complete band structure plot with projections.
 
         Args:
@@ -268,7 +293,7 @@ class BandPlotter:
 class WannierComparePlotter:
     """Class for plotting Wannier and DFT band structure comparison plots."""
 
-    def __init__(self, config=None):
+    def __init__(self, config: PlotConfig = None) -> None:
         """Initialize the WannierComparePlotter with configuration.
 
         Args:
@@ -278,7 +303,7 @@ class WannierComparePlotter:
         self.config = config or PlotConfig()
         self.name_formatter = CompoundNameFormatter()
 
-    def init_plot(self, compound_name, skip_normal=False, flag=""):
+    def init_plot(self, compound_name: str, skip_normal: bool = False, flag: str = "") -> None:
         """Initialize plot with basic settings.
 
         Args:
@@ -299,8 +324,12 @@ class WannierComparePlotter:
         plt.xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
 
 
-    def plot_comparison(self, k_points_dft, dft_energies, k_points_wannier,
-                       wannier_energies, compound_name, flag="", save_path=None):
+    def plot_comparison(self,
+                        k_points_dft: np.ndarray,
+                        dft_energies: np.ndarray,
+                        k_points_wannier: np.ndarray,
+                        wannier_energies: np.ndarray,
+                        save_path: str = None) -> None:
         """Plot comparison between Wannier and DFT band structures.
 
         Args:
@@ -339,7 +368,9 @@ class ProjectionDataProcessor:
         unique_elements_list (list): List of unique chemical elements
     """
 
-    def __init__(self, atomic_projection_weights_info_list, unique_elements_list):
+    def __init__(self,
+                 atomic_projection_weights_info_list: List[Dict],
+                 unique_elements_list: List[str]) -> None:
         """Initialize the ProjectionDataProcessor.
 
         Args:
@@ -351,7 +382,7 @@ class ProjectionDataProcessor:
         self.orbital_colors = self._get_orbital_colors()
 
     @staticmethod
-    def _get_orbital_colors():
+    def _get_orbital_colors() -> Dict[str, str]:
         """Get the color mapping for different orbital types.
 
         Returns:
@@ -359,7 +390,7 @@ class ProjectionDataProcessor:
         """
         return PlotConfig.ORBITAL_COLORS
 
-    def process_projections(self):
+    def process_projections(self) -> List[Dict]:
         """Process projection data for all elements.
 
         Returns:
@@ -378,7 +409,7 @@ class ProjectionDataProcessor:
 
         return projection_info_list
 
-    def _process_element_projections(self, weights_info, element, index):
+    def _process_element_projections(self, weights_info: Dict[str, np.ndarray], element: str, index: int) -> Dict:
         """Process projection data for a single element.
 
         Args:
@@ -410,7 +441,7 @@ class ProjectionDataProcessor:
         }
 
     @staticmethod
-    def combine_similar_orbitals(weights_info):
+    def combine_similar_orbitals(weights_info: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         """Combine orbital projections with the same contribution (like px and py).
 
         Args:
@@ -452,7 +483,7 @@ class ProjectionDataProcessor:
         return combined_weights
 
 
-def plot_band_structure(project, save_fig=True, test_module=False):
+def plot_band_structure(project: ProjectSetup, save_fig: bool = True, test_module: bool = False) -> None:
     """
     Plot band structure from processed data.
 
@@ -547,7 +578,7 @@ def plot_band_structure(project, save_fig=True, test_module=False):
                 plt.show()
 
 
-def plot_wannier_comparison(project, save_fig=True, test_module=False):
+def plot_wannier_comparison(project: ProjectSetup, save_fig: bool = True, test_module: bool = False) -> None:
     """Plot Wannier and DFT band structure comparison.
 
     Args:
@@ -597,8 +628,6 @@ def plot_wannier_comparison(project, save_fig=True, test_module=False):
                     dft_energies,
                     k_points_wannier,
                     wannier_energies,
-                    project.compound_name,
-                    flag,
                     save_path
                 )
 
@@ -619,10 +648,7 @@ def plot_wannier_comparison(project, save_fig=True, test_module=False):
                     k_points_dft,
                     dft_energies,
                     k_points_wannier,
-                    wannier_energies,
-                    project.compound_name,
-                    flag,
-                    project.project_dir
+                    wannier_energies
                 )
                 plt.show()
 
