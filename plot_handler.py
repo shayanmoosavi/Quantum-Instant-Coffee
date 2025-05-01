@@ -4,8 +4,8 @@ import re
 import os
 from sys import argv
 import matplotlib.pyplot as plt
-from data_processor import process_band_data
-from dft_info_extractor import prepare_dft_info
+from data_processor import process_band_data, process_comparison_data
+from dft_info_extractor import prepare_dft_info, prepare_wannier_info
 from project_setup import initialize_project
 
 
@@ -254,6 +254,69 @@ class BandPlotter:
         return fig, axs
 
 
+class WannierComparePlotter:
+    """Class for plotting Wannier and DFT band structure comparison plots."""
+
+    def __init__(self, config=None):
+        """Initialize the WannierComparePlotter with configuration.
+
+        Args:
+            config (PlotConfig, optional): Configuration object with plot parameters.
+                If None, the default PlotConfig will be used.
+        """
+        self.config = config or PlotConfig()
+        self.name_formatter = CompoundNameFormatter()
+
+    def init_plot(self, compound_name, skip_normal=False, flag=""):
+        """Initialize plot with basic settings.
+
+        Args:
+            compound_name (str): Name of the compound
+            skip_normal (bool): Whether to skip non-SOC case
+            flag (str): Spin-orbit flag
+        """
+        plt.xlabel("k")
+        plt.ylabel("E (eV)")
+        plt.grid(True)
+
+        latex_name = self.name_formatter.format_compound_name(compound_name)
+        if skip_normal or flag == "_soc":
+            plt.title(f"Band Structure Comparison for {latex_name} with Spin-Orbit Coupling")
+        else:
+            plt.title(f"Band Structure Comparison for {latex_name} without Spin-Orbit Coupling")
+
+        plt.xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
+
+
+    def plot_comparison(self, k_points_dft, dft_energies, k_points_wannier,
+                       wannier_energies, compound_name, flag="", save_path=None):
+        """Plot comparison between Wannier and DFT band structures.
+
+        Args:
+            k_points_dft (ndarray): K-point coordinates for DFT bands
+            dft_energies (ndarray): Energy values for DFT bands
+            k_points_wannier (ndarray): K-point coordinates for Wannier bands
+            wannier_energies (ndarray): Energy values for Wannier bands
+            compound_name (str): Name of the compound
+            flag (str): Spin-orbit flag
+            save_path (str, optional): Path to save the plot
+        """
+        # Plot Wannier bands
+        plt.plot([], [], color="red", label="Wannier")
+        for band in range(len(wannier_energies)):
+            plt.plot(k_points_wannier, wannier_energies[band, :], color="red")
+
+        # Plot DFT bands
+        plt.plot([], [], color="blue", label="DFT")
+        for band in range(len(dft_energies)):
+            plt.plot(k_points_dft, dft_energies[band, :], color="blue")
+
+        plt.ylim(self.config.ENERGY_LIMITS)
+        plt.legend(loc=(0.4, 0.6))
+
+        if save_path:
+            plt.savefig(save_path)
+
 class ProjectionDataProcessor:
     """Processes atomic projection data for band structure plotting.
 
@@ -473,6 +536,86 @@ def plot_band_structure(project, save_fig=True, test_module=False):
                 plt.show()
 
 
+def plot_wannier_comparison(project, save_fig=True, test_module=False):
+    """Plot Wannier and DFT band structure comparison.
+
+    Args:
+        project (ProjectSetup): Project configuration and data container
+        save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
+        test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
+    """
+    plotter = WannierComparePlotter()
+    comparison_data = project.wannier_setup.comparison_data
+    spin_orbit_flags = ["_soc"] if project.wannier_setup.skip_normal else ["", "_soc"]
+
+    if test_module:
+        print("\nComparison data prepared for plotting. The plotting data is not printed:")
+
+        for fermi_energy, alat_parameter, flag in zip(
+                project.wannier_setup.fermi_energies,
+                project.wannier_setup.alat_parameters,
+                spin_orbit_flags
+        ):
+            print(f"Fermi energy: {fermi_energy} eV")
+            print(f"Lattice parameter: {alat_parameter} Å")
+            print(f"Spin-orbit flag: {flag}")
+
+        print(f"Skip normal: {project.wannier_setup.skip_normal}")
+
+    else:
+        if save_fig:
+            for k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag in zip(
+                    comparison_data["k_points_dft"],
+                    comparison_data["dft_energies"],
+                    comparison_data["k_points_wannier"],
+                    comparison_data["wannier_energies"],
+                    spin_orbit_flags
+            ):
+                save_path = os.path.join(
+                    project.project_dir,
+                    f"{project.compound_name}_comparison{flag}.png"
+                )
+
+                plotter.init_plot(
+                    project.compound_name,
+                    project.wannier_setup.skip_normal,
+                    flag
+                )
+                plotter.plot_comparison(
+                    k_points_dft,
+                    dft_energies,
+                    k_points_wannier,
+                    wannier_energies,
+                    project.compound_name,
+                    flag,
+                    save_path
+                )
+
+        else:
+            for k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag in zip(
+                    comparison_data["k_points_dft"],
+                    comparison_data["dft_energies"],
+                    comparison_data["k_points_wannier"],
+                    comparison_data["wannier_energies"],
+                    spin_orbit_flags
+            ):
+                plotter.init_plot(
+                    project.compound_name,
+                    project.wannier_setup.skip_normal,
+                    flag
+                )
+                plotter.plot_comparison(
+                    k_points_dft,
+                    dft_energies,
+                    k_points_wannier,
+                    wannier_energies,
+                    project.compound_name,
+                    flag,
+                    project.project_dir
+                )
+                plt.show()
+
+
 if __name__ == "__main__":
     """
     Main entry point for the script. Prepares configuration, processes data, and plots band structures.
@@ -484,9 +627,11 @@ if __name__ == "__main__":
         4. Call the `plot_band_structure` function to generate plots.
     """
     is_input = len(argv) == 3
+    is_wannier = input("Are you testing for Wannier comparison? (yes/no): ").strip().lower() == "yes"
 
-    project = initialize_project(argv, is_input)
-    prepare_dft_info(project)
+    project = initialize_project(argv, is_input, is_wannier)
+    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
+    process_comparison_data(project) if is_wannier else process_band_data(project)
 
-    process_band_data(project)
-    plot_band_structure(project, save_fig=False, test_module=True)
+    plot_wannier_comparison(project, save_fig=False, test_module=True) if is_wannier \
+        else plot_band_structure(project, save_fig=False, test_module=True)
