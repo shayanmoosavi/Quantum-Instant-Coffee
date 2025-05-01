@@ -1,4 +1,20 @@
-"""Module for handling the plotting of processed data from DFT calculations."""
+"""Module for handling the plotting of processed data from DFT and Wannier calculations.
+
+This module provides classes and functions for visualizing band structure data,
+including regular band structures, orbital-projected band structures, and
+comparisons between Wannier and DFT band structures.
+
+Classes:
+    PlotConfig: Configuration class containing constants for plot styling and parameters.
+    CompoundNameFormatter: Formats chemical compound names into LaTeX representation.
+    BandPlotter: Class for plotting band structure diagrams.
+    WannierComparePlotter: Class for plotting Wannier and DFT band structure comparison plots.
+    ProjectionDataProcessor: Processes atomic projection data for band structure plotting.
+
+Functions:
+    plot_band_structure: Plot band structure from processed data.
+    plot_wannier_comparison: Plot Wannier and DFT band structure comparison.
+"""
 
 import re
 import os
@@ -181,9 +197,6 @@ class BandPlotter:
             spin_orbit (bool, optional): Whether to include spin-orbit coupling. Defaults to False
             stress_amount (str, optional): Stress amount for the plot title. Defaults to None
             save_path (str, optional): Path to save the plot. Defaults to None
-
-        Returns:
-            tuple: Figure and axes objects
         """
         # One total subplot and one for each element
         number_of_subplots = len(projection_data) + 1
@@ -250,8 +263,6 @@ class BandPlotter:
         # Saving plot if path is provided
         if save_path:
             plt.savefig(save_path)
-
-        return fig, axs
 
 
 class WannierComparePlotter:
@@ -507,7 +518,7 @@ def plot_band_structure(project, save_fig=True, test_module=False):
                 save_path = os.path.join(project.project_dir, file_name)
 
                 # Creating and saveing the plot
-                fig, axs = plotter.create_band_structure_plot(
+                plotter.create_band_structure_plot(
                     compound_name,
                     k_points,
                     energy,
@@ -522,7 +533,7 @@ def plot_band_structure(project, save_fig=True, test_module=False):
 
             else:
                 # Creating and displaying the plot without saving
-                fig, axs = plotter.create_band_structure_plot(
+                plotter.create_band_structure_plot(
                     compound_name,
                     k_points,
                     energy,
@@ -621,12 +632,17 @@ if __name__ == "__main__":
     Main entry point for the script. Prepares configuration, processes data, and plots band structures.
 
     Steps:
-        1. Prepare paths for input and output files.
-        2. Extract DFT information from input files.
-        3. Process band data for plotting.
-        4. Call the `plot_band_structure` function to generate plots.
+        1. Determine if the script is being run for input generation or output processing.
+        2. Prompt the user to check if Wannier comparison is being tested.
+        3. Initialize the project with the appropriate configuration.
+        4. Prepare Wannier or DFT information based on the user's input.
+        5. Process the comparison or band data for plotting.
+        6. Generate and display the appropriate plots (Wannier comparison or band structure).
     """
+    # Check if the script is being run for input generation (3 arguments passed)
     is_input = len(argv) == 3
+
+    # Prompt the user to determine if Wannier comparison is being tested
     is_wannier = input("Are you testing for Wannier comparison? (yes/no): ").strip().lower() == "yes"
 
     project = initialize_project(argv, is_input, is_wannier)

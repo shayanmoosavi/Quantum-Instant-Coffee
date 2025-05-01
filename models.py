@@ -1,5 +1,5 @@
 """
-Data models for quantum material calculations.
+Data models for more organized project structure.
 
 This module defines the core data structures used throughout the project for
 handling compound information, DFT calculation results, and project configuration.
@@ -7,6 +7,8 @@ handling compound information, DFT calculation results, and project configuratio
 Classes:
     CompoundData: Parses and stores chemical compound information.
     DFTInfo: Container for DFT calculation results.
+    BandData: Container for band structure calculation data.
+    WannierSetup: Container for Wannier data and parameters.
     ProjectSetup: Main project configuration and data storage.
 """
 
@@ -96,14 +98,14 @@ class BandData:
     """Container for band structure calculation data.
 
     Attributes:
-        projbands_data (List[ndarray]): Projected bands data for each calculation
-        k_points_proj (List[ndarray]): K-points for projected bands
-        k_points (List[ndarray]): K-points for regular bands
-        energy_proj (List[ndarray]): Energy values for projected bands
-        energy (List[ndarray]): Energy values for regular bands
-        atomic_projection_weights (List[Dict]): Orbital weights for each calculation
-        atomic_projections (List[str]): List of atomic projections
-        unique_elements (List[str]): List of unique elements in the projections
+        projbands_data (List[ndarray]): Projected bands data for each calculation.
+        k_points_proj (List[ndarray]): K-points for projected bands.
+        k_points (List[ndarray]): K-points for regular bands.
+        energy_proj (List[ndarray]): Energy values for projected bands.
+        energy (List[ndarray]): Energy values for regular bands.
+        atomic_projection_weights (List[Dict]): Orbital weights for each calculation.
+        atomic_projections (List[str]): List of atomic projections.
+        unique_elements (List[str]): List of unique elements in the projections.
     """
     projbands_data: List[ndarray]
     k_points_proj: List[ndarray]
@@ -116,13 +118,13 @@ class BandData:
 
 @dataclass
 class WannierSetup:
-    """Configuration for Wannier calculations.
+    """Container for Wannier data and parameters.
 
     Attributes:
-        fermi_energies: List of Fermi energies
-        alat_parameters: List of lattice parameters
-        skip_normal: Whether to skip non-SOC calculations
-        comparison_data: Wannier and DFT data for comparison
+        fermi_energies (List[float]): List of Fermi energies.
+        alat_parameters (List[float]): List of lattice parameters.
+        skip_normal (bool): Whether to skip non-SOC calculations.
+        comparison_data (Dict[str, List[ndarray]]): Wannier and DFT data for comparison.
     """
     fermi_energies: List[float]
     alat_parameters: List[float]
@@ -145,6 +147,8 @@ class ProjectSetup:
         rel_pseudo_dir (Optional[str]): Path to the relativistic pseudopotential directory.
         poscar_file (Optional[str]): Path to the POSCAR file, if applicable.
         dft_info (Optional[DFTInfo]): DFT calculation results, if available.
+        band_data (Optional[BandData]): Band structure calculation data, if available.
+        wannier_setup (Optional[WannierSetup]): Wannier calculation setup, if available.
         input_paths (Optional[Dict[str, List[str]]]): Paths for input files, if applicable.
         output_paths (Optional[Dict[str, List[str]]]): Paths for output files, if applicable.
         skip_soc (bool): Whether spin-orbit coupling is skipped.
