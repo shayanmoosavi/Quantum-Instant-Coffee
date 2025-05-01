@@ -264,3 +264,42 @@ def extract_atomic_states_info(file_path, compound_name, flag, atom, orbital):
             f'File "{compound_name}{flag}.kpdos.out" does not exist. Make sure the file name is correct or in the directory of the project.'
         )
         raise
+
+
+def extract_wannier_parameters(file_path, compound_name, flag):
+    """Extract Wannier calculation parameters from NSCF output file.
+
+    Args:
+        file_path (str): Path to the NSCF Wannier output file
+        compound_name (str): Name of the compound
+        flag (str): Suffix for the file name (e.g., "_soc" or "")
+
+    Returns:
+        tuple: (alat_parameter, fermi_energy)
+
+    Raises:
+        ValueError: If parameters cannot be extracted
+        FileNotFoundError: If the file does not exist
+    """
+    print(f"Reading {compound_name}_nscf_wannier{flag}.pw.out...")
+
+    with open(file_path, "r") as f:
+        content = f.read()
+
+    # Extract alat parameter
+    alat_match = re.search(r"celldm\(1\)=\s+(\d\.\d+)", content)
+    if not alat_match:
+        raise ValueError("Alat parameter not found in NSCF output")
+    alat = float(alat_match.group(1)) * 0.529177  # Convert bohr to angstrom
+
+    # Extract Fermi energy
+    fermi_match = re.search(r"the Fermi energy is\s+(-?\d\.\d+)", content)
+    if not fermi_match:
+        raise ValueError("Fermi energy not found in NSCF output")
+    fermi_energy = float(fermi_match.group(1))
+
+    print(f"Parameters extracted successfully:")
+    print(f"Alat parameter: {alat} Å")
+    print(f"Fermi energy: {fermi_energy} eV\n")
+
+    return alat, fermi_energy

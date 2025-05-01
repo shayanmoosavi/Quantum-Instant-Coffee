@@ -16,7 +16,8 @@ class ProjectInitializationError(Exception):
 
 def initialize_project(
         argv,
-        is_input: bool = True
+        is_input: bool = True,
+        is_wannier: bool = False,
 ) -> ProjectSetup:
     """
     Initialize the project directory and parse compound information.
@@ -24,6 +25,7 @@ def initialize_project(
     Args:
         argv (list): Command-line arguments containing the compound name and POSCAR file path.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
+        is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
 
     Returns:
         ProjectSetup: An object containing the initialized project setup details.
@@ -42,7 +44,7 @@ def initialize_project(
     else:
         # For output/analysis
         compound_name = validate_command_line_args(argv, is_for_plot=True)
-        include_stress = get_pbands_type()
+        include_stress = get_pbands_type() if not is_wannier else False
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
