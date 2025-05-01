@@ -33,8 +33,10 @@ if __name__ == "__main__":
         # Determine if this is for input generation based on argument count
         is_input = len(argv) == 3
 
+        is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
+
         # Initialize and prepare project
-        project = initialize_project(argv, is_input)
+        project = initialize_project(argv, is_input, is_wannier)
 
         # Print summary
         print("\nInitialization complete. Project information:")
