@@ -9,7 +9,7 @@ from sys import argv
 from file_parser import *
 from init_project import initialize_project
 from input_handler import get_atomic_states
-from models import DFTInfo
+from models import DFTInfo, WannierSetup
 from subprocess import CalledProcessError, run
 from project_setup import ProjectInitializationError
 
@@ -398,6 +398,54 @@ def prepare_dft_info(project):
     return project
 
 
+def prepare_wannier_info(project):
+    """Prepare Wannier information by extracting data from NSCF Wannier output files.
+
+    Args:
+        project (PojectSetup): Project setup object containing paths and parameters.
+
+    Returns:
+        WannierSetup: Configuration object for Wannier calculations
+
+    Raises:
+        ProjectInitializationError: If initialization fails
+    """
+    fermi_energies = []
+    alat_parameters = []
+    skip_normal = False
+
+    spin_orbit_flags = ["", "_soc"]
+
+    nscf_paths = project.output_paths["nscf_wannier_output_paths"]
+
+    for path, flag in zip(nscf_paths, spin_orbit_flags):
+        try:
+            alat, fermi_energy = extract_wannier_parameters(path, project.compound_name, flag)
+            alat_parameters.append(alat)
+            fermi_energies.append(fermi_energy)
+
+        except FileNotFoundError as e:
+            if flag == "":
+
+                response = input("Non-SOC calculation files missing. Skip non-SOC case? (yes/no): ")
+                if response.lower() == "yes":
+                    skip_normal = True
+                    continue
+            raise ProjectInitializationError("Required Wannier files missing") from e
+
+        except ValueError as e:
+            raise ProjectInitializationError(f"Failed to extract Wannier parameters: {str(e)}")
+
+    wannier_setup = WannierSetup(
+        fermi_energies=fermi_energies,
+        alat_parameters=alat_parameters,
+        skip_normal=skip_normal
+    )
+
+    # Add Wannier setup to project configuration
+    project.add_wannier_setup(wannier_setup)
+    return project
+
 # Test to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -408,11 +456,11 @@ if __name__ == "__main__":
     """
 
     is_input = len(argv) == 3
+    is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
+    project = initialize_project(argv, is_input, is_wannier)
+    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
 
-    project = initialize_project(argv, is_input)
-    prepare_dft_info(project)
-
-    print("DFT information prepared successfully.\n")
+    print("Information prepared successfully.\n")
     if project.include_stress:
         for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
                 [None] + project.stress_amounts,
@@ -421,25 +469,35 @@ if __name__ == "__main__":
                 project.dft_info.number_of_atomic_states,
                 project.dft_info.atomic_states_info
         ):
-            print(f"\nStress amount: {stress_amount}")
+            print(f"\nStress amount: {(float(stress_amount.replace('_', '.')) * 100):.2f}%")
             print(f"Number of bands: {number_of_bands}")
-            print(f"Fermi energy: {fermi_energy}")
+            print(f"Fermi energy: {fermi_energy} eV")
             print(f"Number of atomic states: {number_of_atomic_states}")
             print("\nAtomic states info:")
             for atomic_state, info in atomic_states_info.items():
                 print(f"{atomic_state}: {info}")
 
     else:
-        for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
-                project.dft_info.number_of_bands,
-                project.dft_info.fermi_energies,
-                project.dft_info.number_of_atomic_states,
-                project.dft_info.atomic_states_info,
-                ["", "(SOC)"]
-        ):
-            print(f"Number of bands {flag}: {number_of_bands}")
-            print(f"Fermi energy {flag}: {fermi_energy}")
-            print(f"Number of atomic states {flag}: {number_of_atomic_states}")
-            print(f"\nAtomic states info {flag}:")
-            for atomic_state, info in atomic_states_info.items():
-                print(f"{atomic_state}: {info}")
+
+        if not is_wannier:
+            for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
+                    project.dft_info.number_of_bands,
+                    project.dft_info.fermi_energies,
+                    project.dft_info.number_of_atomic_states,
+                    project.dft_info.atomic_states_info,
+                    ["", "(SOC)"]
+            ):
+                print(f"Number of bands {flag}: {number_of_bands}")
+                print(f"Fermi energy {flag}: {fermi_energy} eV")
+                print(f"Number of atomic states {flag}: {number_of_atomic_states}")
+                print(f"\nAtomic states info {flag}:")
+                for atomic_state, info in atomic_states_info.items():
+                    print(f"{atomic_state}: {info}")
+        else:
+            for fermi_energy, alat_parameter in zip(
+                    project.wannier_setup.fermi_energies,
+                    project.wannier_setup.alat_parameters,
+            ):
+                print(f"Fermi energy: {fermi_energy} eV")
+                print(f"Lattice parameter: {alat_parameter} Å")
+            print(f"Skip normal: {project.wannier_setup.skip_normal}")
