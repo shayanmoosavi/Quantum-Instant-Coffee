@@ -137,7 +137,7 @@ def add_paths_for_directories(
         elif calculation in ["wannier", "wannier_soc"]:
                 append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag,
                                   ["nscf_wannier_input", "pw2wan_input", "wannier_input"] if is_input
-                                  else ["nscf_wannier_output"])
+                                  else ["nscf_wannier_output", "wannier_bands"])
 
 
 def build_file_paths(
@@ -238,7 +238,8 @@ def build_file_paths(
             "projbands_paths": [],
             "bands_paths": [],
             "nscf_output_paths": [],
-            "nscf_wannier_output_paths": []
+            "nscf_wannier_output_paths": [],
+            "wannier_bands_paths": [],
         }
 
         for key, value in paths.items():
@@ -273,7 +274,7 @@ def build_file_paths(
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
             elif key in ["wannier", "wannier_soc"] and not include_stress:
-                for path_type in ["nscf_wannier_output"]:
+                for path_type in ["nscf_wannier_output", "wannier_bands"]:
                     if not value[path_type]:
                         print(f"Warning: No {path_type} found in {key} directory.")
                     else:
