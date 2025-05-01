@@ -8,9 +8,9 @@ formats and extract relevant data using regular expressions.
 
 import re
 import json
+from typing import List, Tuple, Dict, Union
 
-
-def get_poscar_data(poscar_file):
+def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
     """
     Reads the POSCAR file and extracts lattice vectors and atomic positions.
 
@@ -44,7 +44,7 @@ def get_poscar_data(poscar_file):
     return lattice_vectors, atomic_positions
 
 
-def extract_band_number(file_path, compound_name, flag, atom=None, orbital=None):
+def extract_band_number(file_path: str, compound_name: str, flag: str) -> int:
     """
     Extract the number of bands from a Quantum ESPRESSO bands calculation output file.
 
@@ -52,8 +52,6 @@ def extract_band_number(file_path, compound_name, flag, atom=None, orbital=None)
         file_path (str): Path to the bands output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
-        atom: Added for function signature compatibility
-        orbital: Added for function signature compatibility
 
     Returns:
         int: Number of bands
@@ -92,7 +90,7 @@ def extract_band_number(file_path, compound_name, flag, atom=None, orbital=None)
         raise
 
 
-def extract_fermi_energy(file_path, compound_name, flag, atom=None, orbital=None):
+def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float:
     """
     Extract the Fermi energy from a Quantum ESPRESSO SCF calculation output file.
 
@@ -100,8 +98,6 @@ def extract_fermi_energy(file_path, compound_name, flag, atom=None, orbital=None
         file_path (str): Path to the SCF output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
-        atom: Added for function signature compatibility
-        orbital: Added for function signature compatibility
 
     Returns:
         float: Fermi energy in eV
@@ -136,7 +132,7 @@ def extract_fermi_energy(file_path, compound_name, flag, atom=None, orbital=None
         raise
 
 
-def extract_number_of_atomic_states(file_path, compound_name, flag, atom=None, orbital=None):
+def extract_number_of_atomic_states(file_path: str, compound_name: str, flag: str) -> int:
     """
     Extract the number of atomic states from a Quantum ESPRESSO KPDOS calculation output file.
 
@@ -144,8 +140,6 @@ def extract_number_of_atomic_states(file_path, compound_name, flag, atom=None, o
         file_path (str): Path to the kpdos output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
-        atom: Added for function signature compatibility
-        orbital: Added for function signature compatibility
 
     Returns:
         int: Number of atomic states
@@ -186,7 +180,11 @@ def extract_number_of_atomic_states(file_path, compound_name, flag, atom=None, o
         raise
 
 
-def extract_atomic_states_info(file_path, compound_name, flag, atom, orbital):
+def extract_atomic_states_info(file_path: str,
+                               compound_name: str,
+                               flag: str,
+                               atom: str,
+                               orbital: str) -> Dict[str, Dict[str, Union[List[int], List[float]]]]:
     """
     Extract the atomic states info from a Quantum ESPRESSO KPDOS calculation output file.
 
@@ -266,7 +264,7 @@ def extract_atomic_states_info(file_path, compound_name, flag, atom, orbital):
         raise
 
 
-def extract_wannier_parameters(file_path, compound_name, flag):
+def extract_wannier_parameters(file_path: str, compound_name: str, flag: str) -> Tuple[float, float]:
     """Extract Wannier calculation parameters from NSCF output file.
 
     Args:

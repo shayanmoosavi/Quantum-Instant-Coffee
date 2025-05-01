@@ -6,10 +6,12 @@ and building structured file paths for input and output files.
 """
 
 from sys import argv
+
+from config import ProjectConfig
 from project_setup import *
+from typing import List, Tuple, Dict
 
-
-def validate_command_line_args(args, is_for_plot=False):
+def validate_command_line_args(args: List[str], is_for_plot: bool = False) -> str | Tuple[str, str]:
     """
     Validate command line arguments.
 
@@ -41,7 +43,7 @@ def validate_command_line_args(args, is_for_plot=False):
         return args[1], args[2]
 
 
-def get_project_directory(compound_name):
+def get_project_directory(compound_name: str) -> str:
     """
     Get the project directory for the given compound.
 
@@ -55,7 +57,13 @@ def get_project_directory(compound_name):
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
 
-def append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag, keys):
+def append_file_paths(file_paths: Dict[str, Dict[str, List[str]]],
+                      calculation: str,
+                      path: str,
+                      compound_name: str,
+                      file_patterns: Dict[str, str],
+                      flag: str,
+                      keys: List[str]) -> None:
     """
     Append file paths to the file_paths dictionary for a specific calculation.
 
@@ -82,14 +90,14 @@ def append_file_paths(file_paths, calculation, path, compound_name, file_pattern
 
 
 def add_paths_for_directories(
-        calculation_dirs,
-        compound_name,
-        file_patterns,
-        file_paths,
-        is_input=True,
-        include_stress=False,
-        stress_amounts=None
-):
+        calculation_dirs: Dict[str, str],
+        compound_name: str,
+        file_patterns: Dict[str, str],
+        file_paths: Dict[str, Dict[str, List[str]]],
+        is_input: bool = True,
+        include_stress: bool = False,
+        stress_amounts: List[str] = None
+) -> None:
     """
     Add file paths for the given directory structure.
 
@@ -114,8 +122,6 @@ def add_paths_for_directories(
 
         elif calculation == "strain":
             continue
-        # elif calculation in ["wannier", "wannier_soc"] and not is_input:
-        #     continue
         elif calculation in ["pseudo", "pseudo_rel"]:
             continue
         elif calculation in ["scf", "scf_soc"]:
@@ -141,8 +147,13 @@ def add_paths_for_directories(
 
 
 def build_file_paths(
-        project_dir, compound_name, config, is_input=False, include_stress=False, stress_amounts=None
-):
+        project_dir: str,
+        compound_name: str,
+        config: ProjectConfig,
+        is_input: bool = False,
+        include_stress: bool = False,
+        stress_amounts: bool = None
+) -> Dict[str, List[str]] | Tuple[Dict[str, List[str]], bool]:
     """
     Build file paths based on the analysis type.
 
@@ -283,7 +294,10 @@ def build_file_paths(
         return {key: value for key, value in structured_paths.items() if value}, include_stress
 
 
-def create_directories(project_dir, dir_structure, include_stress=False, stress_amounts=None):
+def create_directories(project_dir: str,
+                       dir_structure: Dict[str, str],
+                       include_stress: bool = False,
+                       stress_amounts: List[str] = None) -> List[str]:
     """
     Creates the directory structure for the project.
 

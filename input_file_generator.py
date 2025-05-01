@@ -18,6 +18,9 @@ from subprocess import run, CalledProcessError
 from file_parser import get_poscar_data
 from init_project import initialize_project
 from input_handler import get_pseudopotential_files
+from typing import List, Dict, Tuple
+
+from models import ProjectSetup
 
 
 class InputGenerationError(Exception):
@@ -25,7 +28,7 @@ class InputGenerationError(Exception):
     pass
 
 
-def get_atomic_weights(element_names):
+def get_atomic_weights(element_names: List[str]) -> List[float] | None:
     """
     Retrieves the atomic weights for the given element names.
 
@@ -57,15 +60,15 @@ def get_atomic_weights(element_names):
             conn.close()
 
 def generate_control_section(
-        calculation_type,
-        pseudo_dir,
-        project_dir,
-        compound_name,
+        calculation_type: str,
+        pseudo_dir: str,
+        project_dir: str,
+        compound_name: str,
         *,
-        etot_conv_thr=1e-8,
-        forc_conv_thr=1e-6,
-        relativistic=False,
-):
+        etot_conv_thr: float = 1e-8,
+        forc_conv_thr:float = 1e-6,
+        relativistic: bool = False,
+) -> str:
     """
     Generates the &CONTROL section of the input file.
 
@@ -101,14 +104,14 @@ def generate_control_section(
 
 
 def generate_system_section(
-        number_of_atoms,
-        atom_types,
+        number_of_atoms: int,
+        atom_types: int,
         *,
-        ecutwfc=50,
-        ecutrho=500,
-        number_of_bands=None,
-        relativistic=False,
-):
+        ecutwfc: int = 50,
+        ecutrho: int = 500,
+        number_of_bands: int = None,
+        relativistic: bool = False,
+) -> str:
     """
     Generates the &SYSTEM section of the input file.
 
@@ -148,8 +151,11 @@ def generate_system_section(
 
 
 def generate_electrons_section(
-        *, relativistic=False, conv_thr=1e-9, electron_maxstep=500
-):
+        *,
+        relativistic: bool = False,
+        conv_thr: float = 1e-9,
+        electron_maxstep: int = 500
+) -> str:
     """
     Generates the &ELECTRONS section of the input file.
 
@@ -181,13 +187,16 @@ def generate_electrons_section(
         return electrons_section
 
 
-def generate_atomic_species_section(element_names, pseudo_list, atomic_weights):
+def generate_atomic_species_section(element_names: List[str],
+                                    pseudo_list: Dict[str, str],
+                                    atomic_weights: List[float]) -> str:
     """
     Generates the ATOMIC_SPECIES section of the input file.
 
     Args:
         element_names (list): List of element names.
         pseudo_list (dict): Dictionary of element names with their corresponding pseudopotential files.
+        atomic_weights (list): List of atomic weights.
 
     Returns:
         str: The ATOMIC_SPECIES section of the input file.
@@ -200,7 +209,7 @@ def generate_atomic_species_section(element_names, pseudo_list, atomic_weights):
     return atomic_species_section
 
 
-def generate_atomic_positions_section(atomic_labels, atomic_positions):
+def generate_atomic_positions_section(atomic_labels: List[str], atomic_positions: List[str]) -> str:
     """
     Generates the ATOMIC_POSITIONS section of the input file.
 
@@ -219,7 +228,7 @@ def generate_atomic_positions_section(atomic_labels, atomic_positions):
     return atomic_positions_section
 
 
-def generate_cell_parameters_section(lattice_vectors):
+def generate_cell_parameters_section(lattice_vectors: List[str]) -> str:
     """
     Generates the CELL_PARAMETERS section of the input file.
 
@@ -237,7 +246,7 @@ def generate_cell_parameters_section(lattice_vectors):
     return cell_parameters_section
 
 
-def generate_k_points_section(calculation_type, k_mesh_density = None):
+def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] = None) -> str | None:
     """
     Generates the K_POINTS section of the input files for Quantum ESPRESSO or
     kpoints section of Wannier90 input file.
@@ -308,14 +317,14 @@ def generate_k_points_section(calculation_type, k_mesh_density = None):
 """
         return k_points_section
 
-def generate_pw_input_file(calculation_type,
-                           project,
-                           atomic_weights,
-                           pseudo_list,
-                           atomic_positions,
-                           lattice_vectors,
-                           relativistic=False,
-                           rel_pseudo_list=None):
+def generate_pw_input_file(calculation_type: str,
+                           project: ProjectSetup,
+                           atomic_weights: List[float],
+                           pseudo_list: List[str],
+                           atomic_positions: List[str],
+                           lattice_vectors: List[str],
+                           relativistic: bool = False,
+                           rel_pseudo_list: bool = None):
     """
     Generates the complete pw.x input file for Quantum ESPRESSO.
 
@@ -327,6 +336,7 @@ def generate_pw_input_file(calculation_type,
         atomic_positions (list): List of atomic positions.
         lattice_vectors (list): List of lattice vectors.
         relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
+        rel_pseudo_list (bool, optional): List of relativistic pseudopotential files
 
     Returns:
         str: The complete input file for Quantum ESPRESSO.
@@ -395,7 +405,7 @@ def generate_pw_input_file(calculation_type,
             exit(1)
 
 
-def generate_pdos_input_file(compound_name, *, delta=0.01):
+def generate_pdos_input_file(compound_name: str, *, delta: float = 0.01) -> str:
     """
     Generates the input file for projected density of states (PDOS) calculations.
 
@@ -414,7 +424,7 @@ def generate_pdos_input_file(compound_name, *, delta=0.01):
  /"""
 
 
-def generate_kpdos_input_file(compound_name, *, delta=0.01):
+def generate_kpdos_input_file(compound_name: str, *, delta: float = 0.01) -> str:
     """
     Generates the input file for k-resolved projected density of states (k-PDOS) calculations.
 
@@ -436,7 +446,7 @@ def generate_kpdos_input_file(compound_name, *, delta=0.01):
 /"""
 
 
-def generate_bands_input_file(compound_name):
+def generate_bands_input_file(compound_name: str) -> str:
     """
     Generates the input file for band structure calculations.
 
@@ -455,7 +465,7 @@ def generate_bands_input_file(compound_name):
 /"""
 
 
-def generate_pw2wannier_input_file(compound_name, relativistic = False):
+def generate_pw2wannier_input_file(compound_name: str, relativistic: bool = False) -> str:
     """
     Generates the complete pw2wannier90.x input file for Quantum ESPRESSO.
 
@@ -483,14 +493,14 @@ def generate_pw2wannier_input_file(compound_name, relativistic = False):
 """
     return input_file_content
 
-def generate_wannier_input_file(element_names,
-                                atomic_positions,
-                                lattice_vectors,
-                                atomic_labels,
-                                relativistic = False,
+def generate_wannier_input_file(element_names: List[str],
+                                atomic_positions: List[str],
+                                lattice_vectors: List[str],
+                                atomic_labels: List[str],
+                                relativistic: bool = False,
                                 *,
-                                num_iter = 250,
-                                dis_num_iter = 2500):
+                                num_iter: int = 250,
+                                dis_num_iter: int = 2500) -> str:
     """
     Generates the input file for Wannier90.
 
@@ -600,7 +610,7 @@ begin kpoints
 
 
 
-def write_input_files(project, skip_soc = False):
+def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
     """
     Write generated input file templates to their respective directories.
 

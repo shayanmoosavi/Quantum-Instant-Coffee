@@ -6,10 +6,11 @@ It includes functionality for handling spin-orbit coupling (SOC), collecting DFT
 
 import os
 from sys import argv
+from typing import Any, Tuple, Dict, List
 from file_parser import *
 from init_project import initialize_project
 from input_handler import get_atomic_states
-from models import DFTInfo, WannierSetup
+from models import DFTInfo, WannierSetup, ProjectSetup
 from subprocess import CalledProcessError, run
 from project_setup import ProjectInitializationError
 
@@ -23,7 +24,7 @@ class SpinOrbitHandler:
         skip_soc (bool): Indicates whether SOC cases should be skipped automatically.
     """
 
-    def __init__(self, skip_soc=False):
+    def __init__(self, skip_soc: bool = False) -> None:
         """
         Initializes the SpinOrbitHandler with the option to skip SOC cases.
 
@@ -32,7 +33,7 @@ class SpinOrbitHandler:
         """
         self.skip_soc = skip_soc
 
-    def should_skip(self, flag):
+    def should_skip(self, flag: str) -> bool:
         """
         Determines if a given case should be skipped based on the SOC flag.
 
@@ -44,7 +45,7 @@ class SpinOrbitHandler:
         """
         return self.skip_soc and flag == "_soc"
 
-    def handle_error(self, flag):
+    def handle_error(self, flag: str) -> bool:
         """
         Handles errors encountered during data collection. For SOC cases, it provides
         the user with the option to skip the case or exit the program. For non-SOC cases,
@@ -75,15 +76,20 @@ class SpinOrbitHandler:
             exit(1)
         return True
 
-def collect_dft_data(paths, compound_name, flag, extractor_func, atom = None, orbital = None):
+def collect_dft_data(path: str,
+                     compound_name: str,
+                     flag: str,
+                     extractor_func: callable,
+                     atom: str = None,
+                     orbital: str = None) -> None | Tuple[None, bool] | Tuple[Any, bool]:
     """
     Collect data from Quantum ESPRESSO output files using a specified extractor function.
 
     Args:
-        paths (dict): Dictionary containing file paths.
+        path (dict): The file path.
         compound_name (str): Name of the compound being analyzed.
         flag (str): Suffix for the file name (e.g., "_soc" or "").
-        extractor_func (function): Function used to extract specific data from the file.
+        extractor_func (callable): Function used to extract specific data from the file.
         atom (str): Atomic symbol
         orbital (str): Orbital type (e.g., "s", "p", "d")
 
@@ -101,7 +107,7 @@ def collect_dft_data(paths, compound_name, flag, extractor_func, atom = None, or
         match (atom is None, orbital is None):
 
             case (True, True):
-                data = extractor_func(paths, compound_name, flag)
+                data = extractor_func(path, compound_name, flag)
                 return data, True
 
             case (True, False) | (False, True):
@@ -111,7 +117,7 @@ def collect_dft_data(paths, compound_name, flag, extractor_func, atom = None, or
                 )
 
             case (False, False):
-                data = extractor_func(paths, compound_name, flag, atom, orbital)
+                data = extractor_func(path, compound_name, flag, atom, orbital)
                 return data, True
 
     except (FileNotFoundError, ValueError) as e:
@@ -119,14 +125,17 @@ def collect_dft_data(paths, compound_name, flag, extractor_func, atom = None, or
         return None, False
 
 
-def collect_band_numbers(paths, compound_name, spin_orbit_flag, skip_soc=False):
+def collect_band_numbers(paths: Dict[str, List[str]],
+                         compound_name: str,
+                         spin_orbit_flags: List[str],
+                         skip_soc: bool = False) -> list[int]:
     """
     Collect band numbers from Quantum ESPRESSO output files.
 
     Args:
         paths (dict): Dictionary of file paths
         compound_name (str): Name of the compound
-        spin_orbit_flag (list): List of flags for spin-orbit coupling
+        spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
 
     Returns:
@@ -135,7 +144,7 @@ def collect_band_numbers(paths, compound_name, spin_orbit_flag, skip_soc=False):
     soc_handler = SpinOrbitHandler(skip_soc)
     number_of_bands_list = []
 
-    for path, flag in zip(paths["pw_bands_output_paths"], spin_orbit_flag):
+    for path, flag in zip(paths["pw_bands_output_paths"], spin_orbit_flags):
         if soc_handler.should_skip(flag):
             continue
 
@@ -150,14 +159,17 @@ def collect_band_numbers(paths, compound_name, spin_orbit_flag, skip_soc=False):
     return number_of_bands_list
 
 
-def collect_fermi_energies(paths, compound_name, spin_orbit_flag, skip_soc=False):
+def collect_fermi_energies(paths: Dict[str, List[str]],
+                           compound_name: str,
+                           spin_orbit_flags: List[str],
+                           skip_soc: bool = False) -> List[float]:
     """
     Collect Fermi energies from Quantum ESPRESSO output files.
 
     Args:
         paths (dict): Dictionary of file paths
         compound_name (str): Name of the compound
-        spin_orbit_flag (list): List of flags for spin-orbit coupling
+        spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
 
     Returns:
@@ -166,7 +178,7 @@ def collect_fermi_energies(paths, compound_name, spin_orbit_flag, skip_soc=False
     soc_handler = SpinOrbitHandler(skip_soc)
     fermi_energy_list = []
 
-    for path, flag in zip(paths["scf_output_paths"], spin_orbit_flag):
+    for path, flag in zip(paths["scf_output_paths"], spin_orbit_flags):
 
         if soc_handler.should_skip(flag):
             continue
@@ -181,14 +193,17 @@ def collect_fermi_energies(paths, compound_name, spin_orbit_flag, skip_soc=False
 
     return fermi_energy_list
 
-def collect_number_of_atomic_states(paths, compound_name, spin_orbit_flag, skip_soc=False):
+def collect_number_of_atomic_states(paths: Dict[str, List[str]],
+                                    compound_name: str,
+                                    spin_orbit_flags: List[str],
+                                    skip_soc: bool = False) -> List[int]:
     """
     Collect the number of atomic states from Quantum ESPRESSO KPDOS output files.
 
     Args:
         paths (dict): Dictionary of file paths
         compound_name (str): Name of the compound
-        spin_orbit_flag (list): List of flags for spin-orbit coupling
+        spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
 
     Returns:
@@ -197,7 +212,7 @@ def collect_number_of_atomic_states(paths, compound_name, spin_orbit_flag, skip_
     soc_handler = SpinOrbitHandler(skip_soc)
     number_of_atomic_states_list = []
 
-    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flag):
+    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flags):
         if soc_handler.should_skip(flag):
             continue
 
@@ -212,14 +227,17 @@ def collect_number_of_atomic_states(paths, compound_name, spin_orbit_flag, skip_
     return number_of_atomic_states_list
 
 
-def collect_atomic_states_info(paths, compound_name, spin_orbit_flag, skip_soc=False):
+def collect_atomic_states_info(paths: Dict[str, List[str]],
+                               compound_name: str,
+                               spin_orbit_flags: List[str],
+                               skip_soc: bool = False) -> List[Dict[Any, Any]]:
     """
     Collect the atomic info states from Quantum ESPRESSO KPDOS output files.
 
     Args:
         paths (dict): Dictionary of file paths
         compound_name (str): Name of the compound
-        spin_orbit_flag (list): List of flags for spin-orbit coupling
+        spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
 
     Returns:
@@ -230,7 +248,7 @@ def collect_atomic_states_info(paths, compound_name, spin_orbit_flag, skip_soc=F
 
     atomic_projection_list = get_atomic_states()
 
-    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flag):
+    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flags):
 
         atomic_states_info = {}
         if soc_handler.should_skip(flag):
@@ -250,7 +268,10 @@ def collect_atomic_states_info(paths, compound_name, spin_orbit_flag, skip_soc=F
     return atomic_states_info_list
 
 
-def run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir):
+def run_awk_script(number_of_atomic_states: int,
+                   fermi_energy: float,
+                   kpdos_output_dir: str,
+                   projbands_dir: str) -> None:
     """
     Execute the AWK script to generate projected bands data.
 
@@ -275,7 +296,9 @@ def run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, proj
     run(awk_command, shell=True, check=True, capture_output=True)
 
 
-def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_list):
+def generate_projected_bands(paths: Dict[str, List[str]],
+                             number_of_atomic_states_list: List[int],
+                             fermi_energies: List[float]) -> List[bool]:
     """
     Generate projected bands data if not already present.
 
@@ -288,7 +311,7 @@ def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_l
             - "kpdos_output_paths" (list): List of KPDOS output file paths.
             - "projbands_paths" (list): List of paths where projbands files should be generated.
         number_of_atomic_states_list (list): A list of integers representing the number of atomic states for each calculation output
-        fermi_energy_list (list): A list of floats representing the Fermi energy values for each calculation output.
+        fermi_energies (list): A list of floats representing the Fermi energy values for each calculation output.
     Returns:
         list: A list of boolean values indicating the success (True) or failure (False)
               of the projected bands generation for each file.
@@ -301,7 +324,7 @@ def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_l
     for (projbands_dir, kpdos_output_dir,
          number_of_atomic_states, fermi_energy) in zip(
         paths["projbands_paths"], paths["kpdos_output_paths"],
-        number_of_atomic_states_list, fermi_energy_list
+        number_of_atomic_states_list, fermi_energies
     ):
 
         # Checking if the projbands file already exists
@@ -325,15 +348,15 @@ def generate_projected_bands(paths, number_of_atomic_states_list, fermi_energy_l
     return projbands_generation_success_list
 
 
-def prepare_dft_info(project):
+def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
     """
     Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
 
     Args:
-        project (ProjectSetup):
+        project (ProjectSetup): Project setup object containing paths and parameters.
 
     Returns:
-        ProjectSetup:
+        ProjectSetup: Updated project setup object with DFT information.
     """
 
     # Determine spin_orbit_flags based on project configuration
@@ -398,7 +421,7 @@ def prepare_dft_info(project):
     return project
 
 
-def prepare_wannier_info(project):
+def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     """Prepare Wannier information by extracting data from NSCF Wannier output files.
 
     Args:

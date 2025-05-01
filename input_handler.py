@@ -7,9 +7,12 @@ of bands to plot, input strain amounts, and specify atomic states for projection
 
 import os
 import re
+from typing import List, Tuple, Dict
 
 
-def select_pseudopotentials(pseudo_files, element_name, relativistic=False):
+def select_pseudopotentials(pseudo_files: List[str],
+                            element_name: str,
+                            relativistic: bool = False):
     """
     Prompts the user to select a pseudopotential file from a list.
 
@@ -41,17 +44,20 @@ def select_pseudopotentials(pseudo_files, element_name, relativistic=False):
                 print("Invalid selection! Please select a valid number.")
 
 
-def get_pseudopotential_files(element_names,
-                              pseudo_path = "../Pseudopotentials",
+def get_pseudopotential_files(element_names: List[str],
+                              pseudo_path: str = "../Pseudopotentials",
                               *,
-                              relativistic = False,
-                              rel_pseudo_path = None):
+                              relativistic: bool = False,
+                              rel_pseudo_path: str = None) -> Tuple[Dict, Dict] | Dict:
     """
     Gets the pseudopotential file paths from the user, searches for the files,
     and lets the user select the appropriate ones.
 
     Args:
         element_names (list): A list of element names in the compound.
+        pseudo_path (str): Path of pseudopotential files
+        relativistic (bool): Whether to get the relativistic pseudopotentials
+        rel_pseudo_path (str): Path of relativistic pseudopotential files
 
     Returns:
         tuple: A tuple containing:
@@ -127,7 +133,7 @@ def get_pbands_type():
             print("Invalid input!")
 
 
-def get_strain_amounts(is_input = False):
+def get_strain_amounts(is_input: bool = False) -> List[str] | None:
     """
     Prompt the user to input strain amounts for DFT calculations.
 
@@ -178,7 +184,7 @@ For example 1_30 means the coordinates are stretched by 30%. Provide a space sep
                 return stress_amount_list
 
 
-def get_atomic_states():
+def get_atomic_states() -> List[Tuple[str, str]] | None:
     """
     Prepares and retrieves the atomic projection list for plotting projected bands.
 

@@ -15,7 +15,7 @@ import pandas as pd
 
 
 # Fetching the webpage
-def fetch_elements_data(url="https://iupac.qmul.ac.uk/AtWt/"):
+def fetch_elements_data(url: str = "https://iupac.qmul.ac.uk/AtWt/") -> BeautifulSoup.Tag:
     """
     Fetches the atomic weights, names, and labels of elements from the IUPAC website.
 
@@ -49,7 +49,7 @@ def fetch_elements_data(url="https://iupac.qmul.ac.uk/AtWt/"):
     return table_2_html
 
 
-def process_elements_data(html_data):
+def process_elements_data(html_data: BeautifulSoup.Tag) -> pd.DataFrame:
     """
     Processes the HTML table containing atomic data into a cleaned pandas DataFrame.
 
@@ -100,7 +100,7 @@ def process_elements_data(html_data):
     return data
 
 
-def create_sqlite_database(data):
+def create_sqlite_database(data: pd.DataFrame) -> bool:
     """
     Creates a SQLite database and stores the atomic data.
 

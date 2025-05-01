@@ -1,15 +1,18 @@
-""" Module for initializing a project directory and parsing compound information.
+"""Script for testing the initialization of a project based on a compound name and POSCAR file.
 
-This module initializes a project directory structure and parses compound information
-based on the provided compound name and optional stress parameters.
+This script tests the initialization of the project based on the provided compound name and POSCAR file.
+It handles command-line arguments, initializes the project, and provides a summary of the project configuration.
 
-Classes:
-    ProjectInitializationError: Custom exception for errors during project initialization.
+Usage:
+    python script.py <compound_name> <poscar_file>
 
-Functions:
-    initialize_project(compound_name, include_stress, stress_amounts): Initializes the project directory
-        and parses compound information.
-    main: Entry point for the script, handling command-line arguments and project initialization.
+Args:
+    compound_name (str): The name of the compound to initialize the project for.
+    poscar_file (str): The path to the POSCAR file for the compound.
+
+Raises:
+    ProjectInitializationError: If an error occurs during project initialization.
+    Exception: For any unexpected errors.
 """
 from sys import argv
 from project_setup import *
@@ -33,8 +36,10 @@ if __name__ == "__main__":
         # Determine if this is for input generation based on argument count
         is_input = len(argv) == 3
 
+        is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
+
         # Initialize and prepare project
-        project = initialize_project(argv, is_input)
+        project = initialize_project(argv, is_input, is_wannier)
 
         # Print summary
         print("\nInitialization complete. Project information:")
