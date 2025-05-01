@@ -68,6 +68,36 @@ class BandDataProcessor:
         return bands_data, k_points, energy
 
 
+class WannierDataProcessor:
+    """
+    Handles loading and processing of Wannier band structure data.
+
+    Attributes:
+        project_dir (str): The directory containing the project files.
+    """
+
+    def __init__(self, project_dir):
+        """Initialize the WannierDataProcessor with the project directory."""
+        self.project_dir = project_dir
+
+    @staticmethod
+    def load_wannier_bands(wannier_bands_dir, alat_parameter, fermi_energy):
+        """
+        Load and process Wannier bands data from a file.
+
+        Args:
+            wannier_bands_dir (str): Path to the Wannier bands file
+            alat_parameter (float): Lattice parameter in Angstrom
+            fermi_energy (float): Fermi energy in eV
+
+        Returns:
+            tuple: (wannier_data, k_points_wannier, wannier_energies)
+        """
+        wannier_data = np.loadtxt(wannier_bands_dir)
+        k_points_wannier = np.unique(wannier_data[:, 0]) / ((2 * np.pi) / alat_parameter)
+        wannier_energies = np.reshape(wannier_data[:, 1], (-1, len(k_points_wannier))) - fermi_energy
+        return wannier_data, k_points_wannier, wannier_energies
+
 class WeightCalculator:
     """Handles orbital weight calculations for band structure."""
 
@@ -228,6 +258,72 @@ def process_band_data(project):
 
     return project
 
+def process_comparison_data(project):
+    """
+    Process Wannier and DFT band structure data.
+
+    Args:
+        project (ProjectSetup): Project configuration and data container
+
+    Returns:
+        ProjectSetup: Updated project with processed Wannier data
+    """
+    band_processor = BandDataProcessor(project.project_dir)
+    wannier_processor = WannierDataProcessor(project.project_dir)
+
+    k_points_wannier_list = []
+    k_points_dft_list = []
+    wannier_energies_list = []
+    dft_energies_list = []
+
+    if project.wannier_setup.skip_normal:
+
+        # Process Wannier data
+        _, k_points_wannier, wannier_energies = wannier_processor.load_wannier_bands(
+            project.output_paths["wannier_bands_paths"][1],
+            project.wannier_setup.alat_parameters[0], project.wannier_setup.fermi_energies[0])
+
+        # Process DFT data
+        _, k_points_dft, dft_energies = band_processor.load_bands(
+            project.output_paths["bands_paths"][1], project.wannier_setup.fermi_energies[0])
+
+        # Store the results
+        k_points_wannier_list.append(k_points_wannier)
+        wannier_energies_list.append(wannier_energies)
+        k_points_dft_list.append(k_points_dft)
+        dft_energies_list.append(dft_energies)
+
+    else:
+
+        for wannier_bands_dir, bands_dir, alat_parameter, fermi_energy in zip(
+                project.output_paths["wannier_bands_paths"],
+                project.output_paths["bands_paths"],
+                project.wannier_setup.alat_parameters,
+                project.wannier_setup.fermi_energies
+        ):
+            # Process Wannier data
+            _, k_points_wannier, wannier_energies = wannier_processor.load_wannier_bands(
+                wannier_bands_dir, alat_parameter, fermi_energy)
+
+            # Process DFT data
+            _, k_points_dft, dft_energies = band_processor.load_bands(
+                bands_dir, fermi_energy)
+
+            # Store results
+            k_points_wannier_list.append(k_points_wannier)
+            wannier_energies_list.append(wannier_energies)
+            k_points_dft_list.append(k_points_dft)
+            dft_energies_list.append(dft_energies)
+
+    comparison_data = {
+        "k_points_wannier": k_points_wannier_list,
+        "k_points_dft": k_points_dft_list,
+        "wannier_energies": wannier_energies_list,
+        "dft_energies": dft_energies_list
+    }
+
+    project.wannier_setup.comparison_data = comparison_data
+    return project
 
 # Testing to ensure the module works as expected
 if __name__ == "__main__":
@@ -238,11 +334,17 @@ if __name__ == "__main__":
     atomic projections and weights are calculated correctly.
     """
     is_input = len(argv) == 3
+    is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
 
-    project = initialize_project(argv, is_input)
-    prepare_dft_info(project)
-
-    process_band_data(project)
+    project = initialize_project(argv, is_input, is_wannier)
+    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
+    process_comparison_data(project) if is_wannier else process_band_data(project)
 
     print("Data processed successfully and ready for plotting.")
-    print(f"Elements: {project.band_data.unique_elements}")
+
+    if is_wannier:
+        for alat, fermi_energy in zip(project.wannier_setup.alat_parameters, project.wannier_setup.fermi_energies):
+            print(f"Alat Parameters: {alat} Å")
+            print(f"Fermi Energies: {fermi_energy} eV")
+    else:
+        print(f"Elements: {project.band_data.unique_elements}")
