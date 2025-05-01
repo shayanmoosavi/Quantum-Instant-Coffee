@@ -112,7 +112,7 @@ After successfully executing `projected_bands_plotter.py`, the script will plot 
 To compare the wannier interpolated bands with DFT bands, run the following command:
 
 ```bash
-python compare_bands.py <compound-name>
+python compare_bands_plotter.py <compound-name>
 ```
 
 ## ⚙️ Configuration
