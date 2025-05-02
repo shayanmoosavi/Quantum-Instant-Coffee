@@ -45,19 +45,35 @@ The input files will be generated both with and without considering spin-orbit c
 - [Wannier90](https://wannier.org/) (for running the calculations)
 
 ## 🔧 Installation
-To install the required packages, you can use pip:
 
-```bash
-pip install numpy matplotlib pandas beautifulsoup4 requests lxml
-```
-
-Then clone the repository:
+### 1 - Get the repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/shayanmoosavi/Quantum-Instant-Coffee.git 
 ````
 
 Or download the latest release from the releases section of the repository.
+
+### 2 - Install the required packages
+To install the required packages, you can use pip.
+
+For all the dependencies:
+```bash
+pip install numpy matplotlib pandas beautifulsoup4 requests lxml
+```
+
+For the required packages:
+```bash
+pip install numpy matplotlib pandas
+```
+
+### 3 - Install the repository as a package
+To install the repository as a package, navigate to the cloned directory and run:
+
+```bash
+pip install .
+```
 
 ## ✨ Features
 
@@ -263,6 +279,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 🏅 Acknowledgements
 - `projwfc_to_bands.awk` script provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
 - `kmesh.pl` script provided by [Wannier90](https://wannier.org/)
-- Logo created with [Banner Maker](https://banner.godori.dev/)
+- Logo created with [Gemini](https://gemini.google.com)
 - Badges created with [Shields.io](https://shields.io/)
-- Logo icon provided by [Flaticon](https://www.flaticon.com/)
