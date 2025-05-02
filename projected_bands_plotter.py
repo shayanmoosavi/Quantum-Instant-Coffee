@@ -3,8 +3,8 @@
 This script initializes the project, processes the data, and plots the projected band structure
 using the provided configuration and data processing modules.
 """
-from plot_handler import *
-from data_processor import *
+from utils.plot_handler import *
+from data.data_processor import *
 
 
 # Initialization of the project
