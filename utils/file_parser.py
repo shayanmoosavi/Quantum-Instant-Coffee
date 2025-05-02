@@ -208,7 +208,7 @@ def extract_atomic_states_info(file_path: str,
         with open(file_path, "r") as kpdos_output_file:
             kpdos_calculation_output = kpdos_output_file.read()
 
-        orbital_info = json.load(open("orbital_info.json", "r"))
+        orbital_info = json.load(open("../data/orbital_info.json", "r"))
 
         # Orbitals with the same contribution
         same_orbitals = {

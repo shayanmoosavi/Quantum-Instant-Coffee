@@ -15,12 +15,12 @@ import os
 from sys import argv
 import sqlite3
 from subprocess import run, CalledProcessError
-from file_parser import get_poscar_data
+from utils.file_parser import get_poscar_data
 from init_project import initialize_project
-from input_handler import get_pseudopotential_files
+from core.input_handler import get_pseudopotential_files
 from typing import List, Dict, Tuple
 
-from models import ProjectSetup
+from data.models import ProjectSetup
 
 
 class InputGenerationError(Exception):
@@ -41,7 +41,7 @@ def get_atomic_weights(element_names: List[str]) -> List[float] | None:
     if not element_names:
         raise ValueError("Element names list cannot be empty.")
     try:
-        conn = sqlite3.connect("elements.db")
+        conn = sqlite3.connect("../data/elements.db")
         cursor = conn.cursor()
         atomic_weights = []
 

@@ -6,13 +6,13 @@ It includes functionality for handling spin-orbit coupling (SOC), collecting DFT
 
 import os
 from sys import argv
-from typing import Any, Tuple, Dict, List
-from file_parser import *
+from typing import Any
+from utils.file_parser import *
 from init_project import initialize_project
-from input_handler import get_atomic_states
-from models import DFTInfo, WannierSetup, ProjectSetup
+from core.input_handler import get_atomic_states
+from data.models import DFTInfo, WannierSetup, ProjectSetup
 from subprocess import CalledProcessError, run
-from project_setup import ProjectInitializationError
+from core.project_setup import ProjectInitializationError
 
 
 class SpinOrbitHandler:

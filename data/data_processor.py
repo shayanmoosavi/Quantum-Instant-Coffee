@@ -7,7 +7,7 @@ weights, and processing atomic projections.
 
 from dft_info_extractor import *
 import numpy as np
-from models import BandData, ProjectSetup
+from data.models import BandData, ProjectSetup
 
 
 class BandDataProcessor:
