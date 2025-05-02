@@ -1,8 +1,7 @@
 import os
-from models import CompoundData, ProjectSetup
-from config import load_config
-from input_handler import get_strain_amounts, get_pbands_type
-from path_handler import get_project_directory, create_directories, validate_command_line_args, build_file_paths
+from data.models import CompoundData, ProjectSetup
+from core.config import load_config
+from core.input_handler import get_strain_amounts, get_pbands_type
 from typing import List
 
 class ProjectInitializationError(Exception):
@@ -33,6 +32,9 @@ def initialize_project(
     Raises:
         ProjectInitializationError: If parsing the compound name fails.
     """
+    from core.path_handler import get_project_directory, create_directories, validate_command_line_args, \
+        build_file_paths
+
     print("Initializing...\n", flush=True)
     config = load_config()
 
@@ -86,12 +88,12 @@ def initialize_project(
         return ProjectSetup(
             compound_name=compound_name,
             project_dir=project_dir,
-            pseudo_dir=os.path.abspath(config.directory_structure["pseudo"]),
+            pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo"])),
             calculation_dirs=calculation_dirs,
             compound_data=compound_data,
             include_stress=include_stress,
             stress_amounts=stress_amounts,
-            rel_pseudo_dir=os.path.abspath(config.directory_structure["pseudo_rel"]),
+            rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
             input_paths=paths,
             poscar_file=poscar_file,
             skip_soc=True if include_stress else False

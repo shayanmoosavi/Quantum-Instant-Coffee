@@ -19,17 +19,16 @@ Functions:
 import re
 import os
 from sys import argv
-from typing import Dict, Union, List
+from typing import Dict, List
 import matplotlib.axes
 import matplotlib.collections
 import matplotlib.pyplot as plt
 import numpy as np
 
-from config import ProjectConfig
-from data_processor import process_band_data, process_comparison_data
-from dft_info_extractor import prepare_dft_info, prepare_wannier_info
-from models import ProjectSetup
-from project_setup import initialize_project
+from data.data_processor import process_band_data, process_comparison_data
+from data.dft_info_extractor import prepare_dft_info, prepare_wannier_info
+from data.models import ProjectSetup
+from core.project_setup import initialize_project
 
 
 class PlotConfig:

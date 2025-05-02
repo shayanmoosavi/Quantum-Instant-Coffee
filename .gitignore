@@ -1,3 +1,4 @@
 .idea/
 __pycache__
-orbital_info_old
+data/orbital_info_old
+*.egg-info/

@@ -5,7 +5,7 @@ output files, such as the number of bands, Fermi energy, number of atomic states
 and atomic state details. These functions are designed to handle specific file
 formats and extract relevant data using regular expressions.
 """
-
+import os
 import re
 import json
 from typing import List, Tuple, Dict, Union
@@ -23,7 +23,7 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
             - list: A list of atomic positions.
     """
 
-    with open(poscar_file, "r") as file:
+    with open(os.path.join("..", poscar_file), "r") as file:
         poscar_file_content = file.read()
 
     coordinates_regex_pattern = r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
@@ -208,8 +208,7 @@ def extract_atomic_states_info(file_path: str,
         with open(file_path, "r") as kpdos_output_file:
             kpdos_calculation_output = kpdos_output_file.read()
 
-        orbital_info = json.load(open("orbital_info.json", "r"))
-
+        orbital_info = json.load(open("data/orbital_info.json", "r"))
         # Orbitals with the same contribution
         same_orbitals = {
             "px": "px+py",
