@@ -14,8 +14,9 @@ Raises:
     ProjectInitializationError: If an error occurs during project initialization.
     Exception: For any unexpected errors.
 """
+import os
 from sys import argv
-from project_setup import *
+from core.project_setup import initialize_project, ProjectInitializationError
 
 if __name__ == "__main__":
     """
@@ -37,6 +38,8 @@ if __name__ == "__main__":
         is_input = len(argv) == 3
 
         is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
+
+        print(f"Current working directory: {os.getcwd()}")
 
         # Initialize and prepare project
         project = initialize_project(argv, is_input, is_wannier)

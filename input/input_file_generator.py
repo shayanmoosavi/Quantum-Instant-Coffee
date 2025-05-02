@@ -292,7 +292,7 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
 
         else:
             try:
-                k_points_section = run(f"./kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
+                k_points_section = run(f"../utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
                                        shell=True, check=True, capture_output=True).stdout.decode("utf-8")
                 return k_points_section
             except CalledProcessError as e:
@@ -301,7 +301,7 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
     elif calculation_type == "wannier":
 
         try:
-            k_points_section = run(f"./kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
+            k_points_section = run(f"../utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
                                    shell=True, check=True, capture_output=True).stdout.decode("utf-8")
             return k_points_section
         except CalledProcessError as e:

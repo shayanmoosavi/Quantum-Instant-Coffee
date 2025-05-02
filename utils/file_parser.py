@@ -23,7 +23,7 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
             - list: A list of atomic positions.
     """
 
-    with open(poscar_file, "r") as file:
+    with open(os.path.join("..", poscar_file), "r") as file:
         poscar_file_content = file.read()
 
     coordinates_regex_pattern = r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"

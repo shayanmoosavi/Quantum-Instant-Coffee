@@ -1,6 +1,6 @@
 """Script to write input files for the project."""
 
-from input_file_generator import *
+from input.input_file_generator import *
 
 
 project = initialize_project(argv, is_input=True)
