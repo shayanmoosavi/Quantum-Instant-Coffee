@@ -6,10 +6,11 @@ and building structured file paths for input and output files.
 """
 
 from sys import argv
-
-from config import ProjectConfig
-from project_setup import *
+import os
+from core.project_setup import initialize_project, ProjectInitializationError
+from core.config import ProjectConfig
 from typing import List, Tuple, Dict
+
 
 def validate_command_line_args(args: List[str], is_for_plot: bool = False) -> str | Tuple[str, str]:
     """
@@ -53,7 +54,7 @@ def get_project_directory(compound_name: str) -> str:
     Returns:
         str: The absolute path to the project directory.
     """
-    root_dir = os.path.abspath("../")  # The root directory of the project
+    root_dir = os.path.abspath("../../")  # The root directory of the project
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
 
@@ -152,7 +153,7 @@ def build_file_paths(
         config: ProjectConfig,
         is_input: bool = False,
         include_stress: bool = False,
-        stress_amounts: bool = None
+        stress_amounts: List[str] = None
 ) -> Dict[str, List[str]] | Tuple[Dict[str, List[str]], bool]:
     """
     Build file paths based on the analysis type.

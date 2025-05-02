@@ -9,7 +9,7 @@ configuration structure to ensure correctness.
 from dataclasses import dataclass
 from typing import Dict
 import json
-from config_validation import validate_config_structure, ConfigValidationError
+from utils.config_validation import validate_config_structure, ConfigValidationError
 
 
 @dataclass

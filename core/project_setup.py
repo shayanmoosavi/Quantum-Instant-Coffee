@@ -1,8 +1,7 @@
 import os
-from models import CompoundData, ProjectSetup
-from config import load_config
-from input_handler import get_strain_amounts, get_pbands_type
-from path_handler import get_project_directory, create_directories, validate_command_line_args, build_file_paths
+from utils.models import CompoundData, ProjectSetup
+from core.config import load_config
+from core.input_handler import get_strain_amounts, get_pbands_type
 from typing import List
 
 class ProjectInitializationError(Exception):
@@ -33,6 +32,9 @@ def initialize_project(
     Raises:
         ProjectInitializationError: If parsing the compound name fails.
     """
+    from core.path_handler import get_project_directory, create_directories, validate_command_line_args, \
+        build_file_paths
+
     print("Initializing...\n", flush=True)
     config = load_config()
 
