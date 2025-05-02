@@ -1,5 +1,5 @@
 import os
-from utils.models import CompoundData, ProjectSetup
+from data.models import CompoundData, ProjectSetup
 from core.config import load_config
 from core.input_handler import get_strain_amounts, get_pbands_type
 from typing import List

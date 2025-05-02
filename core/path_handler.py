@@ -54,7 +54,7 @@ def get_project_directory(compound_name: str) -> str:
     Returns:
         str: The absolute path to the project directory.
     """
-    root_dir = os.path.abspath("../../")  # The root directory of the project
+    root_dir = os.path.abspath("..")  # The root directory of the project
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
 

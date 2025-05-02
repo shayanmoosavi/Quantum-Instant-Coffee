@@ -2,8 +2,8 @@
 
 This script initializes a project, processes Wannier and DFT comparison data, and generates comparison plots.
 """
-from plot_handler import *
-from data_processor import *
+from utils.plot_handler import *
+from data.data_processor import *
 
 # Initializing the project
 project = initialize_project(argv, is_input=False, is_wannier=True)
