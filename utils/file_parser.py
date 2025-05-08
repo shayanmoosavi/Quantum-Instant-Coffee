@@ -90,7 +90,7 @@ def extract_band_number(file_path: str, compound_name: str, flag: str) -> int:
         raise
 
 
-def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float:
+def extract_fermi_energy(file_path: str, compound_name: str, flag: str, is_pdos: bool = False) -> float:
     """
     Extract the Fermi energy from a Quantum ESPRESSO SCF calculation output file.
 
@@ -98,6 +98,7 @@ def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float
         file_path (str): Path to the SCF output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
+        is_pdos (bool): Flag to indicate whether the file is for PDOS calculation
 
     Returns:
         float: Fermi energy in eV
@@ -107,29 +108,56 @@ def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float
         ValueError: If the Fermi energy cannot be extracted
     """
     print("Getting Fermi energy...")
-    print(f"Reading {compound_name}_scf{flag}.pw.out...")
 
-    try:
-        with open(file_path, "r") as scf_output_file:
-            scf_calculation_output = scf_output_file.read()
-
-        # Getting fermi energy from the calculation output
-        fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
-        fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
-        fermi_energy_matches = fermi_energy_regex_object.finditer(scf_calculation_output)
+    if not is_pdos:
+        print(f"Reading {compound_name}_scf{flag}.pw.out...")
 
         try:
-            fermi_energy = float(next(fermi_energy_matches).group(1))
-            print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
-            return fermi_energy
+            with open(file_path, "r") as scf_output_file:
+                scf_calculation_output = scf_output_file.read()
 
-        except StopIteration:
-            raise ValueError(f"Could not find Fermi energy information in {file_path}")
+            # Getting fermi energy from the calculation output
+            fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
+            fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
+            fermi_energy_matches = fermi_energy_regex_object.finditer(scf_calculation_output)
 
-    except FileNotFoundError:
-        print(
-            f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.')
-        raise
+            try:
+                fermi_energy = float(next(fermi_energy_matches).group(1))
+                print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
+                return fermi_energy
+
+            except StopIteration:
+                raise ValueError(f"Could not find Fermi energy information in {file_path}")
+
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.')
+            raise
+
+    else:
+        print(f"Reading {compound_name}_nscf{flag}.pw.out...")
+
+        try:
+            with open(file_path, "r") as nscf_output_file:
+                nscf_calculation_output = nscf_output_file.read()
+
+            # Getting fermi energy from the calculation output
+            fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
+            fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
+            fermi_energy_matches = fermi_energy_regex_object.finditer(nscf_calculation_output)
+
+            try:
+                fermi_energy = float(next(fermi_energy_matches).group(1))
+                print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
+                return fermi_energy
+
+            except StopIteration:
+                raise ValueError(f"Could not find Fermi energy information in {file_path}")
+
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}_nscf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.')
+            raise
 
 
 def extract_number_of_atomic_states(file_path: str, compound_name: str, flag: str) -> int:
