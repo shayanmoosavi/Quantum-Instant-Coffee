@@ -22,8 +22,8 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
             - list: A list of lattice vectors.
             - list: A list of atomic positions.
     """
-
-    with open(os.path.join("..", poscar_file), "r") as file:
+    script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    with open(os.path.join(script_root_dir, poscar_file), "r") as file:
         poscar_file_content = file.read()
 
     coordinates_regex_pattern = r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
