@@ -354,7 +354,8 @@ def create_directories(project_dir: str,
         print("Successfully created calculation directories.\n", flush=True)
 
         # Changing the directory to the root directory of the script
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        os.chdir(script_root_dir)
 
         return calculation_dirs  # Return the list of created directories
 
