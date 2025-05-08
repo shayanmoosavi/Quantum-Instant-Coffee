@@ -125,12 +125,12 @@ class DOSInfo:
 
     Attributes:
         fermi_energies (List[float]): Fermi energy values for each calculation.
-        atomic_states_info (List[Dict[str, Any]]): Detailed information about atomic states.
         spin_orbit_flags (List[str]): Flags indicating spin-orbit coupling for each calculation.
+        atomic_states_info (List[Dict[str, Any]]): Detailed information about atomic states.
     """
     fermi_energies: List[float]
-    atomic_states_info: List[Dict[str, Any]]
     spin_orbit_flags: List[str]
+    atomic_states_info: List[Dict[str, Any]] = None
 
 
 @dataclass

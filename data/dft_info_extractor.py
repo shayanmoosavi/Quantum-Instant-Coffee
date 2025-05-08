@@ -10,7 +10,7 @@ from typing import Any
 from utils.file_parser import *
 from init_project import initialize_project
 from core.input_handler import get_atomic_states
-from data.models import DFTInfo, WannierSetup, ProjectSetup
+from data.models import BandInfo, WannierSetup, ProjectSetup, DOSInfo
 from subprocess import CalledProcessError, run
 from core.project_setup import ProjectInitializationError
 
@@ -80,8 +80,10 @@ def collect_dft_data(path: str,
                      compound_name: str,
                      flag: str,
                      extractor_func: callable,
+                     *,
                      atom: str = None,
-                     orbital: str = None) -> None | Tuple[None, bool] | Tuple[Any, bool]:
+                     orbital: str = None,
+                     is_pdos: bool = False) -> None | Tuple[None, bool] | Tuple[Any, bool]:
     """
     Collect data from Quantum ESPRESSO output files using a specified extractor function.
 
@@ -92,6 +94,7 @@ def collect_dft_data(path: str,
         extractor_func (callable): Function used to extract specific data from the file.
         atom (str): Atomic symbol
         orbital (str): Orbital type (e.g., "s", "p", "d")
+        is_pdos (bool): Whether the data is from a PDOS file.
 
     Returns:
         tuple: A tuple containing:
@@ -107,8 +110,12 @@ def collect_dft_data(path: str,
         match (atom is None, orbital is None):
 
             case (True, True):
-                data = extractor_func(path, compound_name, flag)
-                return data, True
+                if not is_pdos:
+                    data = extractor_func(path, compound_name, flag)
+                    return data, True
+                else:
+                    data = extractor_func(path, compound_name, flag, is_pdos)
+                    return data, True
 
             case (True, False) | (False, True):
                 raise ValueError(
@@ -162,7 +169,8 @@ def collect_band_numbers(paths: Dict[str, List[str]],
 def collect_fermi_energies(paths: Dict[str, List[str]],
                            compound_name: str,
                            spin_orbit_flags: List[str],
-                           skip_soc: bool = False) -> List[float]:
+                           skip_soc: bool = False,
+                           is_pdos: bool = False) -> List[float]:
     """
     Collect Fermi energies from Quantum ESPRESSO output files.
 
@@ -171,6 +179,7 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        is_pdos (bool): Whether to collect Fermi energies from PDOS files
 
     Returns:
         list: List of Fermi energies
@@ -178,12 +187,13 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
     soc_handler = SpinOrbitHandler(skip_soc)
     fermi_energy_list = []
 
-    for path, flag in zip(paths["scf_output_paths"], spin_orbit_flags):
+    for path, flag in zip(paths["nscf_output_paths"] if is_pdos else paths["scf_output_paths"],
+                          spin_orbit_flags):
 
         if soc_handler.should_skip(flag):
             continue
 
-        data, success = collect_dft_data(path, compound_name, flag, extract_fermi_energy)
+        data, success = collect_dft_data(path, compound_name, flag, extract_fermi_energy, is_pdos=is_pdos)
 
         if not success:
             if soc_handler.handle_error(flag):
@@ -255,7 +265,12 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
             continue
 
         for atom, orbital in atomic_projection_list:
-            data, success = collect_dft_data(path, compound_name, flag, extract_atomic_states_info, atom, orbital)
+            data, success = collect_dft_data(path,
+                                             compound_name,
+                                             flag,
+                                             extract_atomic_states_info,
+                                             atom=atom,
+                                             orbital=orbital)
 
             if not success:
                 if soc_handler.handle_error(flag):
@@ -398,7 +413,7 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
         project.skip_soc
     )
 
-    dft_info = DFTInfo(
+    dft_info = BandInfo(
         number_of_bands=number_of_bands_list,
         fermi_energies=fermi_energies,
         number_of_atomic_states=number_of_atomic_states_list,
@@ -469,6 +484,31 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     project.add_wannier_setup(wannier_setup)
     return project
 
+
+def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
+    """
+    Prepare PDOS (Projected Density of States) information by extracting data from Quantum ESPRESSO output files.
+
+    Args:
+        project (ProjectSetup): Project setup object containing paths and parameters.
+
+    Returns:
+        ProjectSetup: Updated project setup object with PDOS information.
+    """
+    spin_orbit_flags = ["", "_soc"]
+    fermi_energies = collect_fermi_energies(project.output_paths,
+                                            project.compound_name,
+                                            spin_orbit_flags,
+                                            project.skip_soc,
+                                            is_pdos=True)
+
+    dos_info = DOSInfo(fermi_energies=fermi_energies,
+                       spin_orbit_flags=spin_orbit_flags)
+
+    project.add_dos_info(dos_info)
+    return project
+
+
 # Test to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -477,11 +517,14 @@ if __name__ == "__main__":
     This script validates that the prepare_dft_info has executed successfully and prints the extracted 
     information if successful.
     """
-
+    os.chdir("..")
     is_input = len(argv) == 3
+
     is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
     project = initialize_project(argv, is_input, is_wannier)
-    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
+    is_pdos = not is_wannier
+    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project) if not is_pdos else prepare_pdos_info(project)
+
 
     print("Information prepared successfully.\n")
     if project.include_stress:
@@ -502,7 +545,7 @@ if __name__ == "__main__":
 
     else:
 
-        if not is_wannier:
+        if not is_wannier and not is_pdos:
             for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
                     project.dft_info.number_of_bands,
                     project.dft_info.fermi_energies,
@@ -516,6 +559,12 @@ if __name__ == "__main__":
                 print(f"\nAtomic states info {flag}:")
                 for atomic_state, info in atomic_states_info.items():
                     print(f"{atomic_state}: {info}")
+        elif is_pdos:
+            for fermi_energy, flag in zip(
+                    project.dos_info.fermi_energies,
+                    ["", "(SOC)"]
+            ):
+                print(f"Fermi energy {flag}: {fermi_energy} eV")
         else:
             for fermi_energy, alat_parameter in zip(
                     project.wannier_setup.fermi_energies,
