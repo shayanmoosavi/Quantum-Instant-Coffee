@@ -50,7 +50,6 @@ def initialize_project(
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
-
         print("Recognizing elements...", flush=True)
 
         # Parse compound information from the compound name
@@ -95,7 +94,7 @@ def initialize_project(
             stress_amounts=stress_amounts,
             rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
             input_paths=paths,
-            poscar_file=poscar_file,
+            poscar_file=os.path.abspath(poscar_file),
             skip_soc=True if include_stress else False
         )
 
