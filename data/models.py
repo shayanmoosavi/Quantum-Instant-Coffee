@@ -118,19 +118,6 @@ class BandData:
     atomic_projections: List[str]
     unique_elements: List[str]
 
-
-@dataclass
-class DOSData:
-    """
-    Container for density of states (DOS) calculation data.
-
-    Attributes:
-        energy (List[ndarray]): Energy values for the DOS data.
-        dos (List[ndarray]): DOS values for each calculation.
-    """
-    energy: List[ndarray]
-    dos: List[ndarray]
-
 @dataclass
 class DOSSetup:
     """Container for density of states (DOS) information extracted from Quantum ESPRESSO output files.
@@ -143,7 +130,7 @@ class DOSSetup:
     fermi_energies: List[float]
     spin_orbit_flags: List[str]
     atomic_states_info: List[Dict[str, Any]] = None
-    dos_data: DOSData = None
+    dos_data: List[Dict[str, Dict[str, ndarray]]] = None
 
 
 @dataclass
@@ -179,7 +166,7 @@ class ProjectSetup:
         dft_info (Optional[BandInfo]): DFT calculation results, if available.
         band_data (Optional[BandData]): Band structure calculation data, if available.
         wannier_setup (Optional[WannierSetup]): Wannier calculation setup, if available.
-        dos_info (Optional[DOSSetup]): Density of states calculation setup, if available.
+        dos_setup (Optional[DOSSetup]): Density of states calculation setup, if available.
         input_paths (Optional[Dict[str, List[str]]]): Paths for input files, if applicable.
         output_paths (Optional[Dict[str, List[str]]]): Paths for output files, if applicable.
         skip_soc (bool): Whether spin-orbit coupling is skipped.
