@@ -9,7 +9,7 @@ from typing import Any
 from utils.file_parser import *
 from core.project_setup import initialize_project
 from core.input_handler import get_atomic_states
-from data.models import BandInfo, WannierSetup, ProjectSetup, DOSInfo
+from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup
 from subprocess import CalledProcessError, run
 from core.project_setup import ProjectInitializationError
 
@@ -565,13 +565,13 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
                                                          project.skip_soc,
                                                          is_pdos=True)
 
-    dos_info = DOSInfo(fermi_energies=fermi_energies,
-                       spin_orbit_flags=spin_orbit_flags,
-                       atomic_states_info=atomic_states_info_list)
+    dos_setup = DOSSetup(fermi_energies=fermi_energies,
+                        spin_orbit_flags=spin_orbit_flags,
+                        atomic_states_info=atomic_states_info_list)
 
-    project.add_dos_info(dos_info)
+    project.add_dos_setup(dos_setup)
 
-    success = generate_pdos(project.output_paths, list(project.dos_info.atomic_states_info[0].keys()))
+    success = generate_pdos(project.output_paths, list(project.dos_setup.atomic_states_info[0].keys()))
     if not all(success):
         raise ProjectInitializationError("Some PDOS files were not generated successfully.")
 
