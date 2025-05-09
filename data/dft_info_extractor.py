@@ -3,8 +3,7 @@
 This module provides functions and classes to extract and process data from Quantum ESPRESSO output files.
 It includes functionality for handling spin-orbit coupling (SOC), collecting DFT data, and generating projected bands.
 """
-
-import os
+import os.path
 from sys import argv
 from typing import Any
 from utils.file_parser import *
@@ -313,6 +312,21 @@ def run_awk_script(number_of_atomic_states: int,
     run(awk_command, shell=True, check=True, capture_output=True)
 
 
+def run_sum_pdos(atomic_projection: Tuple[str, str]) -> None:
+    """
+    Executes the Quantum ESPRESSO sumpdos.x script to get the desired PDOS files.
+
+    """
+
+    print(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
+
+    sum_pdos_command = (f"sumpdos.x "
+                        f"*\({atomic_projection[0]}\)*\({atomic_projection[1]}*\) "
+                        f"> pdos_{atomic_projection[0]}_{atomic_projection[1]}.dat")
+
+    run(sum_pdos_command, shell=True, check=True, capture_output=True)
+
+
 def generate_projected_bands(paths: Dict[str, List[str]],
                              number_of_atomic_states_list: List[int],
                              fermi_energies: List[float]) -> List[bool]:
@@ -363,6 +377,47 @@ def generate_projected_bands(paths: Dict[str, List[str]],
             projbands_generation_success_list.append(False)
 
     return projbands_generation_success_list
+
+
+def generate_pdos(paths: Dict[str, List[str]],
+                  atomic_projection_list: List[str]
+                  ) -> List[bool]:
+    """
+    Generates the PDOS files if not already present
+
+    """
+    # List to track whether the pdos generation was successful for each file
+    pdos_generation_success_list = []
+
+    # Iterating over the PDOS output paths and corresponding PDOS data
+    for pdos_dir in paths["pdos_output_paths"]:
+
+        os.chdir(os.path.dirname(pdos_dir))
+        for atomic_projection in atomic_projection_list:
+
+            atom, orbital = atomic_projection.split('-')
+
+            # Checking if the PDOS file already exists
+            pdos_data_file = os.path.join(os.path.dirname(pdos_dir), f"pdos_{atom}_{orbital}.dat")
+            if os.path.exists(pdos_data_file):
+                print(f"File {pdos_data_file} already exists!")
+                pdos_generation_success_list.append(True)
+                continue
+
+            try:
+                # Running the sumpdos.x script to generate the PDOS files
+                run_sum_pdos((atom, orbital))
+                print(f"PDOS file created for {atomic_projection}")
+                pdos_generation_success_list.append(True)
+
+            except CalledProcessError as e:
+                # Handling errors during the AWK script execution
+                print("Error creating PDOS file:")
+                print(e.stderr.decode("utf-8"))
+                pdos_generation_success_list.append(False)
+    os.chdir(os.path.abspath(os.path.join(__file__, "..")))
+
+    return pdos_generation_success_list
 
 
 def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
@@ -509,11 +564,17 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
                                                          spin_orbit_flags,
                                                          project.skip_soc,
                                                          is_pdos=True)
+
     dos_info = DOSInfo(fermi_energies=fermi_energies,
                        spin_orbit_flags=spin_orbit_flags,
                        atomic_states_info=atomic_states_info_list)
 
     project.add_dos_info(dos_info)
+
+    success = generate_pdos(project.output_paths, list(project.dos_info.atomic_states_info[0].keys()))
+    if not all(success):
+        raise ProjectInitializationError("Some PDOS files were not generated successfully.")
+
     return project
 
 
