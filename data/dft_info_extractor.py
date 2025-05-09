@@ -415,7 +415,7 @@ def generate_pdos(paths: Dict[str, List[str]],
                 print("Error creating PDOS file:")
                 print(e.stderr.decode("utf-8"))
                 pdos_generation_success_list.append(False)
-    os.chdir(os.path.abspath(os.path.join(__file__, "..")))
+    os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     return pdos_generation_success_list
 
