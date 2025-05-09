@@ -8,7 +8,7 @@ import os
 from sys import argv
 from typing import Any
 from utils.file_parser import *
-from init_project import initialize_project
+from core.project_setup import initialize_project
 from core.input_handler import get_atomic_states
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSInfo
 from subprocess import CalledProcessError, run
@@ -110,11 +110,8 @@ def collect_dft_data(path: str,
         match (atom is None, orbital is None):
 
             case (True, True):
-                if not is_pdos:
-                    data = extractor_func(path, compound_name, flag)
-                    return data, True
-                else:
-                    data = extractor_func(path, compound_name, flag, is_pdos)
+                    data = extractor_func(path, compound_name, flag) if \
+                        not is_pdos else extractor_func(path, compound_name, flag, is_pdos)
                     return data, True
 
             case (True, False) | (False, True):
@@ -124,7 +121,8 @@ def collect_dft_data(path: str,
                 )
 
             case (False, False):
-                data = extractor_func(path, compound_name, flag, atom, orbital)
+                data = extractor_func(path, compound_name, flag, atom, orbital) if \
+                    not is_pdos else extractor_func(path, compound_name, flag, atom, orbital, is_pdos)
                 return data, True
 
     except (FileNotFoundError, ValueError) as e:
@@ -240,7 +238,8 @@ def collect_number_of_atomic_states(paths: Dict[str, List[str]],
 def collect_atomic_states_info(paths: Dict[str, List[str]],
                                compound_name: str,
                                spin_orbit_flags: List[str],
-                               skip_soc: bool = False) -> List[Dict[Any, Any]]:
+                               skip_soc: bool = False,
+                               is_pdos: bool = False) -> List[Dict[Any, Any]]:
     """
     Collect the atomic info states from Quantum ESPRESSO KPDOS output files.
 
@@ -249,6 +248,7 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        is_pdos (bool): Whether to collect atomic states info from PDOS files
 
     Returns:
         list: A list of dictionaries containing the indices and orbital weights of each atomic state
@@ -258,7 +258,8 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
 
     atomic_projection_list = get_atomic_states()
 
-    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flags):
+    for path, flag in zip(paths["kpdos_output_paths"] if not is_pdos
+                          else paths["pdos_output_paths"], spin_orbit_flags):
 
         atomic_states_info = {}
         if soc_handler.should_skip(flag):
@@ -270,7 +271,8 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
                                              flag,
                                              extract_atomic_states_info,
                                              atom=atom,
-                                             orbital=orbital)
+                                             orbital=orbital,
+                                             is_pdos=is_pdos)
 
             if not success:
                 if soc_handler.handle_error(flag):
@@ -502,8 +504,14 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
                                             project.skip_soc,
                                             is_pdos=True)
 
+    atomic_states_info_list = collect_atomic_states_info(project.output_paths,
+                                                         project.compound_name,
+                                                         spin_orbit_flags,
+                                                         project.skip_soc,
+                                                         is_pdos=True)
     dos_info = DOSInfo(fermi_energies=fermi_energies,
-                       spin_orbit_flags=spin_orbit_flags)
+                       spin_orbit_flags=spin_orbit_flags,
+                       atomic_states_info=atomic_states_info_list)
 
     project.add_dos_info(dos_info)
     return project
@@ -520,11 +528,29 @@ if __name__ == "__main__":
     os.chdir("..")
     is_input = len(argv) == 3
 
-    is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
-    project = initialize_project(argv, is_input, is_wannier)
-    is_pdos = not is_wannier
-    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project) if not is_pdos else prepare_pdos_info(project)
+    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
+    match response:
+        case "wannier":
+            project = initialize_project(argv, is_input, is_wannier=True)
+            prepare_wannier_info(project)
+            is_wannier = True
+            is_pdos = False
+
+        case "bands":
+            project = initialize_project(argv, is_input)
+            prepare_dft_info(project)
+            is_wannier = False
+            is_pdos = False
+
+        case "pdos":
+            project = initialize_project(argv, is_input)
+            prepare_pdos_info(project)
+            is_wannier = False
+            is_pdos = True
+
+        case _:
+            raise ValueError("Invalid input!")
 
     print("Information prepared successfully.\n")
     if project.include_stress:
