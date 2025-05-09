@@ -140,7 +140,7 @@ def add_paths_for_directories(
 
         elif calculation in ["pdos", "pdos_soc"]:
             append_file_paths(file_paths, calculation, path, compound_name, file_patterns,
-                              flag, ["nscf_input", "pdos_input"] if is_input else ["nscf_output"])
+                              flag, ["nscf_input", "pdos_input"] if is_input else ["nscf_output", "pdos_output"])
 
         elif calculation in ["wannier", "wannier_soc"]:
                 append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag,
@@ -251,6 +251,7 @@ def build_file_paths(
             "projbands_paths": [],
             "bands_paths": [],
             "nscf_output_paths": [],
+            "pdos_output_paths": [],
             "nscf_wannier_output_paths": [],
             "wannier_bands_paths": [],
         }
@@ -280,7 +281,7 @@ def build_file_paths(
                     structured_paths[path_type].append(value[output_key][0])
 
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
-                for path_type in ["nscf_output"]:
+                for path_type in ["nscf_output", "pdos_output"]:
                     if not value[path_type]:
                         print(f"Warning: No {path_type} found in {key} directory.")
                     else:
