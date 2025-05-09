@@ -120,7 +120,19 @@ class BandData:
 
 
 @dataclass
-class DOSInfo:
+class DOSData:
+    """
+    Container for density of states (DOS) calculation data.
+
+    Attributes:
+        energy (List[ndarray]): Energy values for the DOS data.
+        dos (List[ndarray]): DOS values for each calculation.
+    """
+    energy: List[ndarray]
+    dos: List[ndarray]
+
+@dataclass
+class DOSSetup:
     """Container for density of states (DOS) information extracted from Quantum ESPRESSO output files.
 
     Attributes:
@@ -131,6 +143,7 @@ class DOSInfo:
     fermi_energies: List[float]
     spin_orbit_flags: List[str]
     atomic_states_info: List[Dict[str, Any]] = None
+    dos_data: DOSData = None
 
 
 @dataclass
@@ -166,7 +179,7 @@ class ProjectSetup:
         dft_info (Optional[BandInfo]): DFT calculation results, if available.
         band_data (Optional[BandData]): Band structure calculation data, if available.
         wannier_setup (Optional[WannierSetup]): Wannier calculation setup, if available.
-        dos_info (Optional[DOSInfo]): Density of states information, if available.
+        dos_info (Optional[DOSSetup]): Density of states calculation setup, if available.
         input_paths (Optional[Dict[str, List[str]]]): Paths for input files, if applicable.
         output_paths (Optional[Dict[str, List[str]]]): Paths for output files, if applicable.
         skip_soc (bool): Whether spin-orbit coupling is skipped.
@@ -183,7 +196,7 @@ class ProjectSetup:
     dft_info: Optional[BandInfo] = None
     band_data: Optional[BandData] = None
     wannier_setup: Optional[WannierSetup] = None
-    dos_info: Optional[DOSInfo] = None
+    dos_setup: Optional[DOSSetup] = None
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None
     skip_soc: bool = False
@@ -204,10 +217,10 @@ class ProjectSetup:
         """
         self.wannier_setup = wannier_setup
 
-    def add_dos_info(self, dos_info: DOSInfo) -> None:
-        """Add density of states information to the project setup.
+    def add_dos_setup(self, dos_setup: DOSSetup) -> None:
+        """Add density of states calculation setup to the project setup.
 
         Args:
-            dos_info (DOSInfo): The density of states information to add.
+            dos_setup (DOSSetup): The density of states calculation setup to add.
         """
-        self.dos_info = dos_info
+        self.dos_setup = dos_setup
