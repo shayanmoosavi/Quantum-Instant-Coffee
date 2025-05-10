@@ -16,7 +16,7 @@ from sys import argv
 import sqlite3
 from subprocess import run, CalledProcessError
 from utils.file_parser import get_poscar_data
-from init_project import initialize_project
+from core.project_setup import initialize_project
 from core.input_handler import get_pseudopotential_files
 from typing import List, Dict, Tuple
 
@@ -41,7 +41,7 @@ def get_atomic_weights(element_names: List[str]) -> List[float] | None:
     if not element_names:
         raise ValueError("Element names list cannot be empty.")
     try:
-        conn = sqlite3.connect("../data/elements.db")
+        conn = sqlite3.connect("data/elements.db")
         cursor = conn.cursor()
         atomic_weights = []
 
@@ -292,7 +292,7 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
 
         else:
             try:
-                k_points_section = run(f"../utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
+                k_points_section = run(f"utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
                                        shell=True, check=True, capture_output=True).stdout.decode("utf-8")
                 return k_points_section
             except CalledProcessError as e:
@@ -301,7 +301,7 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
     elif calculation_type == "wannier":
 
         try:
-            k_points_section = run(f"../utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
+            k_points_section = run(f"utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
                                    shell=True, check=True, capture_output=True).stdout.decode("utf-8")
             return k_points_section
         except CalledProcessError as e:

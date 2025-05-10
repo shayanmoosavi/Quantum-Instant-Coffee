@@ -40,11 +40,11 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
     for match in coordinates_matches:
         if counter < 3:
             lattice_vectors.append(
-                f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}"
+                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
             )
         else:
             atomic_positions.append(
-                f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}"
+                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
             )
         counter += 1
 
