@@ -30,7 +30,7 @@ The input files will be generated both with and without considering spin-orbit c
 ### 🧰 Toolkit:
 - `input_file_writer.py`: Generates input files for common QE/Wannier90 workflows
 - `projected_bands_plotter.py`: Plots projected band structures
-- `plot_pdos.py`: _Coming soon – under development_
+- `plot_pdos.py`: Plots projected density of states
 - `compare_bands.py`: Compares DFT bands with Wannier-interpolated bands 
 
 ## 📦 Requirements
@@ -84,7 +84,7 @@ pip install .
 
 ### Visualization Tools
 - Projected band structure plotting with customizable projection options
-- PDOS visualization with element-specific contributions (_Under Development_)
+- PDOS visualization with element-specific contributions
 - Comparative analysis of DFT vs Wannier interpolated bands
 
 ## 🔍 Troubleshooting
@@ -132,6 +132,8 @@ python compare_bands_plotter.py <compound-name>
 ```
 
 ## ⚙️ Configuration
+
+### 1- Configuring Directory Structure and Input File Generation
 If you want to customize the list of generated input files, you can do so by modifying the `config.json` file. The following keys in the `input` section are 
 optional and can be removed if not needed:
 - `relax_input`: The input file for Quantum ESPRESSO relax calculations
@@ -262,6 +264,18 @@ required_patterns = {
             "bands_gnu"
         }
     }
+```
+
+### 2- Configuring Plot Settings
+You can modify the plot settings in the main plotting scripts (e.g., `projected_bands_plotter.py`) after instantiating the `BandsPlotConfig` or `DOSPlotConfig` objects.
+
+An example of modified `BandsPlotConfig`:
+
+```python
+from utils.plot_handler import BandsPlotConfig
+
+plot_config = BandsPlotConfig()
+plot_config.ENERGY_LIMITS = (-8, 8)
 ```
 
 ## 📄 License
