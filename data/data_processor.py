@@ -435,7 +435,7 @@ if __name__ == "__main__":
             is_pdos = False
 
         case "pdos":
-            project = initialize_project(argv, is_input)
+            project = initialize_project(argv, is_input, is_pdos=True)
             prepare_pdos_info(project)
             process_pdos_data(project)
             is_wannier = False

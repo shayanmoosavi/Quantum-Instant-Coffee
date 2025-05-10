@@ -984,7 +984,7 @@ if __name__ == "__main__":
             plot_band_structure(project, plot_config, save_fig=False, test_module=True)
 
         case "pdos":
-            project = initialize_project(argv, is_input)
+            project = initialize_project(argv, is_input, is_pdos=True)
             prepare_pdos_info(project)
             process_pdos_data(project)
 
