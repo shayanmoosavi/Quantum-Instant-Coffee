@@ -306,7 +306,7 @@ def run_awk_script(number_of_atomic_states: int,
         f"awk -v firststate=1 "
         f"-v laststate={number_of_atomic_states} "
         f"-v ef={fermi_energy} "
-        f"-f ./projwfc_to_bands.awk {kpdos_output_dir} > {projbands_dir}"
+        f"-f utils/projwfc_to_bands.awk {kpdos_output_dir} > {projbands_dir}"
     )
 
     run(awk_command, shell=True, check=True, capture_output=True)
