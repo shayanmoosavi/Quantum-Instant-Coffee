@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 from numpy import ndarray
 
+
 @dataclass
 class CompoundData:
     """Represents parsed compound information.
@@ -74,10 +75,11 @@ class CompoundData:
             atomic_labels=atomic_labels
         )
 
+
 @dataclass
-class DFTInfo:
+class BandInfo:
     """
-    Container for DFT (Density Functional Theory) calculation results.
+    Container for band structure information extracted from Quantum ESPRESSO output files.
 
     Attributes:
         number_of_bands (List[int]): Number of bands for each calculation.
@@ -86,12 +88,12 @@ class DFTInfo:
         atomic_states_info (List[Dict[str, Any]]): Detailed information about atomic states.
         spin_orbit_flags (List[str]): Flags indicating spin-orbit coupling for each calculation.
     """
-
     number_of_bands: List[int]
     fermi_energies: List[float]
     number_of_atomic_states: List[int]
     atomic_states_info: List[Dict[str, Any]]
     spin_orbit_flags: List[str]
+
 
 @dataclass
 class BandData:
@@ -115,6 +117,21 @@ class BandData:
     atomic_projection_weights: List[Dict]
     atomic_projections: List[str]
     unique_elements: List[str]
+
+@dataclass
+class DOSSetup:
+    """Container for density of states (DOS) information extracted from Quantum ESPRESSO output files.
+
+    Attributes:
+        fermi_energies (List[float]): Fermi energy values for each calculation.
+        spin_orbit_flags (List[str]): Flags indicating spin-orbit coupling for each calculation.
+        atomic_states_info (List[Dict[str, Any]]): Detailed information about atomic states.
+    """
+    fermi_energies: List[float]
+    spin_orbit_flags: List[str]
+    atomic_states_info: List[Dict[str, Any]] = None
+    dos_data: List[Dict[str, Dict[str, ndarray]]] = None
+
 
 @dataclass
 class WannierSetup:
@@ -146,9 +163,10 @@ class ProjectSetup:
         stress_amounts (Optional[List[str]]): List of stress amounts, if applicable.
         rel_pseudo_dir (Optional[str]): Path to the relativistic pseudopotential directory.
         poscar_file (Optional[str]): Path to the POSCAR file, if applicable.
-        dft_info (Optional[DFTInfo]): DFT calculation results, if available.
+        dft_info (Optional[BandInfo]): DFT calculation results, if available.
         band_data (Optional[BandData]): Band structure calculation data, if available.
         wannier_setup (Optional[WannierSetup]): Wannier calculation setup, if available.
+        dos_setup (Optional[DOSSetup]): Density of states calculation setup, if available.
         input_paths (Optional[Dict[str, List[str]]]): Paths for input files, if applicable.
         output_paths (Optional[Dict[str, List[str]]]): Paths for output files, if applicable.
         skip_soc (bool): Whether spin-orbit coupling is skipped.
@@ -162,18 +180,19 @@ class ProjectSetup:
     stress_amounts: Optional[List[str]] = None
     rel_pseudo_dir: Optional[str] = None
     poscar_file: Optional[str] = None
-    dft_info: Optional[DFTInfo] = None
+    dft_info: Optional[BandInfo] = None
     band_data: Optional[BandData] = None
     wannier_setup: Optional[WannierSetup] = None
+    dos_setup: Optional[DOSSetup] = None
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None
     skip_soc: bool = False
 
-    def add_dft_info(self, dft_info: DFTInfo) -> None:
+    def add_dft_info(self, dft_info: BandInfo) -> None:
         """Add DFT calculation results to the project setup.
 
         Args:
-            dft_info (DFTInfo): The DFT calculation results to add.
+            dft_info (BandInfo): The DFT calculation results to add.
         """
         self.dft_info = dft_info
 
@@ -184,3 +203,11 @@ class ProjectSetup:
             wannier_setup (WannierSetup): The Wannier calculation setup to add.
         """
         self.wannier_setup = wannier_setup
+
+    def add_dos_setup(self, dos_setup: DOSSetup) -> None:
+        """Add density of states calculation setup to the project setup.
+
+        Args:
+            dos_setup (DOSSetup): The density of states calculation setup to add.
+        """
+        self.dos_setup = dos_setup

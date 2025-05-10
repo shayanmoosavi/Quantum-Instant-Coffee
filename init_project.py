@@ -18,6 +18,7 @@ import os
 from sys import argv
 from core.project_setup import initialize_project, ProjectInitializationError
 
+
 if __name__ == "__main__":
     """
     Main entry point for the script. Handles command-line arguments and initializes the project.
@@ -55,6 +56,7 @@ if __name__ == "__main__":
         print(f"  Relativistic Pseudopotential directory: {project.rel_pseudo_dir}")
         if is_input:
             print(f"  Calculation directories: {project.calculation_dirs}")
+            print(f"  POSCAR file: {project.poscar_file}")
         print(f"  Elements: {project.compound_data.element_names}")
         print(f"  Atomic labels: {project.compound_data.atomic_labels}")
 

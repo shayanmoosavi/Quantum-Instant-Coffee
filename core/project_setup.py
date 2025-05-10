@@ -13,10 +13,12 @@ class ProjectInitializationError(Exception):
     """
     pass
 
+
 def initialize_project(
         argv: List[str],
         is_input: bool = True,
         is_wannier: bool = False,
+        is_pdos: bool = False
 ) -> ProjectSetup:
     """
     Initialize the project directory and parse compound information.
@@ -25,6 +27,7 @@ def initialize_project(
         argv (list): Command-line arguments containing the compound name and POSCAR file path.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
+        is_pdos (bool): Flag indicating if the function is called for PDOS initialization. Defaults to False.
 
     Returns:
         ProjectSetup: An object containing the initialized project setup details.
@@ -46,11 +49,10 @@ def initialize_project(
     else:
         # For output/analysis
         compound_name = validate_command_line_args(argv, is_for_plot=True)
-        include_stress = get_pbands_type() if not is_wannier else False
+        include_stress = get_pbands_type() if (not is_wannier and not is_pdos) else False
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
-
         print("Recognizing elements...", flush=True)
 
         # Parse compound information from the compound name
@@ -95,7 +97,7 @@ def initialize_project(
             stress_amounts=stress_amounts,
             rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
             input_paths=paths,
-            poscar_file=poscar_file,
+            poscar_file=os.path.abspath(poscar_file),
             skip_soc=True if include_stress else False
         )
 

@@ -25,13 +25,13 @@ import matplotlib.collections
 import matplotlib.pyplot as plt
 import numpy as np
 
-from data.data_processor import process_band_data, process_comparison_data
-from data.dft_info_extractor import prepare_dft_info, prepare_wannier_info
+from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
+from data.dft_info_extractor import prepare_dft_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 
 
-class PlotConfig:
+class BandsPlotConfig:
     """Configuration class containing constants for plot styling and parameters.
 
     Attributes:
@@ -56,7 +56,26 @@ class PlotConfig:
     }
     FIGURE_HEIGHT = 6
     FIGURE_WIDTH = 12
-    ENERGY_LIMITS = (-3, 3)
+    ENERGY_LIMITS = (-5, 5)
+
+
+class DOSPlotConfig:
+    """Configuration class for PDOS plotting.
+
+    Attributes:
+        ORBITAL_COLORS (dict): Color codes for different orbital types
+        FIGURE_HEIGHT (int): Default figure height in inches
+        FIGURE_WIDTH (int): Default figure width in inches
+        ENERGY_LIMITS (tuple): Y-axis energy range in eV
+    """
+    ORBITAL_COLORS = {
+        "s": "#FF00ED",
+        "p": "#0BF317",
+        "d": "#FF2B11",
+    }
+    FIGURE_HEIGHT = 6
+    FIGURE_WIDTH = 12
+    ENERGY_LIMITS = (-5, 5)
 
 
 class CompoundNameFormatter:
@@ -102,14 +121,14 @@ class BandPlotter:
         config (PlotConfig, optional): Configuration object containing plot parameters
     """
 
-    def __init__(self, config: PlotConfig = None) -> None:
+    def __init__(self, config: BandsPlotConfig = None) -> None:
         """Initialize the BandPlotter with configuration.
 
         Args:
-            config (PlotConfig, optional): Configuration object with plot parameters.
+            config (BandsPlotConfig, optional): Configuration object with plot parameters.
                 If None, the default PlotConfig will be used.
         """
-        self.config = config or PlotConfig()
+        self.config = config or BandsPlotConfig()
 
     def init_subplot(self, ax: matplotlib.axes.Axes, xlabel: str, ylabel: str, title: str):
         """Initialize a subplot with basic settings.
@@ -249,7 +268,7 @@ class BandPlotter:
         # Plotting total bands in first subplot
         self.init_subplot(axs[0], "k", "E (eV)", "TOTAL")
         bands_label = self.plot_bands(axs[0], k_points, energy, "total", "blue")
-        axs[0].legend(handles=[bands_label])
+        axs[0].legend(loc="lower center", handles=[bands_label])
 
         # Plotting projected bands for each element
         for element, element_data in projection_data.items():
@@ -292,14 +311,14 @@ class BandPlotter:
 class WannierComparePlotter:
     """Class for plotting Wannier and DFT band structure comparison plots."""
 
-    def __init__(self, config: PlotConfig = None) -> None:
+    def __init__(self, config: BandsPlotConfig = None) -> None:
         """Initialize the WannierComparePlotter with configuration.
 
         Args:
             config (PlotConfig, optional): Configuration object with plot parameters.
                 If None, the default PlotConfig will be used.
         """
-        self.config = config or PlotConfig()
+        self.config = config or BandsPlotConfig()
         self.name_formatter = CompoundNameFormatter()
 
     def init_plot(self, compound_name: str, skip_normal: bool = False, flag: str = "") -> None:
@@ -322,7 +341,6 @@ class WannierComparePlotter:
 
         plt.xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
 
-
     def plot_comparison(self,
                         k_points_dft: np.ndarray,
                         dft_energies: np.ndarray,
@@ -336,8 +354,6 @@ class WannierComparePlotter:
             dft_energies (ndarray): Energy values for DFT bands
             k_points_wannier (ndarray): K-point coordinates for Wannier bands
             wannier_energies (ndarray): Energy values for Wannier bands
-            compound_name (str): Name of the compound
-            flag (str): Spin-orbit flag
             save_path (str, optional): Path to save the plot
         """
         # Plot Wannier bands
@@ -356,38 +372,166 @@ class WannierComparePlotter:
         if save_path:
             plt.savefig(save_path)
 
+
+class DOSPlotter:
+    """Class for plotting projected density of states (PDOS) diagrams."""
+
+    def __init__(self, config: DOSPlotConfig = None) -> None:
+        """Initialize the PdosPlotter with configuration.
+
+        Args:
+            config (PdosPlotConfig, optional): Configuration object with plot parameters.
+                If None, the default PdosPlotConfig will be used.
+        """
+        self.config = config or DOSPlotConfig()
+
+    def init_subplot(self, ax: matplotlib.axes.Axes, title: str) -> None:
+        """Initialize a subplot with basic settings.
+
+        Args:
+            ax (matplotlib.axes.Axes): Subplot axes object
+            title (str): Subplot title
+        """
+
+        ax.set_xlabel("E (eV)")
+        ax.set_ylabel("PDOS")
+        ax.set_title(title)
+        ax.grid("on")
+        ax.set_xlim(self.config.ENERGY_LIMITS)
+
+    @staticmethod
+    def plot_pdos(ax: matplotlib.axes.Axes,
+                  energy: np.ndarray,
+                  pdos: np.ndarray,
+                  data_label: str = "data",
+                  color: str = "blue",
+                  ) -> None:
+        """Plot projected density of states (PDOS).
+
+        Args:
+            ax (matplotlib.axes.Axes): Subplot axes object
+            energy (ndarray): Energy values
+            pdos (ndarray): PDOS values
+            data_label (str): Label for the data
+            color (str): Color for the data
+        """
+
+        # Plot and fill DOS
+        ax.plot(energy, pdos, label=data_label, color=color)
+        ax.fill_between(energy, 0, pdos, color=color, alpha=0.15)
+        ax.legend(loc="best")
+
+    def create_pdos_plot(self,
+                         compound_name: str,
+                         energy: np.ndarray,
+                         pdos_total: np.ndarray,
+                         projection_data: Dict[str, Dict],
+                         spin_orbit: bool = False,
+                         save_path: str = None) -> None:
+        """Create a complete PDOS plot with projections.
+
+        Args:
+            compound_name (str): Name of the compound
+            energy (ndarray): Energy values for DOS
+            pdos_total (ndarray): Total DOS values
+            projection_data (dict): Dictionary containing projection data for each element
+            spin_orbit (bool, optional): Whether to include spin-orbit coupling
+            save_path (str, optional): Path to save the plot
+        """
+        # One total subplot and one for each element
+        number_of_subplots = len(projection_data) + 1
+
+        # Creating figure and subplots
+        fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
+
+        # Setting figure dimensions
+        fig.set_figheight(self.config.FIGURE_HEIGHT)
+        fig.set_figwidth(self.config.FIGURE_WIDTH)
+
+        # Formatting compound name for plot title
+        latex_name = CompoundNameFormatter.format_compound_name(compound_name)
+
+        # Setting plot title based on spin-orbit coupling
+        title = f"Projected DOS for {latex_name}"
+        if spin_orbit:
+            title += " with Spin-Orbit Coupling"
+        else:
+            title += " without Spin-Orbit Coupling"
+
+        fig.suptitle(title)
+
+        # Plotting total DOS in first subplot
+        self.init_subplot(axs[0], "TOTAL")
+        self.plot_pdos(axs[0], energy, pdos_total, "total", "black")
+
+        # Plotting projected DOS for each element
+        for element, element_data in projection_data.items():
+            element_index = element_data["index"]
+
+            # Initializing subplot for this element
+            self.init_subplot(axs[element_index], element)
+
+            # Plotting each orbital projection
+            for orbital, color, pdos in zip(
+                    element_data["projected_orbitals"],
+                    element_data["plot_colors"],
+                    element_data["pdos"]
+            ):
+                self.plot_pdos(
+                    axs[element_index],
+                    energy,
+                    pdos,
+                    f"{element}-{orbital}",
+                    color
+                )
+
+        # Saving plot if path is provided
+        if save_path:
+            plt.savefig(save_path)
+
+
 class ProjectionDataProcessor:
-    """Processes atomic projection data for band structure plotting.
+    """Processes atomic projection data for band structure or DOS plotting.
 
     This class handles the processing of atomic projection weights and organizing
     them by element and orbital type for visualization.
 
     Args:
-        atomic_projection_weights_info_list (list): List of dictionaries containing projection weights
+        weights_info_list (list): List of dictionaries containing projection weights
         unique_elements_list (list): List of unique chemical elements
+        is_pdos (bool): Flag indicating whether to process PDOS data
     """
 
     def __init__(self,
-                 atomic_projection_weights_info_list: List[Dict],
-                 unique_elements_list: List[str]) -> None:
+                 config: BandsPlotConfig | DOSPlotConfig,
+                 unique_elements_list: List[str],
+                 *,
+                 is_pdos: bool = False,
+                 weights_info_list: List[Dict] = None,
+                 pdos_info_list: List[Dict] = None,
+                 dos_data_list: List[Dict] = None
+                 ) -> None:
         """Initialize the ProjectionDataProcessor.
 
         Args:
-            atomic_projection_weights_info_list (list): List of dictionaries containing projection weights
+            config (BandsPlotConfig | DOSPlotConfig): Configuration object with plot parameters
             unique_elements_list (list): List of unique chemical elements
+            is_pdos (bool): Flag indicating whether to process PDOS data
+            weights_info_list (list): List of dictionaries containing projection weights
+            pdos_info_list (list): List of dictionaries containing PDOS projection data
+            dos_data_list (list): List of dictionaries containing DOS data
         """
-        self.weights_info_list = atomic_projection_weights_info_list
-        self.elements_list = unique_elements_list
-        self.orbital_colors = self._get_orbital_colors()
-
-    @staticmethod
-    def _get_orbital_colors() -> Dict[str, str]:
-        """Get the color mapping for different orbital types.
-
-        Returns:
-            dict: Dictionary mapping orbital types to color codes
-        """
-        return PlotConfig.ORBITAL_COLORS
+        if not is_pdos:
+            self.config = config or BandsPlotConfig()
+            self.weights_info_list = weights_info_list
+            self.elements_list = unique_elements_list
+            self.is_pdos = is_pdos
+        else:
+            self.config = config or DOSPlotConfig()
+            self.elements_list = unique_elements_list
+            self.pdos_info_list = pdos_info_list
+            self.is_pdos = is_pdos
+            self.dos_data_list = dos_data_list
 
     def process_projections(self) -> List[Dict]:
         """Process projection data for all elements.
@@ -395,49 +539,94 @@ class ProjectionDataProcessor:
         Returns:
             list: List of processed projection data dictionaries
         """
-        projection_info_list = []
+        if not self.is_pdos:
+            projection_info_list = []
 
-        for weights_info in self.weights_info_list:
-            projection_info = {}
+            for weights_info in self.weights_info_list:
+                projection_info = {}
 
-            for i, element in enumerate(self.elements_list):
-                projection_info[element] = self._process_element_projections(
-                    weights_info, element, i)
+                for i, element in enumerate(self.elements_list):
+                    projection_info[element] = self._process_element_projections(
+                        element, i, weights_info=weights_info)
 
-            projection_info_list.append(projection_info)
+                projection_info_list.append(projection_info)
 
-        return projection_info_list
+            return projection_info_list
+        else:
 
-    def _process_element_projections(self, weights_info: Dict[str, np.ndarray], element: str, index: int) -> Dict:
+            projection_info_list = []
+
+            for dos_data in self.dos_data_list:
+                projection_info = {}
+
+                for i, element in enumerate(self.elements_list):
+                    projection_info[element] = self._process_element_projections(
+                        element, i, dos_data=dos_data)
+
+                projection_info_list.append(projection_info)
+            return projection_info_list
+
+    def _process_element_projections(self,
+                                     element: str,
+                                     index: int,
+                                     *,
+                                     weights_info: Dict[str, np.ndarray] = None,
+                                     dos_data: Dict[str, Dict[str, np.ndarray]] = None) -> Dict:
         """Process projection data for a single element.
 
         Args:
-            weights_info (dict): Dictionary containing projection weights
             element (str): Chemical element symbol
             index (int): Element index
+            weights_info (dict): Dictionary containing projection weights
+            dos_data (dict): Dictionary containing DOS data
 
         Returns:
             dict: Processed projection data for the element
         """
-        orbitals = []
-        colors = []
-        weights = []
+        if not self.is_pdos:
+            orbitals = []
+            colors = []
+            weights = []
 
-        for orbital, color in self.orbital_colors.items():
-            projection = f"{element}-{orbital}"
+            for orbital, color in self.config.ORBITAL_COLORS.items():
+                projection = f"{element}-{orbital}"
 
-            # Check if this projection exists in the weights_info
-            if projection in weights_info:
-                orbitals.append(orbital)
-                colors.append(color)
-                weights.append(weights_info[projection])
+                # Check if this projection exists in the weights_info
+                if projection in weights_info:
+                    orbitals.append(orbital)
+                    colors.append(color)
+                    weights.append(weights_info[projection])
 
-        return {
-            "index": index + 1,
-            "projected_orbitals": orbitals,
-            "plot_colors": colors,
-            "orbital_weights": weights
-        }
+            return {
+                "index": index + 1,
+                "projected_orbitals": orbitals,
+                "plot_colors": colors,
+                "orbital_weights": weights
+            }
+
+        else:
+            orbitals = []
+            colors = []
+            energies = []
+            pdos = []
+
+            for orbital, color in self.config.ORBITAL_COLORS.items():
+                projection = f"{element}-{orbital}"
+
+                # Check if this projection exists in the weights_info
+                if projection in dos_data:
+                    orbitals.append(orbital)
+                    colors.append(color)
+                    energies.append(dos_data[projection]["energy"])
+                    pdos.append(dos_data[projection]["dos"])
+
+            return {
+                "index": index + 1,
+                "projected_orbitals": orbitals,
+                "plot_colors": colors,
+                "energies": energies,
+                "pdos": pdos
+            }
 
     @staticmethod
     def combine_similar_orbitals(weights_info: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
@@ -482,20 +671,25 @@ class ProjectionDataProcessor:
         return combined_weights
 
 
-def plot_band_structure(project: ProjectSetup, save_fig: bool = True, test_module: bool = False) -> None:
+def plot_band_structure(project: ProjectSetup,
+                        plot_config: BandsPlotConfig = BandsPlotConfig(),
+                        save_fig: bool = True,
+                        test_module: bool = False) -> None:
     """
     Plot band structure from processed data.
 
     Args:
         project (ProjectSetup): Project configuration and data container
+        plot_config (BandsPlotConfig, optional): Plotting configuration. Defaults to BandsPlotConfig().
         save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
     # Initializing objects for plotting and processing projection data
-    plotter = BandPlotter()
+    plotter = BandPlotter(plot_config)
     processor = ProjectionDataProcessor(
-        project.band_data.atomic_projection_weights,
-        project.band_data.unique_elements
+        plot_config,
+        project.band_data.unique_elements,
+        weights_info_list=project.band_data.atomic_projection_weights
     )
 
     # Process projection data into a structured format
@@ -503,8 +697,10 @@ def plot_band_structure(project: ProjectSetup, save_fig: bool = True, test_modul
 
     # Extracting configuration values
     compound_name = project.compound_name
-    spin_orbit_flags = project.dft_info.spin_orbit_flags if project.dft_info.spin_orbit_flags else [False] * len(project.band_data.energy)
-    stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
+    spin_orbit_flags = project.dft_info.spin_orbit_flags if project.dft_info.spin_orbit_flags else [False] * len(
+        project.band_data.energy)
+    stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
+        project.band_data.energy)
 
     if test_module:
         # Debug mode: Printing projection information for verification
@@ -577,15 +773,19 @@ def plot_band_structure(project: ProjectSetup, save_fig: bool = True, test_modul
                 plt.show()
 
 
-def plot_wannier_comparison(project: ProjectSetup, save_fig: bool = True, test_module: bool = False) -> None:
+def plot_wannier_comparison(project: ProjectSetup,
+                            plot_config: BandsPlotConfig = BandsPlotConfig(),
+                            save_fig: bool = True,
+                            test_module: bool = False) -> None:
     """Plot Wannier and DFT band structure comparison.
 
     Args:
         project (ProjectSetup): Project configuration and data container
+        plot_config (BandsPlotConfig, optional): Plotting configuration. Defaults to BandsPlotConfig().
         save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
-    plotter = WannierComparePlotter()
+    plotter = WannierComparePlotter(plot_config)
     comparison_data = project.wannier_setup.comparison_data
     spin_orbit_flags = ["_soc"] if project.wannier_setup.skip_normal else ["", "_soc"]
 
@@ -652,6 +852,102 @@ def plot_wannier_comparison(project: ProjectSetup, save_fig: bool = True, test_m
                 plt.show()
 
 
+def plot_pdos(project: ProjectSetup,
+              plot_config: DOSPlotConfig = DOSPlotConfig(),
+              save_fig: bool = False,
+              test_module: bool = False) -> None:
+    """Plot projected DOS.
+
+    Args:
+        project (ProjectSetup): Project configuration and data container
+        plot_config (PDOSPlotConfig, optional): Plotting configuration. Defaults to PDOSPlotConfig().
+        save_fig (bool, optional): Whether to save the plots to files. Defaults to False.
+        test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
+    """
+    compound_name = project.compound_name
+    spin_orbit_flags = ["", "_soc"]
+    projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
+    unique_elements_list = projection_processor.get_unique_elements()
+
+    projection_data_processor = ProjectionDataProcessor(plot_config,
+                                                        unique_elements_list,
+                                                        is_pdos=True,
+                                                        pdos_info_list=project.dos_setup.atomic_states_info,
+                                                        dos_data_list=project.dos_setup.dos_data
+                                                        )
+
+    projection_data_list = projection_data_processor.process_projections()
+
+    if test_module:
+
+        print("\nProjection data prepared for plotting. The plotting data is not printed:")
+        print(f"\nUnique elements: {unique_elements_list}\n")
+
+        for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
+            plotting_info = {element: {key: value for key, value in element_data.items()
+                             if key in ["index", "projected_orbitals", "plot_colors"]}
+                   for element, element_data in projection_data.items()}
+            print(f"Spin-orbit flag: {'SOC' if flag == '_soc' else 'Non-SOC'}\n")
+            for element, element_data in plotting_info.items():
+                print(f"Element: {element}")
+                print(f"Index: {element_data['index']}")
+                print(f"Projected orbitals: {element_data['projected_orbitals']}")
+                print(f"Plot colors: {element_data['plot_colors']}\n")
+
+    else:
+
+        plotter = DOSPlotter(plot_config)
+
+        if save_fig:
+            for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
+                save_path = os.path.join(
+                    project.project_dir,
+                    f"{compound_name}_pdos{flag}.png"
+                )
+
+                # Get total DOS from first element's energy values
+                energy = projection_data[unique_elements_list[0]]["energies"][0]
+                pdos_total = np.zeros_like(energy)
+
+                # Sum up all orbital contributions for total DOS
+                for element_data in projection_data.values():
+                    for pdos in element_data["pdos"]:
+                        pdos_total += pdos
+
+                # Create and save the plot
+                plotter.create_pdos_plot(
+                    compound_name,
+                    energy,
+                    pdos_total,
+                    projection_data,
+                    flag == "_soc",
+                    save_path
+                )
+
+        else:
+
+            # Displaying plots without saving
+            for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
+
+                # Getting total DOS from first element's energy values
+                energy = projection_data[unique_elements_list[0]]["energies"][0]
+                pdos_total = np.zeros_like(energy)
+
+                # Summing up all orbital contributions for total DOS
+                for element_data in projection_data.values():
+                    for pdos in element_data["pdos"]:
+                        pdos_total += pdos
+
+                # Creating and displaying the plot
+                plotter.create_pdos_plot(
+                    compound_name,
+                    energy,
+                    pdos_total,
+                    projection_data,
+                    flag == "_soc"
+                )
+                plt.show()
+
 if __name__ == "__main__":
     """
     Main entry point for the script. Prepares configuration, processes data, and plots band structures.
@@ -665,14 +961,35 @@ if __name__ == "__main__":
         6. Generate and display the appropriate plots (Wannier comparison or band structure).
     """
     # Check if the script is being run for input generation (3 arguments passed)
+    os.chdir("..")
     is_input = len(argv) == 3
 
-    # Prompt the user to determine if Wannier comparison is being tested
-    is_wannier = input("Are you testing for Wannier comparison? (yes/no): ").strip().lower() == "yes"
+    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
-    project = initialize_project(argv, is_input, is_wannier)
-    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
-    process_comparison_data(project) if is_wannier else process_band_data(project)
+    match response:
+        case "wannier":
+            project = initialize_project(argv, is_input, is_wannier=True)
+            prepare_wannier_info(project)
+            process_comparison_data(project)
 
-    plot_wannier_comparison(project, save_fig=False, test_module=True) if is_wannier \
-        else plot_band_structure(project, save_fig=False, test_module=True)
+            plot_config = BandsPlotConfig()
+            plot_wannier_comparison(project, plot_config, save_fig=False, test_module=True)
+
+        case "bands":
+            project = initialize_project(argv, is_input)
+            prepare_dft_info(project)
+            process_band_data(project)
+
+            plot_config = BandsPlotConfig()
+            plot_band_structure(project, plot_config, save_fig=False, test_module=True)
+
+        case "pdos":
+            project = initialize_project(argv, is_input, is_pdos=True)
+            prepare_pdos_info(project)
+            process_pdos_data(project)
+
+            plot_config = DOSPlotConfig()
+            plot_pdos(project, plot_config, save_fig=False, test_module=True)
+
+        case _:
+            raise ValueError("Invalid input!")

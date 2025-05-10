@@ -115,6 +115,7 @@ class ProjectConfig:
                     "projbands_output": "{compound_name}{flag}.projbands", # Pattern for generated projbands files from the AWK script
                     "bands_gnu": "{compound_name}.bands.gnu", # Pattern for DFT band data
                     "nscf_output": "{compound_name}_nscf{flag}.pw.out",  # Pattern for NSCF output files
+                    "pdos_output": "{compound_name}{flag}.pdos.out",  # Pattern for PDOS output files
                     "nscf_wannier_output": "{compound_name}_nscf_wannier{flag}.pw.out", # Pattern for NSCF wannier output files
                     "wannier_bands": "{compound_name}_wannier{flag}_band.dat" # Pattern for wannier band data
                 }

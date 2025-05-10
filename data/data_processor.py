@@ -4,8 +4,9 @@ This module provides classes and functions to process band structure data and at
 from Quantum ESPRESSO output files. It includes functionality for loading data, calculating orbital
 weights, and processing atomic projections.
 """
+import os.path
 
-from .dft_info_extractor import *
+from data.dft_info_extractor import *
 import numpy as np
 from data.models import BandData, ProjectSetup
 
@@ -100,6 +101,7 @@ class WannierDataProcessor:
         wannier_energies = np.reshape(wannier_data[:, 1], (-1, len(k_points_wannier))) - fermi_energy
         return wannier_data, k_points_wannier, wannier_energies
 
+
 class WeightCalculator:
     """Handles orbital weight calculations for band structure."""
 
@@ -126,7 +128,6 @@ class WeightCalculator:
         # Calculating the total weights for each atomic state
         for index in atomic_state_indices:
             for coefficient in atomic_state_coefficients:
-
                 # The first 3 columns are not the weights
                 total_orbital_weights += coefficient * data[:, index + 3]
 
@@ -202,6 +203,39 @@ class AtomicProjectionProcessor:
         return weights_info
 
 
+class DOSDataProcessor:
+    """
+    Handles loading and processing of density of states (DOS) data.
+
+    Attributes:
+        project_dir (str): The directory containing the project files.
+    """
+
+    def __init__(self, project_dir: str) -> None:
+        """Initialize the DOSDataProcessor with the project directory."""
+        self.project_dir = project_dir
+
+    @staticmethod
+    def load_pdos_data(pdos_dir: str, fermi_energy: float):
+        """
+        Load and process PDOS data from a file.
+
+        Args:
+            pdos_dir (str): Path to the PDOS calculation data.
+            fermi_energy (float): Fermi energy in eV.
+
+        Returns:
+            tuple: A tuple containing:
+                - energies (ndarray): Energies column of the PDOS data.
+                - pdos (ndarray): PDOS column of PDOSdata.
+        """
+
+        pdos_data = np.loadtxt(pdos_dir)
+        energies = pdos_data[:, 0] - fermi_energy
+        pdos = pdos_data[:, 1]
+        return energies, pdos
+
+
 def process_band_data(project: ProjectSetup) -> ProjectSetup:
     """
     Process all band data and calculate projections.
@@ -265,6 +299,7 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     project.band_data = band_data
 
     return project
+
 
 def process_comparison_data(project: ProjectSetup) -> ProjectSetup:
     """
@@ -333,6 +368,45 @@ def process_comparison_data(project: ProjectSetup) -> ProjectSetup:
     project.wannier_setup.comparison_data = comparison_data
     return project
 
+
+def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
+    """
+    Process PDOS data.
+
+    Args:
+        project (ProjectSetup): Project configuration and data container
+
+    Returns:
+        ProjectSetup: Updated project with processed PDOS data
+    """
+    pdos_processor = DOSDataProcessor(project.project_dir)
+
+    atomic_projection_list = project.dos_setup.atomic_states_info[0].keys()
+    pdos_data_filename_list = [f"pdos_{atomic_projection.split('-')[0]}_{atomic_projection.split('-')[1]}.dat"
+                       for atomic_projection in atomic_projection_list]
+    dos_data_list = []
+
+    for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"], project.dos_setup.fermi_energies):
+
+        dos_data = {}
+        pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in pdos_data_filename_list]
+
+        for pdos_data, atomic_projection in zip(pdos_data_file_paths, atomic_projection_list):
+            energy, dos = pdos_processor.load_pdos_data(pdos_data, fermi_energy)
+            dos_data[atomic_projection] = {"energy": energy, "dos": dos}
+
+        dos_data_list.append(dos_data)
+
+    dos_setup = DOSSetup(fermi_energies=project.dos_setup.fermi_energies,
+                         spin_orbit_flags=project.dos_setup.spin_orbit_flags,
+                         atomic_states_info=project.dos_setup.atomic_states_info,
+                         dos_data=dos_data_list
+                         )
+
+    project.add_dos_setup(dos_setup)
+    return project
+
+
 # Testing to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -342,11 +416,33 @@ if __name__ == "__main__":
     atomic projections and weights are calculated correctly.
     """
     is_input = len(argv) == 3
-    is_wannier = input("Are you testing for Wannier initialization? (yes/no): ").strip().lower() == "yes"
 
-    project = initialize_project(argv, is_input, is_wannier)
-    prepare_wannier_info(project) if is_wannier else prepare_dft_info(project)
-    process_comparison_data(project) if is_wannier else process_band_data(project)
+    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+
+    match response:
+        case "wannier":
+            project = initialize_project(argv, is_input, is_wannier=True)
+            prepare_wannier_info(project)
+            process_comparison_data(project)
+            is_wannier = True
+            is_pdos = False
+
+        case "bands":
+            project = initialize_project(argv, is_input)
+            prepare_dft_info(project)
+            process_band_data(project)
+            is_wannier = False
+            is_pdos = False
+
+        case "pdos":
+            project = initialize_project(argv, is_input, is_pdos=True)
+            prepare_pdos_info(project)
+            process_pdos_data(project)
+            is_wannier = False
+            is_pdos = True
+
+        case _:
+            raise ValueError("Invalid input!")
 
     print("Data processed successfully and ready for plotting.")
 
@@ -354,5 +450,9 @@ if __name__ == "__main__":
         for alat, fermi_energy in zip(project.wannier_setup.alat_parameters, project.wannier_setup.fermi_energies):
             print(f"Alat Parameters: {alat} Å")
             print(f"Fermi Energies: {fermi_energy} eV")
+    elif is_pdos:
+        print(f"Fermi energies: {project.dos_setup.fermi_energies}")
+        print(f"Spin orbit flags: {project.dos_setup.spin_orbit_flags}")
+        print(f"Atomic projections: {list(project.dos_setup.dos_data[0].keys())}")
     else:
         print(f"Elements: {project.band_data.unique_elements}")

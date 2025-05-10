@@ -3,8 +3,12 @@
 This script initializes the project, processes the data, and plots the projected band structure
 using the provided configuration and data processing modules.
 """
-from utils.plot_handler import *
-from data.data_processor import *
+from sys import argv
+
+from core.project_setup import initialize_project
+from data.data_processor import process_band_data
+from data.dft_info_extractor import prepare_dft_info
+from utils.plot_handler import BandsPlotConfig, plot_band_structure
 
 
 # Initialization of the project
@@ -16,5 +20,10 @@ prepare_dft_info(project)
 # Process the band data for the project
 process_band_data(project)
 
-# Plotting the band structure
-plot_band_structure(project, save_fig=False)
+# Setting the plot configuration
+plot_config = BandsPlotConfig()
+# You can modify the plot configuration here
+# ...
+
+# Plotting the band structure (set save_fig to True if you want to save the figure)
+plot_band_structure(project, plot_config, save_fig=False)

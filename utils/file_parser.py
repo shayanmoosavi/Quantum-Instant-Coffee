@@ -10,6 +10,7 @@ import re
 import json
 from typing import List, Tuple, Dict, Union
 
+
 def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
     """
     Reads the POSCAR file and extracts lattice vectors and atomic positions.
@@ -22,11 +23,13 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
             - list: A list of lattice vectors.
             - list: A list of atomic positions.
     """
-
-    with open(os.path.join("..", poscar_file), "r") as file:
+    script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    with open(os.path.join(script_root_dir, poscar_file), "r") as file:
         poscar_file_content = file.read()
 
-    coordinates_regex_pattern = r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
+    coordinates_regex_pattern = (
+        r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
+    )
     coordinates_regex_object = re.compile(coordinates_regex_pattern)
     coordinates_matches = coordinates_regex_object.finditer(poscar_file_content)
 
@@ -36,9 +39,13 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
     counter = 0
     for match in coordinates_matches:
         if counter < 3:
-            lattice_vectors.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
+            lattice_vectors.append(
+                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
+            )
         else:
-            atomic_positions.append(f"{match.group(1):>13}    {match.group(2):>13}    {match.group(3):>13}")
+            atomic_positions.append(
+                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
+            )
         counter += 1
 
     return lattice_vectors, atomic_positions
@@ -90,7 +97,9 @@ def extract_band_number(file_path: str, compound_name: str, flag: str) -> int:
         raise
 
 
-def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float:
+def extract_fermi_energy(
+    file_path: str, compound_name: str, flag: str, is_pdos: bool = False
+) -> float:
     """
     Extract the Fermi energy from a Quantum ESPRESSO SCF calculation output file.
 
@@ -98,6 +107,7 @@ def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float
         file_path (str): Path to the SCF output file
         compound_name (str): Name of the compound
         flag (str): Suffix for the file name (e.g., "_soc" or "")
+        is_pdos (bool): Flag to indicate whether the file is for PDOS calculation
 
     Returns:
         float: Fermi energy in eV
@@ -107,32 +117,75 @@ def extract_fermi_energy(file_path: str, compound_name: str, flag: str) -> float
         ValueError: If the Fermi energy cannot be extracted
     """
     print("Getting Fermi energy...")
-    print(f"Reading {compound_name}_scf{flag}.pw.out...")
 
-    try:
-        with open(file_path, "r") as scf_output_file:
-            scf_calculation_output = scf_output_file.read()
-
-        # Getting fermi energy from the calculation output
-        fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
-        fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
-        fermi_energy_matches = fermi_energy_regex_object.finditer(scf_calculation_output)
+    if not is_pdos:
+        print(f"Reading {compound_name}_scf{flag}.pw.out...")
 
         try:
-            fermi_energy = float(next(fermi_energy_matches).group(1))
-            print(f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n")
-            return fermi_energy
+            with open(file_path, "r") as scf_output_file:
+                scf_calculation_output = scf_output_file.read()
 
-        except StopIteration:
-            raise ValueError(f"Could not find Fermi energy information in {file_path}")
+            # Getting fermi energy from the calculation output
+            fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
+            fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
+            fermi_energy_matches = fermi_energy_regex_object.finditer(
+                scf_calculation_output
+            )
 
-    except FileNotFoundError:
-        print(
-            f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.')
-        raise
+            try:
+                fermi_energy = float(next(fermi_energy_matches).group(1))
+                print(
+                    f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n"
+                )
+                return fermi_energy
+
+            except StopIteration:
+                raise ValueError(
+                    f"Could not find Fermi energy information in {file_path}"
+                )
+
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}_scf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.'
+            )
+            raise
+
+    else:
+        print(f"Reading {compound_name}_nscf{flag}.pw.out...")
+
+        try:
+            with open(file_path, "r") as nscf_output_file:
+                nscf_calculation_output = nscf_output_file.read()
+
+            # Getting fermi energy from the calculation output
+            fermi_energy_regex_pattern = r"the Fermi energy is\s+(-?\d+\.\d+)"
+            fermi_energy_regex_object = re.compile(fermi_energy_regex_pattern)
+            fermi_energy_matches = fermi_energy_regex_object.finditer(
+                nscf_calculation_output
+            )
+
+            try:
+                fermi_energy = float(next(fermi_energy_matches).group(1))
+                print(
+                    f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n"
+                )
+                return fermi_energy
+
+            except StopIteration:
+                raise ValueError(
+                    f"Could not find Fermi energy information in {file_path}"
+                )
+
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}_nscf{flag}.pw.out" does not exist. Make sure the file name is correct or in the directory of the project.'
+            )
+            raise
 
 
-def extract_number_of_atomic_states(file_path: str, compound_name: str, flag: str) -> int:
+def extract_number_of_atomic_states(
+    file_path: str, compound_name: str, flag: str
+) -> int:
     """
     Extract the number of atomic states from a Quantum ESPRESSO KPDOS calculation output file.
 
@@ -180,11 +233,17 @@ def extract_number_of_atomic_states(file_path: str, compound_name: str, flag: st
         raise
 
 
-def extract_atomic_states_info(file_path: str,
-                               compound_name: str,
-                               flag: str,
-                               atom: str,
-                               orbital: str) -> Dict[str, Dict[str, Union[List[int], List[float]]]]:
+def extract_atomic_states_info(
+    file_path: str,
+    compound_name: str,
+    flag: str,
+    atom: str,
+    orbital: str,
+    is_pdos: bool = False,
+) -> (
+    Dict[str, Dict[str, Union[List[int], List[float]]]]
+    | Dict[str, List[Tuple[int, int]]]
+):
     """
     Extract the atomic states info from a Quantum ESPRESSO KPDOS calculation output file.
 
@@ -194,6 +253,7 @@ def extract_atomic_states_info(file_path: str,
         flag (str): Suffix for the file name (e.g., "_soc" or "")
         atom (str): Atomic symbol
         orbital (str): Orbital type (e.g., "s", "p", "d")
+        is_pdos (bool): Flag to indicate whether to extract PDOS information
 
     Returns:
         dict: Dictionary containing the indices and orbital weights for the specified atom and orbital
@@ -204,66 +264,123 @@ def extract_atomic_states_info(file_path: str,
     """
     print(f"Getting atomic state {atom}-{orbital}...")
 
-    try:
-        with open(file_path, "r") as kpdos_output_file:
-            kpdos_calculation_output = kpdos_output_file.read()
+    if not is_pdos:
+        try:
+            with open(file_path, "r") as kpdos_output_file:
+                kpdos_calculation_output = kpdos_output_file.read()
 
-        orbital_info = json.load(open("data/orbital_info.json", "r"))
-        # Orbitals with the same contribution
-        same_orbitals = {
-            "px": "px+py",
-            "py": "px+py",
-            "dxz": "dxz+dyz",
-            "dyz": "dxz+dyz",
-            "dx2y2": "dx2y2+dxy",
-            "dxy": "dx2y2+dxy"
-        }
+            orbital_info = json.load(open("data/orbital_info.json", "r"))
+            # Orbitals with the same contribution
+            same_orbitals = {
+                "px": "px+py",
+                "py": "px+py",
+                "dxz": "dxz+dyz",
+                "dyz": "dxz+dyz",
+                "dx2y2": "dx2y2+dxy",
+                "dxy": "dx2y2+dxy",
+            }
 
-        projection_indices_list = []
+            projection_indices_list = []
 
-        # Validating the orbital exists in orbital info file
-        if orbital not in orbital_info:
-            raise ValueError(
-                f"The orbital '{orbital}' is not defined in 'orbital_info.json'. Please check the file.")
+            # Validating the orbital exists in orbital info file
+            if orbital not in orbital_info:
+                raise ValueError(
+                    f"The orbital '{orbital}' is not defined in 'orbital_info.json'. Please check the file."
+                )
 
-        # Getting the index of all atomic states given by user input
-        for orbital_number in orbital_info[orbital]['orbital_numbers']:
-            atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital_number}\)"
+            # Getting the index of all atomic states given by user input
+            for orbital_number in orbital_info[orbital]["orbital_numbers"]:
+                atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital_number}\)"
+                atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
+
+                projection_indices_list.extend(
+                    [
+                        int(atomic_state.group(1))
+                        for atomic_state in atomic_state_regex_object.finditer(
+                            kpdos_calculation_output
+                        )
+                    ]
+                )
+            projection_indices_list.sort()
+
+            if orbital in same_orbitals:
+                key = f"{atom}-{same_orbitals[orbital]}"
+            else:
+                key = f"{atom}-{orbital}"
+
+            if not projection_indices_list:
+                raise ValueError(
+                    f"Could not find atomic state information for {atom}-{orbital} in {file_path}"
+                )
+
+            return {
+                key: {
+                    "indices": projection_indices_list,
+                    "coefficients": orbital_info[orbital]["orbital_coefficients"],
+                }
+            }
+
+        except ValueError:
+            print("There was an error in extracting the atomic state information.")
+            raise
+
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}{flag}.kpdos.out" does not exist. Make sure the file name is correct or in the directory of the project.'
+            )
+            raise
+
+    else:
+        try:
+            orbital_lookup = {
+                "s": "0",
+                "p": "1",
+                "d": "2",
+            }  # Map orbital numbers to types
+
+            if orbital not in orbital_lookup:
+                raise ValueError(
+                    f"The orbital '{orbital}' is not defined in the orbital lookup."
+                )
+
+            with open(file_path, "r") as pdos_output_file:
+                pdos_calculation_output = pdos_output_file.read()
+
+            atomic_state_regex_pattern = (
+                rf"state #\s+\d+: atom\s+(?P<atomic_index>\d+) \({atom}\s+\),"
+                rf" wfc\s+(?P<wfc_num>\d+) \(l=({orbital_lookup[orbital]}).*\)"
+            )
             atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
-
-            projection_indices_list.extend([int(atomic_state.group(1)) for atomic_state
-                                       in atomic_state_regex_object.finditer(kpdos_calculation_output)])
-        projection_indices_list.sort()
-
-        if orbital in same_orbitals:
-            key = f"{atom}-{same_orbitals[orbital]}"
-        else:
-            key = f"{atom}-{orbital}"
-
-        if not projection_indices_list:
-            raise ValueError(
-                f"Could not find atomic state information for {atom}-{orbital} in {file_path}"
+            atomic_state_matches = atomic_state_regex_object.finditer(
+                pdos_calculation_output
             )
 
-        return {
-            key: {
-                "indices": projection_indices_list,
-                "coefficients": orbital_info[orbital]["orbital_coefficients"]
+            projection_info_list = [(int(match.group("atomic_index")), int(match.group("wfc_num")))
+                                 for match in atomic_state_matches]
+
+
+            key = f"{atom}-{orbital}"
+            return {
+                key: {
+                    "atomic_indices": [info[0] for info in projection_info_list],
+                    "wavefunction_numbers": [info[1] for info in projection_info_list],
+                }
             }
-        }
 
-    except ValueError:
-        print("There was an error in extracting the atomic state information.")
-        raise
+        except ValueError:
+            print("There was an error in extracting the atomic state information.")
+            raise
 
-    except FileNotFoundError:
-        print(
-            f'File "{compound_name}{flag}.kpdos.out" does not exist. Make sure the file name is correct or in the directory of the project.'
-        )
-        raise
+        except FileNotFoundError:
+            print(
+                f'File "{compound_name}{flag}.pdos.out" does not exist. Make sure the file name is correct or in the directory of the project.'
+            )
+            raise
 
 
-def extract_wannier_parameters(file_path: str, compound_name: str, flag: str) -> Tuple[float, float]:
+def extract_wannier_parameters(
+    file_path: str, compound_name: str, flag: str
+) -> Tuple[float, float]:
     """Extract Wannier calculation parameters from NSCF output file.
 
     Args:
@@ -295,7 +412,7 @@ def extract_wannier_parameters(file_path: str, compound_name: str, flag: str) ->
         raise ValueError("Fermi energy not found in NSCF output")
     fermi_energy = float(fermi_match.group(1))
 
-    print(f"Parameters extracted successfully:")
+    print("Parameters extracted successfully:")
     print(f"Alat parameter: {alat} Å")
     print(f"Fermi energy: {fermi_energy} eV\n")
 
