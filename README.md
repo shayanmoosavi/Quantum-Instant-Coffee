@@ -30,7 +30,7 @@ The input files will be generated both with and without considering spin-orbit c
 ### 🧰 Toolkit:
 - `input_file_writer.py`: Generates input files for common QE/Wannier90 workflows
 - `projected_bands_plotter.py`: Plots projected band structures
-- `plot_pdos.py`: Plots projected density of states
+- `pdos_plotter.py`: Plots projected density of states
 - `compare_bands.py`: Compares DFT bands with Wannier-interpolated bands 
 
 ## 📦 Requirements
