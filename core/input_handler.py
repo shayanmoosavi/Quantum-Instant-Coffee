@@ -9,6 +9,8 @@ import os
 import re
 from typing import List, Tuple, Dict
 
+from ui.ui_helpers import *
+
 
 def select_pseudopotentials(pseudo_files: List[str],
                             element_name: str,
@@ -26,22 +28,21 @@ def select_pseudopotentials(pseudo_files: List[str],
         str: The selected pseudopotential file name.
     """
 
-    print(f"\nFinding {'relativistic' if relativistic else 'non-relativistic'} pseudopotential files for {element_name}:")
+    header_text = f"{'Relativistic' if relativistic else 'Non-relativistic'} pseudopotentials for [bold]{element_name}[/bold]"
+    print_header(header_text)
+
     if not pseudo_files:
-        print(
-            f"ERROR: No pseudopotentials found for {element_name}. Make sure they exist in the specified directory and rerun this script"
-        )
+        print_error(f"No pseudopotentials found for {element_name}. Make sure they exist in the specified directory and rerun this script.")
         exit(1)
-    else:
-        print(f"Found the following pseudopotential files for {element_name}:")
-        for i, filename in enumerate(pseudo_files):
-            print(f"{i + 1}: {filename}")
-        while True:
-            try:
-                selected_index = int(input("Which one do you want? Enter the number associated with it: ")) - 1
-                return pseudo_files[selected_index]
-            except (IndexError, ValueError):
-                print("Invalid selection! Please select a valid number.")
+
+    print_list(f"Available Pseudopotentials for {element_name}", pseudo_files)
+
+    while True:
+        try:
+            selected_index = int(prompt_input("Which one do you want? Enter the number: ")) - 1
+            return pseudo_files[selected_index]
+        except (IndexError, ValueError):
+            print_warning("Invalid selection! Please enter a valid number from the list.")
 
 
 def get_pseudopotential_files(element_names: List[str],
@@ -71,6 +72,8 @@ def get_pseudopotential_files(element_names: List[str],
     # Get non-relativistic pseudopotentials
     pseudo_dir_path = os.path.abspath(pseudo_path)
     if os.path.exists(pseudo_dir_path):
+        print_info(f"Searching for pseudopotential files in: {pseudo_dir_path}")
+
         for element_name in element_names:
             pseudo_files = []
             pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
@@ -82,7 +85,7 @@ def get_pseudopotential_files(element_names: List[str],
             pseudo_list[element_name] = selected_pseudo
 
     else:
-        print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+        print_error(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
         exit(1)
 
     # Get relativistic pseudopotentials
@@ -90,6 +93,8 @@ def get_pseudopotential_files(element_names: List[str],
 
         rel_pseudo_dir_path = os.path.abspath(rel_pseudo_path)
         if os.path.exists(rel_pseudo_dir_path):
+
+            print_info(f"\nSearching for relativistic pseudopotential files in: {rel_pseudo_dir_path}\n")
 
             for element_name in element_names:
                 rel_pseudo_files = []
@@ -103,7 +108,7 @@ def get_pseudopotential_files(element_names: List[str],
                 )
                 rel_pseudo_list[element_name] = selected_pseudo
         else:
-            print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+            print_error(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
             exit(1)
 
         return pseudo_list, rel_pseudo_list
