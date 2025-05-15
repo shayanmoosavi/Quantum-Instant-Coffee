@@ -6,6 +6,8 @@ It includes functionality for handling spin-orbit coupling (SOC), collecting DFT
 import os.path
 from sys import argv
 from typing import Any
+
+from ui.ui_helpers import prompt_input, print_warning, print_header
 from utils.file_parser import *
 from core.project_setup import initialize_project
 from core.input_handler import get_atomic_states
@@ -64,14 +66,14 @@ class SpinOrbitHandler:
             exit(1) # Exit immediately for non spin-orbit cases
 
         if self.skip_soc:
-            print("Spin-orbit was set to be skipped. Continuing...")
+            print_info("Spin-orbit was set to be skipped. Continuing...")
             return True
 
-        skip_soc_input = input(
-            'Do you want to skip spin-orbit case? Enter "yes" if you want to skip spin-orbit or "no" to quit the program: '
+        skip_soc_input = prompt_input(
+            'Do you want to skip spin-orbit case? Enter "y" if you want to skip spin-orbit or "n" to quit the program: '
         ).lower()
 
-        if skip_soc_input == "no":
+        if skip_soc_input == "n":
             exit(1)
         return True
 
@@ -125,7 +127,7 @@ def collect_dft_data(path: str,
                 return data, True
 
     except (FileNotFoundError, ValueError) as e:
-        print(f"Error: {e}")
+        print_error(f"Error: {e}")
         return None, False
 
 
@@ -300,7 +302,7 @@ def run_awk_script(number_of_atomic_states: int,
     Raises:
         CalledProcessError: If the AWK script execution fails
     """
-    print("Calculating projected bands...")
+    print_info("Calculating projected bands...")
 
     awk_command = (
         f"awk -v firststate=1 "
@@ -318,7 +320,7 @@ def run_sum_pdos(atomic_projection: Tuple[str, str]) -> None:
 
     """
 
-    print(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
+    print_info(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
 
     sum_pdos_command = (f"sumpdos.x "
                         f"*\({atomic_projection[0]}\)*\({atomic_projection[1]}*\) "
@@ -360,20 +362,20 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
         # Checking if the projbands file already exists
         if os.path.exists(projbands_dir):
-            print(f"File {projbands_dir} already exists!")
+            print_warning(f"File {projbands_dir} already exists!")
             projbands_generation_success_list.append(True)
             continue
 
         try:
             # Running the AWK script to generate the projbands file
             run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir)
-            print("Projected bands calculation completed successfully.")
+            print_success("Projected bands calculation completed successfully.")
             projbands_generation_success_list.append(True)
 
         except CalledProcessError as e:
             # Handling errors during the AWK script execution
-            print("Error calculating projected bands:")
-            print(e.stderr.decode("utf-8"))
+            print_error("Error calculating projected bands:")
+            print_error(e.stderr.decode("utf-8"))
             projbands_generation_success_list.append(False)
 
     return projbands_generation_success_list
@@ -400,20 +402,20 @@ def generate_pdos(paths: Dict[str, List[str]],
             # Checking if the PDOS file already exists
             pdos_data_file = os.path.join(os.path.dirname(pdos_dir), f"pdos_{atom}_{orbital}.dat")
             if os.path.exists(pdos_data_file):
-                print(f"File {pdos_data_file} already exists!")
+                print_warning(f"File {pdos_data_file} already exists!")
                 pdos_generation_success_list.append(True)
                 continue
 
             try:
                 # Running the sumpdos.x script to generate the PDOS files
                 run_sum_pdos((atom, orbital))
-                print(f"PDOS file created for {atomic_projection}")
+                print_success(f"PDOS file created for {atomic_projection}")
                 pdos_generation_success_list.append(True)
 
             except CalledProcessError as e:
                 # Handling errors during the AWK script execution
-                print("Error creating PDOS file:")
-                print(e.stderr.decode("utf-8"))
+                print_error("Error creating PDOS file:")
+                print_error(e.stderr.decode("utf-8"))
                 pdos_generation_success_list.append(False)
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -552,6 +554,9 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project setup object with PDOS information.
     """
+
+    print_header("Info Extraction")
+
     spin_orbit_flags = ["", "_soc"]
     fermi_energies = collect_fermi_energies(project.output_paths,
                                             project.compound_name,
@@ -589,7 +594,7 @@ if __name__ == "__main__":
     os.chdir("..")
     is_input = len(argv) == 3
 
-    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
     match response:
         case "wannier":
@@ -613,7 +618,7 @@ if __name__ == "__main__":
         case _:
             raise ValueError("Invalid input!")
 
-    print("Information prepared successfully.\n")
+    print_info("Information prepared successfully.\n")
     if project.include_stress:
         for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
                 [None] + project.stress_amounts,
@@ -648,7 +653,7 @@ if __name__ == "__main__":
                     print(f"{atomic_state}: {info}")
         elif is_pdos:
             for fermi_energy, flag in zip(
-                    project.dos_info.fermi_energies,
+                    project.dos_setup.fermi_energies,
                     ["", "(SOC)"]
             ):
                 print(f"Fermi energy {flag}: {fermi_energy} eV")

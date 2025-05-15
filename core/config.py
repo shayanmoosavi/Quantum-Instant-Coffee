@@ -9,6 +9,8 @@ configuration structure to ensure correctness.
 from dataclasses import dataclass
 from typing import Dict
 import json
+
+from ui.ui_helpers import print_error, print_info
 from utils.config_validation import validate_config_structure, ConfigValidationError
 
 
@@ -149,6 +151,6 @@ def load_config(config_file: str = "config.json") -> ProjectConfig:
     try:
         return ProjectConfig.from_json(config_file)
     except ConfigValidationError as e:
-        print(f"Configuration validation error: {str(e)}")
-        print("Using default configuration instead.")
+        print_error(f"Configuration validation error: {str(e)}")
+        print_info("Using default configuration instead.")
         return ProjectConfig.get_default_config()
