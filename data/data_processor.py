@@ -6,7 +6,7 @@ weights, and processing atomic projections.
 """
 import os.path
 
-from data.dft_info_extractor import *
+from data.data_collector import *
 import numpy as np
 from data.models import BandData, ProjectSetup
 

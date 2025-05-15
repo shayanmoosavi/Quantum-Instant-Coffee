@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
-from data.dft_info_extractor import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
+from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 

@@ -6,7 +6,7 @@ from sys import argv
 
 from core.project_setup import initialize_project
 from data.data_processor import process_comparison_data
-from data.dft_info_extractor import prepare_wannier_info
+from data.data_collector import prepare_wannier_info
 from utils.plot_handler import BandsPlotConfig, plot_wannier_comparison
 
 # Initializing the project

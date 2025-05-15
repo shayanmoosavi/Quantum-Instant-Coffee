@@ -8,7 +8,7 @@ from sys import argv
 
 from core.project_setup import initialize_project
 from data.data_processor import process_pdos_data
-from data.dft_info_extractor import prepare_pdos_info
+from data.data_collector import prepare_pdos_info
 from utils.plot_handler import DOSPlotConfig, plot_pdos
 
 # Initialization of the project
