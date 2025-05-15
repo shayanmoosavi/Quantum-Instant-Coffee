@@ -226,7 +226,7 @@ Example: O-s C-p Fe-d
 
             # Validating the input format (must be in the form <element name>-<orbital>)
             if '-' not in atomic_projection:
-                print_warning("Invalid input format. Expected <element name>-<orbital>.")
+                print_warning("Invalid input format. Expected <element_name>-<orbital>.")
                 break
 
             element, orbital = atomic_projection.split('-')

@@ -34,8 +34,8 @@ def print_success(message: str):
     console.print(f"[success]{message}[/success]")
 
 
-def print_header(message: str):
-    console.print(Panel(message, style="header", width=80))
+def print_header(message: str, width=None):
+    console.print(Panel(message, style="header", width=width))
 
 
 def print_list(title: str, items: list[str]):
