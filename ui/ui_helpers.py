@@ -2,6 +2,7 @@ from rich.console import Console
 from rich.theme import Theme
 from rich.panel import Panel
 from rich.table import Table
+from rich import box
 
 # Custom color theme
 custom_theme = Theme({
@@ -17,8 +18,8 @@ custom_theme = Theme({
 console = Console(theme=custom_theme)
 
 
-def print_info(message: str):
-    console.print(f"[info]{message}[/info]")
+def print_info(message: str, highlight: bool = True):
+    console.print(f"[info]{message}[/info]", highlight=highlight)
 
 
 def print_warning(message: str):
@@ -34,11 +35,11 @@ def print_success(message: str):
 
 
 def print_header(message: str):
-    console.print(Panel(message, style="header"))
+    console.print(Panel(message, style="header", width=80))
 
 
 def print_list(title: str, items: list[str]):
-    table = Table(title=title)
+    table = Table(title=title, box=box.ROUNDED, width=40)
     table.add_column("Index", style="highlight", justify="right")
     table.add_column("Filename", style="info", justify="left")
     for i, item in enumerate(items, 1):
