@@ -422,9 +422,9 @@ def generate_pdos(paths: Dict[str, List[str]],
     return pdos_generation_success_list
 
 
-def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
+def prepare_bands_info(project: ProjectSetup) -> ProjectSetup:
     """
-    Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
+    Prepare projected bands information by extracting data from Quantum ESPRESSO output files.
 
     Args:
         project (ProjectSetup): Project setup object containing paths and parameters.
@@ -432,6 +432,8 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project setup object with DFT information.
     """
+
+    print_header("Bands Info Extraction")
 
     # Determine spin_orbit_flags based on project configuration
     spin_orbit_flags = (
@@ -472,7 +474,7 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
         project.skip_soc
     )
 
-    dft_info = BandInfo(
+    band_info = BandInfo(
         number_of_bands=number_of_bands_list,
         fermi_energies=fermi_energies,
         number_of_atomic_states=number_of_atomic_states_list,
@@ -483,15 +485,15 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
     # Generate projected bands
     success = generate_projected_bands(
         project.output_paths,
-        dft_info.number_of_atomic_states,
-        dft_info.fermi_energies
+        band_info.number_of_atomic_states,
+        band_info.fermi_energies
     )
 
     if not all(success):
         raise ProjectInitializationError("Some projbands files were not generated successfully.")
 
     # Add DFT info to project
-    project.add_dft_info(dft_info)
+    project.add_bands_info(band_info)
     return project
 
 
@@ -555,7 +557,7 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
         ProjectSetup: Updated project setup object with PDOS information.
     """
 
-    print_header("Info Extraction")
+    print_header("PDOS Info Extraction")
 
     spin_orbit_flags = ["", "_soc"]
     fermi_energies = collect_fermi_energies(project.output_paths,
@@ -605,7 +607,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             is_wannier = False
             is_pdos = False
 
@@ -622,10 +624,10 @@ if __name__ == "__main__":
     if project.include_stress:
         for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
                 [None] + project.stress_amounts,
-                project.dft_info.number_of_bands,
-                project.dft_info.fermi_energies,
-                project.dft_info.number_of_atomic_states,
-                project.dft_info.atomic_states_info
+                project.band_info.number_of_bands,
+                project.band_info.fermi_energies,
+                project.band_info.number_of_atomic_states,
+                project.band_info.atomic_states_info
         ):
             print(f"\nStress amount: {(float(stress_amount.replace('_', '.')) * 100):.2f}%")
             print(f"Number of bands: {number_of_bands}")
@@ -639,10 +641,10 @@ if __name__ == "__main__":
 
         if not is_wannier and not is_pdos:
             for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
-                    project.dft_info.number_of_bands,
-                    project.dft_info.fermi_energies,
-                    project.dft_info.number_of_atomic_states,
-                    project.dft_info.atomic_states_info,
+                    project.band_info.number_of_bands,
+                    project.band_info.fermi_energies,
+                    project.band_info.number_of_atomic_states,
+                    project.band_info.atomic_states_info,
                     ["", "(SOC)"]
             ):
                 print(f"Number of bands {flag}: {number_of_bands}")

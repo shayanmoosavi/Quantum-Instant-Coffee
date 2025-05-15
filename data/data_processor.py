@@ -248,7 +248,7 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     """
     processor = BandDataProcessor(project.project_dir)
     calculator = WeightCalculator()
-    projection_processor = AtomicProjectionProcessor(list(project.dft_info.atomic_states_info[0].keys()))
+    projection_processor = AtomicProjectionProcessor(list(project.band_info.atomic_states_info[0].keys()))
 
     projbands_data_list = []
     k_points_proj_list = []
@@ -260,9 +260,9 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     for projbands_dir, bands_dir, num_bands, fermi_energy, proj_info in zip(
             project.output_paths["projbands_paths"],
             project.output_paths["bands_paths"],
-            project.dft_info.number_of_bands,
-            project.dft_info.fermi_energies,
-            project.dft_info.atomic_states_info
+            project.band_info.number_of_bands,
+            project.band_info.fermi_energies,
+            project.band_info.atomic_states_info
     ):
         # Loading and processing of data
         projbands_data, k_points_proj, energy_proj = processor.load_projected_bands(
@@ -292,7 +292,7 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
         energy_proj=energy_proj_list,
         energy=energy_list,
         atomic_projection_weights=atomic_projection_weights_info_list,
-        atomic_projections=list(project.dft_info.atomic_states_info[0].keys()),
+        atomic_projections=list(project.band_info.atomic_states_info[0].keys()),
         unique_elements=unique_elements_list
     )
 
@@ -429,7 +429,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             process_band_data(project)
             is_wannier = False
             is_pdos = False

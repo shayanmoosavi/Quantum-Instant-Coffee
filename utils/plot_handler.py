@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
-from data.dft_info_extractor import prepare_dft_info, prepare_wannier_info, prepare_pdos_info
+from data.dft_info_extractor import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 
@@ -697,7 +697,7 @@ def plot_band_structure(project: ProjectSetup,
 
     # Extracting configuration values
     compound_name = project.compound_name
-    spin_orbit_flags = project.dft_info.spin_orbit_flags if project.dft_info.spin_orbit_flags else [False] * len(
+    spin_orbit_flags = project.band_info.spin_orbit_flags if project.band_info.spin_orbit_flags else [False] * len(
         project.band_data.energy)
     stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
         project.band_data.energy)
@@ -728,7 +728,7 @@ def plot_band_structure(project: ProjectSetup,
             project.band_data.energy,
             project.band_data.k_points_proj,
             project.band_data.energy_proj,
-            project.dft_info.number_of_bands,
+            project.band_info.number_of_bands,
             spin_orbit_flags,
             stress_amount_list):
 
@@ -977,7 +977,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             process_band_data(project)
 
             plot_config = BandsPlotConfig()
