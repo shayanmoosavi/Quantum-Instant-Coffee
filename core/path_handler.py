@@ -335,6 +335,7 @@ def create_directories(project_dir: str,
         table.add_column("Status")
 
         print_header("Directory Creation", width=80)
+        print('\n')
 
         # Creating directories for each calculation type
         for calculation, path in dir_structure.items():
@@ -368,7 +369,7 @@ def create_directories(project_dir: str,
                 print_error(f"Error creating directory: \n{str(e)}")
 
         console.print(table)
-        print_success("Successfully created calculation directories.\n")
+        print_success("\nSuccessfully created calculation directories.\n")
 
         # Changing the directory to the root directory of the script
         script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

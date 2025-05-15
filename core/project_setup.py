@@ -80,7 +80,7 @@ def initialize_project(
 
     # Get the project directory path
     project_dir = get_project_directory(compound_name)
-    print_info(f"Project directory: {project_dir}")
+    print_info(f"\nProject directory: {project_dir}")
 
     if is_input:
         # Create the required calculation directories
