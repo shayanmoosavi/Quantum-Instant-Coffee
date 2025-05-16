@@ -389,7 +389,7 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
         # Checking if the projbands file already exists
         if os.path.exists(projbands_dir):
-            print_warning(f"File already exists: `{os.path.basename(projbands_dir)}`")
+            print_warning(f"File already exists: `{os.path.basename(projbands_dir)}`\n")
             success_list.append(True)
             continue
 
@@ -399,7 +399,7 @@ def generate_projected_bands(paths: Dict[str, List[str]],
                 # Running the AWK script to generate the projbands file
                 run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir)
 
-            print_success(f"Created: `{os.path.basename(projbands_dir)}`")
+            print_success(f"Created: `{os.path.basename(projbands_dir)}`\n")
             success_list.append(True)
 
         except CalledProcessError as e:
@@ -447,7 +447,7 @@ def generate_pdos(paths: Dict[str, List[str]],
             # Checking if the PDOS file already exists
             pdos_data_file = os.path.join(os.path.dirname(pdos_dir), f"pdos_{atom}_{orbital}.dat")
             if os.path.exists(pdos_data_file):
-                print_warning(f"File already exists: `{os.path.basename(pdos_data_file)}`")
+                print_warning(f"File already exists: `{os.path.basename(pdos_data_file)}`\n")
                 success_list.append(True)
                 continue
 
@@ -456,7 +456,7 @@ def generate_pdos(paths: Dict[str, List[str]],
                     # Running the sumpdos.x script to generate the PDOS files
                     run_sum_pdos((atom, orbital))
 
-                print_success(f"Created: `{os.path.basename(pdos_data_file)}`")
+                print_success(f"Created: `{os.path.basename(pdos_data_file)}`\n")
                 success_list.append(True)
 
             except CalledProcessError as e:

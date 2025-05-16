@@ -761,6 +761,7 @@ def plot_band_structure(project: ProjectSetup,
         project.band_data.energy)
     stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
         project.band_data.energy)
+    total_plots = len(spin_orbit_flags)
 
     if test_module:
         # Debug mode: Printing projection information for verification
@@ -787,7 +788,7 @@ def plot_band_structure(project: ProjectSetup,
             spin_orbit_flags,
             stress_amount_list), 1):
 
-            console.rule(f"Processing dataset {i}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
 
             if save_fig:
                 # Generating file name for saving the plot
@@ -851,6 +852,7 @@ def plot_wannier_comparison(project: ProjectSetup,
     plotter = WannierComparePlotter(plot_config)
     comparison_data = project.wannier_setup.comparison_data
     spin_orbit_flags = ["_soc"] if project.wannier_setup.skip_normal else ["", "_soc"]
+    total_plots = len(spin_orbit_flags)
 
     if test_module:
 
@@ -860,20 +862,21 @@ def plot_wannier_comparison(project: ProjectSetup,
             spin_orbit_flags
         ), 1):
 
-            console.rule(f"Processing dataset {i}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
             display_wannier_plot_info(fermi_energy, alat, flag)
 
     else:
-        if save_fig:
-            for i, (k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag) in enumerate(zip(
-                    comparison_data["k_points_dft"],
-                    comparison_data["dft_energies"],
-                    comparison_data["k_points_wannier"],
-                    comparison_data["wannier_energies"],
-                    spin_orbit_flags
-            ), 1):
+        for i, (k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag) in enumerate(zip(
+                comparison_data["k_points_dft"],
+                comparison_data["dft_energies"],
+                comparison_data["k_points_wannier"],
+                comparison_data["wannier_energies"],
+                spin_orbit_flags
+        ), 1):
 
-                console.rule(f"Processing dataset {i}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
+
+            if save_fig:
 
                 file_name = f"{project.compound_name}_comparison{flag}.png"
                 save_path = os.path.join(
@@ -895,17 +898,8 @@ def plot_wannier_comparison(project: ProjectSetup,
                         save_path
                     )
                 print_success(f"Created: `{file_name}`")
-        else:
-            for i, (k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag) in enumerate(zip(
-                    comparison_data["k_points_dft"],
-                    comparison_data["dft_energies"],
-                    comparison_data["k_points_wannier"],
-                    comparison_data["wannier_energies"],
-                    spin_orbit_flags
-            ), 1):
 
-                console.rule(f"Processing dataset {i}")
-
+            else:
                 with console.status("Creating Wannier comparison plot..."):
                     plotter.init_plot(
                         project.compound_name,
@@ -940,6 +934,7 @@ def plot_pdos(project: ProjectSetup,
     spin_orbit_flags = ["", "_soc"]
     projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
     unique_elements_list = projection_processor.get_unique_elements()
+    total_plots = len(spin_orbit_flags)
 
     with console.status("Processing projection data..."):
         projection_data_processor = ProjectionDataProcessor(plot_config,
@@ -956,7 +951,7 @@ def plot_pdos(project: ProjectSetup,
         for i, (projection_data, flag) in enumerate(
                 zip(projection_data_list, spin_orbit_flags), 1):
 
-            console.rule(f"Processing dataset {i}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
             print('\n')
             display_pdos_plot_info(unique_elements_list, projection_data)
 
@@ -967,7 +962,7 @@ def plot_pdos(project: ProjectSetup,
         for i, (projection_data, flag) in enumerate(
                 zip(projection_data_list, spin_orbit_flags), 1):
 
-            console.rule(f"Processing dataset {i}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
 
             # Get total DOS from first element's energy values
             energy = projection_data[unique_elements_list[0]]["energies"][0]
@@ -1063,7 +1058,7 @@ if __name__ == "__main__":
             process_pdos_data(project)
 
             plot_config = DOSPlotConfig()
-            plot_pdos(project, plot_config, save_fig=False, test_module=True)
+            plot_pdos(project, plot_config, save_fig=False, test_module=False)
 
         case _:
             raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")
