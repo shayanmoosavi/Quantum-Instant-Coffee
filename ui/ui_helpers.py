@@ -3,6 +3,7 @@ from rich.theme import Theme
 from rich.panel import Panel
 from rich.table import Table
 from rich import box
+from rich.progress import track
 
 # Custom color theme
 custom_theme = Theme({
@@ -49,6 +50,11 @@ def print_list(title: str, items: list[str]):
 
 def prompt_input(message: str) -> str:
     return console.input(f"[prompt]{message}[/prompt] ")
+
+
+# Simple iterable progress
+def progress_track(iterable, description="Processing"):
+    return track(iterable, description=f"[cyan]{description}[/cyan]")
 
 
 if __name__ == "__main__":
