@@ -38,6 +38,7 @@ The input files will be generated both with and without considering spin-orbit c
 - Numpy
 - Matplotlib
 - Pandas
+- Rich
 - BeautifulSoup4 (Optional, for fetching the atomic weights table from IUPAC website)
 - Requests (Optional, for fetching the atomic weights table from IUPAC website)
 - lxml (Optional, for fetching the atomic weights table from IUPAC website)
@@ -60,12 +61,12 @@ To install the required packages, you can use pip.
 
 For all the dependencies:
 ```bash
-pip install numpy matplotlib pandas beautifulsoup4 requests lxml
+pip install numpy matplotlib pandas rich beautifulsoup4 requests lxml
 ```
 
 For the required packages:
 ```bash
-pip install numpy matplotlib pandas
+pip install numpy matplotlib pandas rich
 ```
 
 ### 3 - Install the repository as a package
@@ -291,6 +292,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request
 
 ## 🏅 Acknowledgements
+- Special thanks to [Will McGugan](https://github.com/willmcgugan) for creating the awesome [Rich](https://github.com/Textualize/rich) library 
 - `projwfc_to_bands.awk` script provided by [Quantum ESPRESSO](https://www.quantum-espresso.org)
 - `kmesh.pl` script provided by [Wannier90](https://wannier.org/)
 - Logo created with [Gemini](https://gemini.google.com)
