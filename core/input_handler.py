@@ -9,6 +9,9 @@ import os
 import re
 from typing import List, Tuple, Dict
 
+from ui.ui_helpers import *
+from rich.markup import escape
+
 
 def select_pseudopotentials(pseudo_files: List[str],
                             element_name: str,
@@ -26,22 +29,21 @@ def select_pseudopotentials(pseudo_files: List[str],
         str: The selected pseudopotential file name.
     """
 
-    print(f"\nFinding {'relativistic' if relativistic else 'non-relativistic'} pseudopotential files for {element_name}:")
+    header_text = f"{'Relativistic' if relativistic else 'Non-relativistic'} pseudopotentials for [bold]{element_name}[/bold]"
+    print_header(header_text)
+
     if not pseudo_files:
-        print(
-            f"ERROR: No pseudopotentials found for {element_name}. Make sure they exist in the specified directory and rerun this script"
-        )
+        print_error(f"ERROR: No pseudopotentials found for {element_name}. Make sure they exist in the specified directory and rerun this script.")
         exit(1)
-    else:
-        print(f"Found the following pseudopotential files for {element_name}:")
-        for i, filename in enumerate(pseudo_files):
-            print(f"{i + 1}: {filename}")
-        while True:
-            try:
-                selected_index = int(input("Which one do you want? Enter the number associated with it: ")) - 1
-                return pseudo_files[selected_index]
-            except (IndexError, ValueError):
-                print("Invalid selection! Please select a valid number.")
+
+    print_list(f"Available Pseudopotentials for {element_name}", pseudo_files)
+
+    while True:
+        try:
+            selected_index = int(prompt_input("Which one do you want? Enter the number: ")) - 1
+            return pseudo_files[selected_index]
+        except (IndexError, ValueError):
+            print_warning("Invalid selection! Please enter a valid number from the list.")
 
 
 def get_pseudopotential_files(element_names: List[str],
@@ -71,6 +73,8 @@ def get_pseudopotential_files(element_names: List[str],
     # Get non-relativistic pseudopotentials
     pseudo_dir_path = os.path.abspath(pseudo_path)
     if os.path.exists(pseudo_dir_path):
+        print_info(f"Searching for pseudopotential files in: {pseudo_dir_path}")
+
         for element_name in element_names:
             pseudo_files = []
             pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
@@ -82,7 +86,7 @@ def get_pseudopotential_files(element_names: List[str],
             pseudo_list[element_name] = selected_pseudo
 
     else:
-        print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+        print_error(f"ERROR: Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
         exit(1)
 
     # Get relativistic pseudopotentials
@@ -90,6 +94,8 @@ def get_pseudopotential_files(element_names: List[str],
 
         rel_pseudo_dir_path = os.path.abspath(rel_pseudo_path)
         if os.path.exists(rel_pseudo_dir_path):
+
+            print_info(f"\nSearching for relativistic pseudopotential files in: {rel_pseudo_dir_path}\n")
 
             for element_name in element_names:
                 rel_pseudo_files = []
@@ -103,7 +109,7 @@ def get_pseudopotential_files(element_names: List[str],
                 )
                 rel_pseudo_list[element_name] = selected_pseudo
         else:
-            print(f"Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
+            print_error(f"ERROR: Directory {pseudo_dir_path} does not exist! Could not get the pseudopotential file path.")
             exit(1)
 
         return pseudo_list, rel_pseudo_list
@@ -123,14 +129,14 @@ def get_pbands_type():
         bool: True if the user chooses to plot strained projected bands, False otherwise.
     """
     while True:
-        include_stress_input = input(
-            'Do you want to plot strained projected bands instead? Type "yes" to plot strained projected bands and "no" to plot normal projected bands. '
-        ).lower()
+        include_stress_input = prompt_input(
+            'Do you want to plot strained projected bands instead? Type "y" to plot strained projected bands and "n" to plot normal projected bands. '
+        ).strip().lower()
 
-        if include_stress_input in ["yes", "no"]:
-            return include_stress_input == "yes"
+        if include_stress_input in ["y", "n"]:
+            return include_stress_input == "y"
         else:
-            print("Invalid input!")
+            print_warning("Invalid input! Please type 'y' or 'n'.")
 
 
 def get_strain_amounts(is_input: bool = False) -> List[str] | None:
@@ -145,41 +151,39 @@ def get_strain_amounts(is_input: bool = False) -> List[str] | None:
         list: A list of strings representing the strain amounts, e.g., ['1_10', '1_15', '1_20'].
     """
 
-    if is_input:
-        if input("Do you want to create strain analysis directories? (yes/no): ").strip().lower() == "yes":
-            while True:
-                stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
-For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
-(e.g., 1_10 1_15 1_20):
-""")
+    def prompt_strain_input():
+        print_info("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
+        For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
+        (e.g., 1_10 1_15 1_20)
+        """)
+        user_input = prompt_input("Strain amounts: ")
 
-                # Cleaning up user input and error handling
-                stress_amount_list = [
-                    amount for amount in stress_amount_list_input.split() if amount.strip()
-                ]
+        # Cleaning up user input and error handling
+        return [
+            amount for amount in user_input.split() if amount.strip()
+        ]
+
+    if is_input:
+        if prompt_input("Do you want to create strain analysis directories? (y/n): ").strip().lower() == "y":
+            while True:
+
+                stress_amount_list = prompt_strain_input()
 
                 # List should not be empty
                 if not stress_amount_list:
-                    print("Error: No valid strain amounts provided.")
+                    print_error("Error: No valid strain amounts provided.")
                 else:
                     return stress_amount_list
         else:
             return None
     else:
         while True:
-            stress_amount_list_input = input("""Enter the strain amounts in units of relaxed coordinates in the form 1_<percent-of-stretch>.
-For example 1_30 means the coordinates are stretched by 30%. Provide a space separated list of DFT calculations with the specified stress amounts
-(e.g., 1_10 1_15 1_20):
-""")
 
-            # Cleaning up user input and error handling
-            stress_amount_list = [
-                amount for amount in stress_amount_list_input.split() if amount.strip()
-            ]
+            stress_amount_list = prompt_strain_input()
 
             # List should not be empty
             if not stress_amount_list:
-                print("Error: No valid strain amounts provided.")
+                print_error("Error: No valid strain amounts provided.")
             else:
                 return stress_amount_list
 
@@ -196,23 +200,24 @@ def get_atomic_states() -> List[Tuple[str, str]] | None:
         list: A list of tuples where each tuple contains an element name (str) and
               an orbital type (str), e.g., [('O', 's'), ('C', 'p'), ('Fe', 'd')].
     """
-    print("Preparing the atomic projection list for plotting projected bands...")
+    print_header("Atomic Projections")
+    print_info("Preparing the atomic projection list for plotting projected bands...")
 
     supported_orbitals = ('s', 'p', 'd', 'pz', 'px', 'py', 'dz2', 'dxz', 'dyz', 'dx2y2', 'dxy')
 
-    print(f"""
-The supported orbitals are:
+    print_info(f"""
+Supported orbitals:
 {', '.join(supported_orbitals)}
-The projection list should be in pairs of <element name>-<orbital> separated by a single space.
-Example usage: O-s C-p Fe-d
-    """)
+Format: <element_name>-<orbital> separated by a single space.
+Example: O-s C-p Fe-d
+    """, highlight=False)
 
     # Loop to repeatedly prompt the user until valid input is provided
     while True:
-        user_input = input("Enter the desired atomic orbitals you wish to project onto: ").strip()
+        user_input = prompt_input("Enter the desired atomic orbitals you wish to project onto: ").strip()
 
         if not user_input:
-            print("Input cannot be empty!")
+            print_warning("Input cannot be empty!")
             continue
 
         # Processing the user input and extracting atomic projection information
@@ -221,18 +226,18 @@ Example usage: O-s C-p Fe-d
 
             # Validating the input format (must be in the form <element name>-<orbital>)
             if '-' not in atomic_projection:
-                print("Invalid input format. Expected <element name>-<orbital>.")
+                print_warning("Invalid input format. Expected <element_name>-<orbital>.")
                 break
 
             element, orbital = atomic_projection.split('-')
 
             # Validating the element and orbital symbols
             if not element.isalpha():
-                print("Invalid element symbol!")
+                print_warning("Invalid element symbol!")
                 break
 
             if orbital not in supported_orbitals:
-                print(f"Invalid orbital type! Supported types are: {', '.join(supported_orbitals)}")
+                print_warning(f"Invalid orbital type! Supported types are: {', '.join(supported_orbitals)}")
                 break
 
             atomic_projection_list.append((element, orbital))

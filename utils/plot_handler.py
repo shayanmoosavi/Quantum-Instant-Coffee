@@ -24,11 +24,14 @@ import matplotlib.axes
 import matplotlib.collections
 import matplotlib.pyplot as plt
 import numpy as np
+from rich import box
+from rich.table import Table
 
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
-from data.dft_info_extractor import prepare_dft_info, prepare_wannier_info, prepare_pdos_info
+from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
+from ui.ui_helpers import print_header, console, print_success, prompt_input
 
 
 class BandsPlotConfig:
@@ -671,6 +674,60 @@ class ProjectionDataProcessor:
         return combined_weights
 
 
+def display_band_plot_info(projection_info: Dict,
+                           spin_orbit_flag: str,
+                           include_stress: bool = False,
+                           stress_amount: str = None):
+
+    debug_table = Table(title="Projection Info Debug", box=box.ROUNDED)
+    debug_table.add_column("Parameter", style="cyan")
+    debug_table.add_column("Value", style="green")
+
+    if include_stress:
+        strain = float(stress_amount.replace('_', '.')) * 100
+        debug_table.add_row("Strain", f"{strain:.2f}%")
+    else:
+        debug_table.add_row("SOC", "Yes" if spin_orbit_flag else "No")
+
+    for atom, info in projection_info.items():
+        debug_info = {k: v for k, v in info.items() if k != "orbital_weights"}
+        debug_table.add_row(f"Element {atom}", str(debug_info))
+
+
+    console.print(debug_table)
+
+
+def display_wannier_plot_info(fermi_energy: float, alat: float, flag: str):
+
+    debug_table = Table(box=box.ROUNDED, title="Wannier Comparison Debug Info")
+    debug_table.add_column("Parameter", style="cyan")
+    debug_table.add_column("Value", style="green")
+
+    debug_table.add_row("Fermi Energy (eV)", f"{fermi_energy:.4f}")
+    debug_table.add_row("Alat (Å)", f"{alat:.6f}")
+    debug_table.add_row("SOC Flag", "Yes" if flag == "_soc" else "No")
+
+    console.print(debug_table)
+
+
+def display_pdos_plot_info(elements: List[str], projection_data: Dict[str, Dict]):
+    debug_table = Table(box=box.ROUNDED, title="PDOS Debug Info")
+    debug_table.add_column("Parameter", style="cyan")
+    debug_table.add_column("Value", style="green")
+
+    debug_table.add_row("Elements", ", ".join(elements))
+
+    for element, data in projection_data.items():
+        element_info = {
+            "index": data["index"],
+            "projected_orbitals": data["projected_orbitals"],
+            "plot_colors": data["plot_colors"]
+        }
+        debug_table.add_row(f"Element {element}", str(element_info))
+
+    console.print(debug_table)
+
+
 def plot_band_structure(project: ProjectSetup,
                         plot_config: BandsPlotConfig = BandsPlotConfig(),
                         save_fig: bool = True,
@@ -684,6 +741,8 @@ def plot_band_structure(project: ProjectSetup,
         save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
+    print_header("Processing Band Structure Data")
+
     # Initializing objects for plotting and processing projection data
     plotter = BandPlotter(plot_config)
     processor = ProjectionDataProcessor(
@@ -692,45 +751,44 @@ def plot_band_structure(project: ProjectSetup,
         weights_info_list=project.band_data.atomic_projection_weights
     )
 
-    # Process projection data into a structured format
-    projection_info_list = processor.process_projections()
+    with console.status("Processing projection data..."):
+        # Process projection data into a structured format
+        projection_info_list = processor.process_projections()
 
     # Extracting configuration values
     compound_name = project.compound_name
-    spin_orbit_flags = project.dft_info.spin_orbit_flags if project.dft_info.spin_orbit_flags else [False] * len(
+    spin_orbit_flags = project.band_info.spin_orbit_flags if project.band_info.spin_orbit_flags else [False] * len(
         project.band_data.energy)
     stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
         project.band_data.energy)
+    total_plots = len(spin_orbit_flags)
 
     if test_module:
         # Debug mode: Printing projection information for verification
-        print("\nProjection info list prepared for plotting. Orbital weights are not printed:")
-        for projection_info, spin_orbit_flag, stress_amount in zip(projection_info_list, spin_orbit_flags,
-                                                                   stress_amount_list):
-            if project.include_stress:
-                print(f"\nStress amount: {(float(stress_amount.replace('_', '.')) * 100):.2f}%")
-            else:
-                if spin_orbit_flag:
-                    print("\nWith SOC:")
-                else:
-                    print("\nWithout SOC:")
-
-            for atom, info in projection_info.items():
-                # Not printing the orbital weights as it takes a lot of space
-                debug_info = {key: value for key, value in info.items() if key != "orbital_weights"}
-                print(f"{atom}: {debug_info}")
+        for projection_info, spin_orbit_flag, stress_amount in zip(
+            projection_info_list,
+            project.band_info.spin_orbit_flags or [False] * len(project.band_data.energy),
+            (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
+        ):
+            print('\n')
+            display_band_plot_info(projection_info,
+                                   spin_orbit_flag,
+                                   project.include_stress,
+                                   stress_amount)
     else:
         # Plotting mode: Generating plots for each dataset
-        for (projection_data, k_points, energy, k_points_proj, energy_proj,
-             number_of_bands, spin_orbit, stress_amount) in zip(
+        for i, (projection_data, k_points, energy, k_points_proj, energy_proj,
+             number_of_bands, spin_orbit, stress_amount) in enumerate(zip(
             projection_info_list,
             project.band_data.k_points,
             project.band_data.energy,
             project.band_data.k_points_proj,
             project.band_data.energy_proj,
-            project.dft_info.number_of_bands,
+            project.band_info.number_of_bands,
             spin_orbit_flags,
-            stress_amount_list):
+            stress_amount_list), 1):
+
+            console.rule(f"Processing dataset {i} of {total_plots}")
 
             if save_fig:
                 # Generating file name for saving the plot
@@ -743,34 +801,38 @@ def plot_band_structure(project: ProjectSetup,
 
                 save_path = os.path.join(project.project_dir, file_name)
 
-                # Creating and saveing the plot
-                plotter.create_band_structure_plot(
-                    compound_name,
-                    k_points,
-                    energy,
-                    k_points_proj,
-                    energy_proj,
-                    projection_data,
-                    number_of_bands,
-                    spin_orbit,
-                    stress_amount,
-                    save_path
-                )
+                with console.status("Creating band structure plot..."):
+                    # Creating and saveing the plot
+                    plotter.create_band_structure_plot(
+                        compound_name,
+                        k_points,
+                        energy,
+                        k_points_proj,
+                        energy_proj,
+                        projection_data,
+                        number_of_bands,
+                        spin_orbit,
+                        stress_amount,
+                        save_path
+                    )
+                    print_success(f"Created: `{file_name}`")
 
             else:
-                # Creating and displaying the plot without saving
-                plotter.create_band_structure_plot(
-                    compound_name,
-                    k_points,
-                    energy,
-                    k_points_proj,
-                    energy_proj,
-                    projection_data,
-                    number_of_bands,
-                    spin_orbit,
-                    stress_amount
-                )
+                with console.status("Creating band structure plot..."):
+                    # Creating and displaying the plot without saving
+                    plotter.create_band_structure_plot(
+                        compound_name,
+                        k_points,
+                        energy,
+                        k_points_proj,
+                        energy_proj,
+                        projection_data,
+                        number_of_bands,
+                        spin_orbit,
+                        stress_amount
+                    )
                 plt.show()
+                print_success("Plot displayed successfully.")
 
 
 def plot_wannier_comparison(project: ProjectSetup,
@@ -785,71 +847,73 @@ def plot_wannier_comparison(project: ProjectSetup,
         save_fig (bool, optional): Whether to save the plots to files. Defaults to True.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
+    print_header("Processing Wannier Comparison Data")
+
     plotter = WannierComparePlotter(plot_config)
     comparison_data = project.wannier_setup.comparison_data
     spin_orbit_flags = ["_soc"] if project.wannier_setup.skip_normal else ["", "_soc"]
+    total_plots = len(spin_orbit_flags)
 
     if test_module:
-        print("\nComparison data prepared for plotting. The plotting data is not printed:")
 
-        for fermi_energy, alat_parameter, flag in zip(
-                project.wannier_setup.fermi_energies,
-                project.wannier_setup.alat_parameters,
-                spin_orbit_flags
-        ):
-            print(f"Fermi energy: {fermi_energy} eV")
-            print(f"Lattice parameter: {alat_parameter} Å")
-            print(f"Spin-orbit flag: {flag}")
+        for i, (fermi_energy, alat, flag) in enumerate(zip(
+            project.wannier_setup.fermi_energies,
+            project.wannier_setup.alat_parameters,
+            spin_orbit_flags
+        ), 1):
 
-        print(f"Skip normal: {project.wannier_setup.skip_normal}")
+            console.rule(f"Processing dataset {i} of {total_plots}")
+            display_wannier_plot_info(fermi_energy, alat, flag)
 
     else:
-        if save_fig:
-            for k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag in zip(
-                    comparison_data["k_points_dft"],
-                    comparison_data["dft_energies"],
-                    comparison_data["k_points_wannier"],
-                    comparison_data["wannier_energies"],
-                    spin_orbit_flags
-            ):
+        for i, (k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag) in enumerate(zip(
+                comparison_data["k_points_dft"],
+                comparison_data["dft_energies"],
+                comparison_data["k_points_wannier"],
+                comparison_data["wannier_energies"],
+                spin_orbit_flags
+        ), 1):
+
+            console.rule(f"Processing dataset {i} of {total_plots}")
+
+            if save_fig:
+
+                file_name = f"{project.compound_name}_comparison{flag}.png"
                 save_path = os.path.join(
                     project.project_dir,
-                    f"{project.compound_name}_comparison{flag}.png"
+                    file_name
                 )
 
-                plotter.init_plot(
-                    project.compound_name,
-                    project.wannier_setup.skip_normal,
-                    flag
-                )
-                plotter.plot_comparison(
-                    k_points_dft,
-                    dft_energies,
-                    k_points_wannier,
-                    wannier_energies,
-                    save_path
-                )
+                with console.status("Creating Wannier comparison plot..."):
+                    plotter.init_plot(
+                        project.compound_name,
+                        project.wannier_setup.skip_normal,
+                        flag
+                    )
+                    plotter.plot_comparison(
+                        k_points_dft,
+                        dft_energies,
+                        k_points_wannier,
+                        wannier_energies,
+                        save_path
+                    )
+                print_success(f"Created: `{file_name}`")
 
-        else:
-            for k_points_dft, dft_energies, k_points_wannier, wannier_energies, flag in zip(
-                    comparison_data["k_points_dft"],
-                    comparison_data["dft_energies"],
-                    comparison_data["k_points_wannier"],
-                    comparison_data["wannier_energies"],
-                    spin_orbit_flags
-            ):
-                plotter.init_plot(
-                    project.compound_name,
-                    project.wannier_setup.skip_normal,
-                    flag
-                )
-                plotter.plot_comparison(
-                    k_points_dft,
-                    dft_energies,
-                    k_points_wannier,
-                    wannier_energies
-                )
+            else:
+                with console.status("Creating Wannier comparison plot..."):
+                    plotter.init_plot(
+                        project.compound_name,
+                        project.wannier_setup.skip_normal,
+                        flag
+                    )
+                    plotter.plot_comparison(
+                        k_points_dft,
+                        dft_energies,
+                        k_points_wannier,
+                        wannier_energies
+                    )
                 plt.show()
+                print_success("Plot displayed successfully.")
 
 
 def plot_pdos(project: ProjectSetup,
@@ -864,89 +928,84 @@ def plot_pdos(project: ProjectSetup,
         save_fig (bool, optional): Whether to save the plots to files. Defaults to False.
         test_module (bool, optional): If True, prints debug information instead of plotting. Defaults to False.
     """
+    print_header("Processing PDOS Data")
+
     compound_name = project.compound_name
     spin_orbit_flags = ["", "_soc"]
     projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
     unique_elements_list = projection_processor.get_unique_elements()
+    total_plots = len(spin_orbit_flags)
 
-    projection_data_processor = ProjectionDataProcessor(plot_config,
-                                                        unique_elements_list,
-                                                        is_pdos=True,
-                                                        pdos_info_list=project.dos_setup.atomic_states_info,
-                                                        dos_data_list=project.dos_setup.dos_data
-                                                        )
+    with console.status("Processing projection data..."):
+        projection_data_processor = ProjectionDataProcessor(plot_config,
+                                                            unique_elements_list,
+                                                            is_pdos=True,
+                                                            pdos_info_list=project.dos_setup.atomic_states_info,
+                                                            dos_data_list=project.dos_setup.dos_data
+                                                            )
 
-    projection_data_list = projection_data_processor.process_projections()
+        projection_data_list = projection_data_processor.process_projections()
 
     if test_module:
 
-        print("\nProjection data prepared for plotting. The plotting data is not printed:")
-        print(f"\nUnique elements: {unique_elements_list}\n")
+        for i, (projection_data, flag) in enumerate(
+                zip(projection_data_list, spin_orbit_flags), 1):
 
-        for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
-            plotting_info = {element: {key: value for key, value in element_data.items()
-                             if key in ["index", "projected_orbitals", "plot_colors"]}
-                   for element, element_data in projection_data.items()}
-            print(f"Spin-orbit flag: {'SOC' if flag == '_soc' else 'Non-SOC'}\n")
-            for element, element_data in plotting_info.items():
-                print(f"Element: {element}")
-                print(f"Index: {element_data['index']}")
-                print(f"Projected orbitals: {element_data['projected_orbitals']}")
-                print(f"Plot colors: {element_data['plot_colors']}\n")
+            console.rule(f"Processing dataset {i} of {total_plots}")
+            print('\n')
+            display_pdos_plot_info(unique_elements_list, projection_data)
 
     else:
 
         plotter = DOSPlotter(plot_config)
 
-        if save_fig:
-            for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
+        for i, (projection_data, flag) in enumerate(
+                zip(projection_data_list, spin_orbit_flags), 1):
+
+            console.rule(f"Processing dataset {i} of {total_plots}")
+
+            # Get total DOS from first element's energy values
+            energy = projection_data[unique_elements_list[0]]["energies"][0]
+            pdos_total = np.zeros_like(energy)
+
+            # Sum up all orbital contributions for total DOS
+            with console.status("Calculating total DOS"):
+                for element_data in projection_data.values():
+                    for pdos in element_data["pdos"]:
+                        pdos_total += pdos
+            print_success("Total DOS calculated successfully.")
+
+            if save_fig:
+                file_name = f"{compound_name}_pdos{flag}.png"
                 save_path = os.path.join(
                     project.project_dir,
-                    f"{compound_name}_pdos{flag}.png"
+                    file_name
                 )
-
-                # Get total DOS from first element's energy values
-                energy = projection_data[unique_elements_list[0]]["energies"][0]
-                pdos_total = np.zeros_like(energy)
-
-                # Sum up all orbital contributions for total DOS
-                for element_data in projection_data.values():
-                    for pdos in element_data["pdos"]:
-                        pdos_total += pdos
 
                 # Create and save the plot
-                plotter.create_pdos_plot(
-                    compound_name,
-                    energy,
-                    pdos_total,
-                    projection_data,
-                    flag == "_soc",
-                    save_path
-                )
+                with console.status("Creating PDOS plot..."):
+                    plotter.create_pdos_plot(
+                        compound_name,
+                        energy,
+                        pdos_total,
+                        projection_data,
+                        flag == "_soc",
+                        save_path
+                    )
+                print_success(f"Created: `{file_name}`")
 
-        else:
-
-            # Displaying plots without saving
-            for projection_data, flag in zip(projection_data_list, spin_orbit_flags):
-
-                # Getting total DOS from first element's energy values
-                energy = projection_data[unique_elements_list[0]]["energies"][0]
-                pdos_total = np.zeros_like(energy)
-
-                # Summing up all orbital contributions for total DOS
-                for element_data in projection_data.values():
-                    for pdos in element_data["pdos"]:
-                        pdos_total += pdos
-
-                # Creating and displaying the plot
-                plotter.create_pdos_plot(
-                    compound_name,
-                    energy,
-                    pdos_total,
-                    projection_data,
-                    flag == "_soc"
-                )
-                plt.show()
+            else:
+                    # Creating and displaying the plot
+                    with console.status("Creating PDOS plot..."):
+                        plotter.create_pdos_plot(
+                            compound_name,
+                            energy,
+                            pdos_total,
+                            projection_data,
+                            flag == "_soc"
+                        )
+                        plt.show()
+                    print_success("Plot displayed successfully.")
 
 if __name__ == "__main__":
     """
@@ -960,11 +1019,21 @@ if __name__ == "__main__":
         5. Process the comparison or band data for plotting.
         6. Generate and display the appropriate plots (Wannier comparison or band structure).
     """
-    # Check if the script is being run for input generation (3 arguments passed)
     os.chdir("..")
+
+    # Create initialization options table
+    options_table = Table(title="Available Initialization Types")
+    options_table.add_column("Type", style="cyan")
+    options_table.add_column("Description", style="green")
+    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
+    options_table.add_row("bands", "Extract band structure information")
+    options_table.add_row("pdos", "Process projected density of states")
+    console.print(options_table)
+
+    # Check if the script is being run for input generation (3 arguments passed)
     is_input = len(argv) == 3
 
-    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
     match response:
         case "wannier":
@@ -977,7 +1046,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             process_band_data(project)
 
             plot_config = BandsPlotConfig()
@@ -989,7 +1058,7 @@ if __name__ == "__main__":
             process_pdos_data(project)
 
             plot_config = DOSPlotConfig()
-            plot_pdos(project, plot_config, save_fig=False, test_module=True)
+            plot_pdos(project, plot_config, save_fig=False, test_module=False)
 
         case _:
-            raise ValueError("Invalid input!")
+            raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")

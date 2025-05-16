@@ -7,7 +7,7 @@ from sys import argv
 
 from core.project_setup import initialize_project
 from data.data_processor import process_band_data
-from data.dft_info_extractor import prepare_dft_info
+from data.data_collector import prepare_bands_info
 from utils.plot_handler import BandsPlotConfig, plot_band_structure
 
 
@@ -15,7 +15,7 @@ from utils.plot_handler import BandsPlotConfig, plot_band_structure
 project = initialize_project(argv, is_input=False)
 
 # Prepare the DFT information for the project
-prepare_dft_info(project)
+prepare_bands_info(project)
 
 # Process the band data for the project
 process_band_data(project)

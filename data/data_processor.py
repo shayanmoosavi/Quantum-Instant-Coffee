@@ -6,7 +6,7 @@ weights, and processing atomic projections.
 """
 import os.path
 
-from data.dft_info_extractor import *
+from data.data_collector import *
 import numpy as np
 from data.models import BandData, ProjectSetup
 
@@ -248,7 +248,7 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     """
     processor = BandDataProcessor(project.project_dir)
     calculator = WeightCalculator()
-    projection_processor = AtomicProjectionProcessor(list(project.dft_info.atomic_states_info[0].keys()))
+    projection_processor = AtomicProjectionProcessor(list(project.band_info.atomic_states_info[0].keys()))
 
     projbands_data_list = []
     k_points_proj_list = []
@@ -260,9 +260,9 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     for projbands_dir, bands_dir, num_bands, fermi_energy, proj_info in zip(
             project.output_paths["projbands_paths"],
             project.output_paths["bands_paths"],
-            project.dft_info.number_of_bands,
-            project.dft_info.fermi_energies,
-            project.dft_info.atomic_states_info
+            project.band_info.number_of_bands,
+            project.band_info.fermi_energies,
+            project.band_info.atomic_states_info
     ):
         # Loading and processing of data
         projbands_data, k_points_proj, energy_proj = processor.load_projected_bands(
@@ -292,7 +292,7 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
         energy_proj=energy_proj_list,
         energy=energy_list,
         atomic_projection_weights=atomic_projection_weights_info_list,
-        atomic_projections=list(project.dft_info.atomic_states_info[0].keys()),
+        atomic_projections=list(project.band_info.atomic_states_info[0].keys()),
         unique_elements=unique_elements_list
     )
 
@@ -407,6 +407,21 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
     return project
 
 
+def display_dft_data_info(bands: int, kpoints: np.ndarray, fermi_energy: float, stress_amount: str = None):
+    table = Table(title="Bands Info", box=box.ROUNDED)
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+
+    if stress_amount:
+        strain_percent = float(stress_amount.replace('_', '.')) * 100
+        table.caption = f"Results for {strain_percent:.2f}% strain"
+
+    table.add_row("Number of bands", str(bands))
+    table.add_row("Number of k-points", str(len(kpoints)))
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
+
+    console.print(table)
+
 # Testing to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -415,9 +430,19 @@ if __name__ == "__main__":
     This script validates the processing of band data and ensures that the
     atomic projections and weights are calculated correctly.
     """
+    os.chdir("..")
+    # Create initialization options table
+    options_table = Table(title="Available Initialization Types")
+    options_table.add_column("Type", style="cyan")
+    options_table.add_column("Description", style="green")
+    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
+    options_table.add_row("bands", "Extract band structure information")
+    options_table.add_row("pdos", "Process projected density of states")
+    console.print(options_table)
+
     is_input = len(argv) == 3
 
-    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input("Select initialization type: ").strip().lower()
 
     match response:
         case "wannier":
@@ -429,7 +454,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             process_band_data(project)
             is_wannier = False
             is_pdos = False
@@ -442,17 +467,69 @@ if __name__ == "__main__":
             is_pdos = True
 
         case _:
-            raise ValueError("Invalid input!")
+            raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")
 
-    print("Data processed successfully and ready for plotting.")
+    print_info("Data processed successfully and ready for plotting.\n")
 
     if is_wannier:
+        print_header("Wannier comparison Summary")
+        table = Table(title="Wannier Info", box=box.ROUNDED)
+        table.add_column("Alat (Å)", style="cyan", justify="right")
+        table.add_column("Fermi Energy (eV)", style="green", justify="right")
+
         for alat, fermi_energy in zip(project.wannier_setup.alat_parameters, project.wannier_setup.fermi_energies):
-            print(f"Alat Parameters: {alat} Å")
-            print(f"Fermi Energies: {fermi_energy} eV")
+            table.add_row(f"{alat:.6f}", f"{fermi_energy:.4f}")
+
+        console.print(table)
+
     elif is_pdos:
-        print(f"Fermi energies: {project.dos_setup.fermi_energies}")
-        print(f"Spin orbit flags: {project.dos_setup.spin_orbit_flags}")
-        print(f"Atomic projections: {list(project.dos_setup.dos_data[0].keys())}")
+        print_header("PDOS Setup Summary")
+        table = Table(title="PDOS Info", box=box.ROUNDED)
+        table.add_column("Fermi Energy (eV)", style="green", justify="right")
+        table.add_column("SOC Enabled", style="cyan", justify="center")
+
+        projections = list(project.dos_setup.atomic_states_info[0].keys())
+
+        for fermi_energy, flag, proj in zip(
+                project.dos_setup.fermi_energies,
+                project.dos_setup.spin_orbit_flags,
+                projections
+        ):
+            table.add_row(f"{fermi_energy:.4f}", "No" if flag else "Yes")
+
+        console.print(table)
+
+        print_info(f"Number of atomic projections: {len(projections)}")
+        print_info(f"Atomic Projections: {', '.join(projections)}")
+
     else:
-        print(f"Elements: {project.band_data.unique_elements}")
+        print_header("Bands Setup Summary")
+        general_table = Table(title="General Info", box=box.ROUNDED)
+        general_table.add_column("Property", style="cyan")
+        general_table.add_column("Value", style="green")
+
+        general_table.add_row("Number of unique elements", str(len(project.band_data.unique_elements)))
+        general_table.add_row("Number of atomic projections", str(len(project.band_data.atomic_projections)))
+        general_table.add_row("Elements", ", ".join(project.band_data.unique_elements))
+        general_table.add_row("Atomic Projections", ", ".join(project.band_data.atomic_projections))
+
+        console.print(general_table)
+
+        if project.include_stress:
+            for bands, k_points, fermi_energy, stress_amount in zip(
+                    project.band_info.number_of_bands,
+                    project.band_data.k_points,
+                    project.band_info.fermi_energies,
+                    [None] + project.stress_amounts
+            ):
+                display_dft_data_info(bands, k_points, fermi_energy, stress_amount)
+        else:
+
+            for bands, k_points, fermi_energy, flag in zip(
+                    project.band_info.number_of_bands,
+                    project.band_data.k_points,
+                    project.band_info.fermi_energies,
+                    ["", "(SOC)"]
+                    ):
+                console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} bands")
+                display_dft_data_info(bands, k_points, fermi_energy)

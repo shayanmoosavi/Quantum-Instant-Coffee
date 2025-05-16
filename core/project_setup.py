@@ -1,8 +1,15 @@
 import os
+
+from rich import box
+from rich.table import Table
+
 from data.models import CompoundData, ProjectSetup
 from core.config import load_config
 from core.input_handler import get_strain_amounts, get_pbands_type
 from typing import List
+
+from ui.ui_helpers import print_header, print_info, console, print_success
+
 
 class ProjectInitializationError(Exception):
     """
@@ -37,8 +44,8 @@ def initialize_project(
     """
     from core.path_handler import get_project_directory, create_directories, validate_command_line_args, \
         build_file_paths
-
-    print("Initializing...\n", flush=True)
+    print('\n')
+    print_header("Project Initialization")
     config = load_config()
 
     if is_input:
@@ -53,22 +60,27 @@ def initialize_project(
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
-        print("Recognizing elements...", flush=True)
+        print_info("Recognizing elements...\n")
 
         # Parse compound information from the compound name
         compound_data = CompoundData.from_compound_name(compound_name)
 
+        # Create compound info table
+        compound_table = Table(title="Compound Information", box=box.ROUNDED)
+        compound_table.add_column("Property", style="cyan")
+        compound_table.add_column("Value", style="green")
+
+        compound_table.add_row("Total atoms", str(compound_data.number_of_atoms))
+        compound_table.add_row("Distinct atom types", str(compound_data.atom_types))
+        compound_table.add_row("Elements", ", ".join(compound_data.element_names))
+        console.print(compound_table)
+
     except Exception as ex:
         raise ProjectInitializationError(f"Failed to parse compound name: {str(ex)}")
 
-    print(f"Total number of atoms found: {compound_data.number_of_atoms}", flush=True)
-    print(f"Number of distinct atom types found: {compound_data.atom_types}", flush=True)
-
-    print("Recognized elements:", *compound_data.element_names)
-
     # Get the project directory path
     project_dir = get_project_directory(compound_name)
-    print(f"Project directory: {project_dir}", flush=True)
+    print_info(f"\nProject directory: {project_dir}")
 
     if is_input:
         # Create the required calculation directories
@@ -85,6 +97,8 @@ def initialize_project(
                                  is_input,
                                  include_stress,
                                  stress_amounts)
+
+        print_success("Project initialization completed successfully.\n")
 
         # Return the project setup details
         return ProjectSetup(
@@ -109,6 +123,8 @@ def initialize_project(
                                  is_input,
                                  include_stress,
                                  stress_amounts)
+
+        print_success("Project analysis setup completed successfully.\n")
 
         return ProjectSetup(
             compound_name=compound_name,

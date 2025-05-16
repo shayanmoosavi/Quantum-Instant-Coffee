@@ -1,11 +1,38 @@
 """Module for collecting data from Quantum ESPRESSO output files.
 
-This module provides functions and classes to extract and process data from Quantum ESPRESSO output files.
-It includes functionality for handling spin-orbit coupling (SOC), collecting DFT data, and generating projected bands.
+This module provides functionality to extract and process data from Quantum ESPRESSO output files,
+including band structure, Fermi energies, atomic states, and projected density of states (PDOS).
+It also includes utilities for handling spin-orbit coupling (SOC) cases and generating derived data
+such as projected bands and PDOS files.
+
+Classes:
+    SpinOrbitHandler: Handles SOC-related logic, including skipping SOC cases and managing errors.
+
+Functions:
+    collect_dft_data: Extracts data from Quantum ESPRESSO output files using a specified extractor function.
+    collect_band_numbers: Collects band numbers from Quantum ESPRESSO output files.
+    collect_fermi_energies: Collects Fermi energies from Quantum ESPRESSO output files.
+    collect_number_of_atomic_states: Collects the number of atomic states from KPDOS output files.
+    collect_atomic_states_info: Collects atomic states information from KPDOS or PDOS output files.
+    run_awk_script: Executes an AWK script to generate projected bands data.
+    run_sum_pdos: Executes the Quantum ESPRESSO sumpdos.x script to generate PDOS files.
+    generate_projected_bands: Generates projected bands data if not already present.
+    generate_pdos: Generates PDOS files if not already present.
+    prepare_bands_info: Prepares band structure information by extracting data from output files.
+    prepare_wannier_info: Prepares Wannier information by extracting data from NSCF Wannier output files.
+    prepare_pdos_info: Prepares PDOS information by extracting data from output files.
+    display_dft_info: Displays DFT calculation information in a formatted table.
+    display_atomic_states: Displays atomic states information in a formatted table.
+    display_wannier_info: Displays Wannier calculation information in a formatted table.
 """
 import os.path
 from sys import argv
 from typing import Any
+
+from rich import box
+from rich.table import Table
+
+from ui.ui_helpers import prompt_input, print_warning, print_header, console
 from utils.file_parser import *
 from core.project_setup import initialize_project
 from core.input_handler import get_atomic_states
@@ -64,14 +91,14 @@ class SpinOrbitHandler:
             exit(1) # Exit immediately for non spin-orbit cases
 
         if self.skip_soc:
-            print("Spin-orbit was set to be skipped. Continuing...")
+            print_info("Spin-orbit was set to be skipped. Continuing...")
             return True
 
-        skip_soc_input = input(
-            'Do you want to skip spin-orbit case? Enter "yes" if you want to skip spin-orbit or "no" to quit the program: '
+        skip_soc_input = prompt_input(
+            'Do you want to skip spin-orbit case? Enter "y" if you want to skip spin-orbit or "n" to quit the program: '
         ).lower()
 
-        if skip_soc_input == "no":
+        if skip_soc_input == "n":
             exit(1)
         return True
 
@@ -125,7 +152,7 @@ def collect_dft_data(path: str,
                 return data, True
 
     except (FileNotFoundError, ValueError) as e:
-        print(f"Error: {e}")
+        print_error(f"Error: {e}")
         return None, False
 
 
@@ -300,7 +327,7 @@ def run_awk_script(number_of_atomic_states: int,
     Raises:
         CalledProcessError: If the AWK script execution fails
     """
-    print("Calculating projected bands...")
+    print_info("Calculating projected bands...")
 
     awk_command = (
         f"awk -v firststate=1 "
@@ -318,7 +345,7 @@ def run_sum_pdos(atomic_projection: Tuple[str, str]) -> None:
 
     """
 
-    print(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
+    print_info(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
 
     sum_pdos_command = (f"sumpdos.x "
                         f"*\({atomic_projection[0]}\)*\({atomic_projection[1]}*\) "
@@ -347,47 +374,64 @@ def generate_projected_bands(paths: Dict[str, List[str]],
         list: A list of boolean values indicating the success (True) or failure (False)
               of the projected bands generation for each file.
     """
+    print_header("Generating Projected Bands Data")
 
     # List to track whether the projbands generation was successful for each file
-    projbands_generation_success_list = []
+    success_list = []
 
     # Iterating over the KPDOS output paths and corresponding projbands paths
-    for (projbands_dir, kpdos_output_dir,
-         number_of_atomic_states, fermi_energy) in zip(
+    for i, (projbands_dir, kpdos_output_dir,
+         number_of_atomic_states, fermi_energy) in enumerate(zip(
         paths["projbands_paths"], paths["kpdos_output_paths"],
         number_of_atomic_states_list, fermi_energies
-    ):
+    )):
+        console.rule(f"Generating file {i + 1} of {len(paths['projbands_paths'])}")
 
         # Checking if the projbands file already exists
         if os.path.exists(projbands_dir):
-            print(f"File {projbands_dir} already exists!")
-            projbands_generation_success_list.append(True)
+            print_warning(f"File already exists: `{os.path.basename(projbands_dir)}`\n")
+            success_list.append(True)
             continue
 
         try:
-            # Running the AWK script to generate the projbands file
-            run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir)
-            print("Projected bands calculation completed successfully.")
-            projbands_generation_success_list.append(True)
+            with console.status("Calculating projected bands..."):
+
+                # Running the AWK script to generate the projbands file
+                run_awk_script(number_of_atomic_states, fermi_energy, kpdos_output_dir, projbands_dir)
+
+            print_success(f"Created: `{os.path.basename(projbands_dir)}`\n")
+            success_list.append(True)
 
         except CalledProcessError as e:
-            # Handling errors during the AWK script execution
-            print("Error calculating projected bands:")
-            print(e.stderr.decode("utf-8"))
-            projbands_generation_success_list.append(False)
 
-    return projbands_generation_success_list
+            # Handling errors during the AWK script execution
+            print_error(f"Failed to generate: `{os.path.basename(projbands_dir)}`")
+            print_error(e.stderr.decode("utf-8"))
+            success_list.append(False)
+
+    return success_list
 
 
 def generate_pdos(paths: Dict[str, List[str]],
                   atomic_projection_list: List[str]
                   ) -> List[bool]:
     """
-    Generates the PDOS files if not already present
+    Generates Projected Density of States (PDOS) files if not already present.
 
+    Args:
+        paths (Dict[str, List[str]]): Dictionary containing output file paths
+        atomic_projection_list (List[str]): List of atomic projections in "atom-orbital" format
+
+    Returns:
+        List[bool]: List of boolean values indicating success/failure for each file generation
     """
+    print_header("Generating PDOS Data")
+
     # List to track whether the pdos generation was successful for each file
-    pdos_generation_success_list = []
+    success_list = []
+
+    total_files = len(paths["pdos_output_paths"]) * len(atomic_projection_list)
+    current_file = 0
 
     # Iterating over the PDOS output paths and corresponding PDOS data
     for pdos_dir in paths["pdos_output_paths"]:
@@ -395,34 +439,40 @@ def generate_pdos(paths: Dict[str, List[str]],
         os.chdir(os.path.dirname(pdos_dir))
         for atomic_projection in atomic_projection_list:
 
+            current_file += 1
+            console.rule(f"Generating file {current_file} of {total_files}")
+
             atom, orbital = atomic_projection.split('-')
 
             # Checking if the PDOS file already exists
             pdos_data_file = os.path.join(os.path.dirname(pdos_dir), f"pdos_{atom}_{orbital}.dat")
             if os.path.exists(pdos_data_file):
-                print(f"File {pdos_data_file} already exists!")
-                pdos_generation_success_list.append(True)
+                print_warning(f"File already exists: `{os.path.basename(pdos_data_file)}`\n")
+                success_list.append(True)
                 continue
 
             try:
-                # Running the sumpdos.x script to generate the PDOS files
-                run_sum_pdos((atom, orbital))
-                print(f"PDOS file created for {atomic_projection}")
-                pdos_generation_success_list.append(True)
+                with console.status("Calculating PDOS..."):
+                    # Running the sumpdos.x script to generate the PDOS files
+                    run_sum_pdos((atom, orbital))
+
+                print_success(f"Created: `{os.path.basename(pdos_data_file)}`\n")
+                success_list.append(True)
 
             except CalledProcessError as e:
-                # Handling errors during the AWK script execution
-                print("Error creating PDOS file:")
-                print(e.stderr.decode("utf-8"))
-                pdos_generation_success_list.append(False)
+                # Handling errors
+                print_error(f"Failed to generate: `{os.path.basename(pdos_data_file)}`")
+                print_error(e.stderr.decode("utf-8"))
+                success_list.append(False)
+
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-    return pdos_generation_success_list
+    return success_list
 
 
-def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
+def prepare_bands_info(project: ProjectSetup) -> ProjectSetup:
     """
-    Prepare DFT (Density Functional Theory) information by extracting data from Quantum ESPRESSO output files.
+    Prepare projected bands information by extracting data from Quantum ESPRESSO output files.
 
     Args:
         project (ProjectSetup): Project setup object containing paths and parameters.
@@ -430,6 +480,7 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project setup object with DFT information.
     """
+    print_header("Bands Info Extraction")
 
     # Determine spin_orbit_flags based on project configuration
     spin_orbit_flags = (
@@ -470,7 +521,7 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
         project.skip_soc
     )
 
-    dft_info = BandInfo(
+    band_info = BandInfo(
         number_of_bands=number_of_bands_list,
         fermi_energies=fermi_energies,
         number_of_atomic_states=number_of_atomic_states_list,
@@ -481,15 +532,15 @@ def prepare_dft_info(project: ProjectSetup) -> ProjectSetup:
     # Generate projected bands
     success = generate_projected_bands(
         project.output_paths,
-        dft_info.number_of_atomic_states,
-        dft_info.fermi_energies
+        band_info.number_of_atomic_states,
+        band_info.fermi_energies
     )
 
     if not all(success):
         raise ProjectInitializationError("Some projbands files were not generated successfully.")
 
     # Add DFT info to project
-    project.add_dft_info(dft_info)
+    project.add_bands_info(band_info)
     return project
 
 
@@ -505,6 +556,8 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     Raises:
         ProjectInitializationError: If initialization fails
     """
+    print_header("Wannier Info Extraction")
+
     fermi_energies = []
     alat_parameters = []
     skip_normal = False
@@ -522,8 +575,8 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
         except FileNotFoundError as e:
             if flag == "":
 
-                response = input("Non-SOC calculation files missing. Skip non-SOC case? (yes/no): ")
-                if response.lower() == "yes":
+                response = prompt_input("Non-SOC calculation files missing. Skip non-SOC case? (y/n): ")
+                if response.lower() == "y":
                     skip_normal = True
                     continue
             raise ProjectInitializationError("Required Wannier files missing") from e
@@ -552,6 +605,8 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project setup object with PDOS information.
     """
+    print_header("PDOS Info Extraction")
+
     spin_orbit_flags = ["", "_soc"]
     fermi_energies = collect_fermi_energies(project.output_paths,
                                             project.compound_name,
@@ -578,6 +633,76 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     return project
 
 
+def display_dft_info(band: int, fermi_energy: float, states: int, stress_amount: str | None = None) -> None:
+    """
+    Display DFT (Density Functional Theory) calculation information in a formatted table.
+
+    Args:
+        band (int): The number of bands in the calculation.
+        fermi_energy (float): The Fermi energy value in eV.
+        states (int): The number of atomic states.
+        stress_amount (str | None): The stress amount in the format '1_<percent>' (e.g., '1_30')
+                                    or None if no stress is applied.
+
+    Returns:
+        None: This function prints the DFT calculation information to the console.
+    """
+    table = Table(box=box.ROUNDED, title="DFT Calculation Info")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+
+    if stress_amount:
+        strain_percent = float(stress_amount.replace('_', '.')) * 100
+        table.caption = f"Results for {strain_percent:.2f}% strain"
+
+    # Add rows for each property
+    table.add_row("Number of bands", str(band))
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
+    table.add_row("Atomic states", str(states))
+
+    console.print(table)
+
+
+def display_atomic_states(atomic_states_info: Dict[str, Any]) -> None:
+    """
+    Display atomic states information in a formatted table.
+
+    Args:
+        atomic_states_info (Dict[str, Any]): A dictionary containing atomic states and their properties.
+
+    Returns:
+        None: This function prints the atomic states information to the console.
+    """
+    table = Table(title="Atomic States Info", box=box.ROUNDED)
+    table.add_column("State", style="cyan")
+    table.add_column("Properties", style="green")
+
+    for state, info in atomic_states_info.items():
+        table.add_row(state, str(info))
+
+    console.print(table)
+
+
+def display_wannier_info(fermi_energy: float, alat_parameter: float) -> None:
+    """
+    Display Wannier calculation information in a formatted table.
+
+    Args:
+        fermi_energy (float): The Fermi energy value in eV.
+        alat_parameter (float): The lattice parameter in Ångströms.
+
+    Returns:
+        None: This function prints the Wannier calculation information to the console.
+    """
+    table = Table(title="Wannier Info", box=box.ROUNDED)
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
+    table.add_row("Lattice parameter (Å)", f"{alat_parameter:.6f}")
+
+    console.print(table)
+
 # Test to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -587,9 +712,19 @@ if __name__ == "__main__":
     information if successful.
     """
     os.chdir("..")
+
+    # Create initialization options table
+    options_table = Table(title="Available Initialization Types")
+    options_table.add_column("Type", style="cyan")
+    options_table.add_column("Description", style="green")
+    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
+    options_table.add_row("bands", "Extract band structure information")
+    options_table.add_row("pdos", "Process projected density of states")
+    console.print(options_table)
+
     is_input = len(argv) == 3
 
-    response = input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input("Select initialization type: ").strip().lower()
 
     match response:
         case "wannier":
@@ -600,7 +735,7 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(argv, is_input)
-            prepare_dft_info(project)
+            prepare_bands_info(project)
             is_wannier = False
             is_pdos = False
 
@@ -611,52 +746,52 @@ if __name__ == "__main__":
             is_pdos = True
 
         case _:
-            raise ValueError("Invalid input!")
+            raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")
 
-    print("Information prepared successfully.\n")
+    print_info("Setup completed successfully.\n")
+
     if project.include_stress:
-        for stress_amount, number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info in zip(
+        print_header("Reporting Projected Bands Info")
+        print('\n')
+        for stress_amount, band, fermi_energy, states, atomic_states_info in zip(
                 [None] + project.stress_amounts,
-                project.dft_info.number_of_bands,
-                project.dft_info.fermi_energies,
-                project.dft_info.number_of_atomic_states,
-                project.dft_info.atomic_states_info
+                project.band_info.number_of_bands,
+                project.band_info.fermi_energies,
+                project.band_info.number_of_atomic_states,
+                project.band_info.atomic_states_info
         ):
-            print(f"\nStress amount: {(float(stress_amount.replace('_', '.')) * 100):.2f}%")
-            print(f"Number of bands: {number_of_bands}")
-            print(f"Fermi energy: {fermi_energy} eV")
-            print(f"Number of atomic states: {number_of_atomic_states}")
-            print("\nAtomic states info:")
-            for atomic_state, info in atomic_states_info.items():
-                print(f"{atomic_state}: {info}")
-
+            display_dft_info(band, fermi_energy, states, stress_amount)
     else:
 
         if not is_wannier and not is_pdos:
-            for number_of_bands, fermi_energy, number_of_atomic_states, atomic_states_info, flag in zip(
-                    project.dft_info.number_of_bands,
-                    project.dft_info.fermi_energies,
-                    project.dft_info.number_of_atomic_states,
-                    project.dft_info.atomic_states_info,
+            print_header("Reporting Projected Bands Info")
+            print('\n')
+            for band, fermi_energy, states, atomic_states_info, flag in zip(
+                    project.band_info.number_of_bands,
+                    project.band_info.fermi_energies,
+                    project.band_info.number_of_atomic_states,
+                    project.band_info.atomic_states_info,
                     ["", "(SOC)"]
             ):
-                print(f"Number of bands {flag}: {number_of_bands}")
-                print(f"Fermi energy {flag}: {fermi_energy} eV")
-                print(f"Number of atomic states {flag}: {number_of_atomic_states}")
-                print(f"\nAtomic states info {flag}:")
-                for atomic_state, info in atomic_states_info.items():
-                    print(f"{atomic_state}: {info}")
+                console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
+                display_dft_info(band, fermi_energy, states)
+                display_atomic_states(project.band_info.atomic_states_info[0])
+                print('\n')
+
         elif is_pdos:
+            print_header("Reporting PDOS Info")
             for fermi_energy, flag in zip(
-                    project.dos_info.fermi_energies,
+                    project.dos_setup.fermi_energies,
                     ["", "(SOC)"]
             ):
-                print(f"Fermi energy {flag}: {fermi_energy} eV")
+                print_info(f"Fermi energy {flag}: {fermi_energy:.4f} eV")
         else:
-            for fermi_energy, alat_parameter in zip(
+            print_header("Reporting Wannier Info")
+            print('\n')
+            for fermi_energy, alat_parameter, flag in zip(
                     project.wannier_setup.fermi_energies,
                     project.wannier_setup.alat_parameters,
+                    ["(SOC)"] if project.wannier_setup.skip_normal else ["", "(SOC)"]
             ):
-                print(f"Fermi energy: {fermi_energy} eV")
-                print(f"Lattice parameter: {alat_parameter} Å")
-            print(f"Skip normal: {project.wannier_setup.skip_normal}")
+                console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
+                display_wannier_info(fermi_energy, alat_parameter)

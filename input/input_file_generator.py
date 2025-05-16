@@ -10,22 +10,47 @@ complete input file.
 The module is designed to handle both relativistic and non-relativistic
 calculations and supports flexible configuration of input parameters.
 """
-
 import os
 from sys import argv
 import sqlite3
 from subprocess import run, CalledProcessError
+from typing import List, Dict, Tuple
+
+from ui.ui_helpers import prompt_input, print_error, print_info, print_success, console, progress_track, print_header
 from utils.file_parser import get_poscar_data
 from core.project_setup import initialize_project
 from core.input_handler import get_pseudopotential_files
-from typing import List, Dict, Tuple
-
 from data.models import ProjectSetup
 
 
 class InputGenerationError(Exception):
     """Custom exception for input file generation errors."""
     pass
+
+
+class WannierParams:
+    """Store shared parameters between nscf_wannier and wannier input files."""
+
+    def __init__(self):
+        self.normal_nbands = None
+        self.normal_kmesh = None
+        self.soc_nbands = None
+        self.soc_kmesh = None
+
+    def set_params(self, nbands: int, kmesh: tuple[int, int, int], is_soc: bool = False) -> None:
+        """Set parameters for either normal or SOC calculation."""
+        if is_soc:
+            self.soc_nbands = nbands
+            self.soc_kmesh = kmesh
+        else:
+            self.normal_nbands = nbands
+            self.normal_kmesh = kmesh
+
+    def get_params(self, is_soc: bool = False) -> tuple[int | None, tuple[int, int, int] | None]:
+        """Get parameters for either normal or SOC calculation."""
+        if is_soc:
+            return self.soc_nbands, self.soc_kmesh
+        return self.normal_nbands, self.normal_kmesh
 
 
 def get_atomic_weights(element_names: List[str]) -> List[float] | None:
@@ -59,6 +84,7 @@ def get_atomic_weights(element_names: List[str]) -> List[float] | None:
         if conn:
             conn.close()
 
+
 def generate_control_section(
         calculation_type: str,
         pseudo_dir: str,
@@ -66,7 +92,7 @@ def generate_control_section(
         compound_name: str,
         *,
         etot_conv_thr: float = 1e-8,
-        forc_conv_thr:float = 1e-6,
+        forc_conv_thr: float = 1e-6,
         relativistic: bool = False,
 ) -> str:
     """
@@ -85,7 +111,6 @@ def generate_control_section(
     Returns:
         str: The &CONTROL section of the input file.
     """
-
     pseudo_dir_path = os.path.join(
         "../../" if relativistic else "../", os.path.relpath(pseudo_dir, project_dir))
 
@@ -246,7 +271,9 @@ def generate_cell_parameters_section(lattice_vectors: List[str]) -> str:
     return cell_parameters_section
 
 
-def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] = None) -> str | None:
+def generate_k_points_section(calculation_type: str,
+                              k_mesh_density: Tuple[int, int, int] = None,
+                              is_wannier=False) -> str | None:
     """
     Generates the K_POINTS section of the input files for Quantum ESPRESSO or
     kpoints section of Wannier90 input file.
@@ -254,15 +281,19 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
     Args:
         calculation_type (str): The calculation type (e.g., 'scf', 'bands').
         k_mesh_density (tuple): The K-point mesh density.
+        is_wannier (bool): Whether the calculation is for Wannier case
 
-    Returns
+    Returns:
         str: The K_POINTS section of the input file.
+
+    Raises:
+        InputGenerationError: If the calculation type is invalid or k_mesh_density is not provided.
     """
     valid_calc_types = ("relax", "vc-relax", "scf", "bands", "nscf", "wannier")
 
     if calculation_type not in valid_calc_types:
         raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
-                         f"Valid types are: {', '.join(valid_calc_types)}")
+                                   f"Valid types are: {', '.join(valid_calc_types)}")
 
     try:
         if len(k_mesh_density) != 3:
@@ -279,27 +310,22 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
         return k_points_section
 
     elif calculation_type == "nscf":
-        is_wannier = input("Is this a wannier calculation? (y/n): ").strip().lower()
-
-        if is_wannier not in ["y", "n"]:
-            raise ValueError("Invalid input. Please enter 'y' for yes or 'n' for no.")
-
-        if is_wannier == "n":
-            k_points_section = "K_POINTS automatic\n"
-            k_points_section += f" {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} 0 0 0\n"
-
-            return k_points_section
-
-        else:
+        if is_wannier:
             try:
                 k_points_section = run(f"utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}",
                                        shell=True, check=True, capture_output=True).stdout.decode("utf-8")
                 return k_points_section
             except CalledProcessError as e:
-                raise InputGenerationError(f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
+                raise InputGenerationError(
+                    f"An error occurred in running kmesh.pl script:\n {e.stderr.decode('utf-8')}")
+
+        else:
+            k_points_section = "K_POINTS automatic\n"
+            k_points_section += f" {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} 0 0 0\n"
+
+            return k_points_section
 
     elif calculation_type == "wannier":
-
         try:
             k_points_section = run(f"utils/kmesh.pl {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]} wann",
                                    shell=True, check=True, capture_output=True).stdout.decode("utf-8")
@@ -317,6 +343,7 @@ def generate_k_points_section(calculation_type: str, k_mesh_density: Tuple[int] 
 """
         return k_points_section
 
+
 def generate_pw_input_file(calculation_type: str,
                            project: ProjectSetup,
                            atomic_weights: List[float],
@@ -324,7 +351,9 @@ def generate_pw_input_file(calculation_type: str,
                            atomic_positions: List[str],
                            lattice_vectors: List[str],
                            relativistic: bool = False,
-                           rel_pseudo_list: bool = None):
+                           rel_pseudo_list: bool = None,
+                           kmesh: Tuple[int, int, int] = None,
+                           nbnds: int = None) -> str | None:
     """
     Generates the complete pw.x input file for Quantum ESPRESSO.
 
@@ -337,10 +366,21 @@ def generate_pw_input_file(calculation_type: str,
         lattice_vectors (list): List of lattice vectors.
         relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
         rel_pseudo_list (bool, optional): List of relativistic pseudopotential files
+        kmesh (tuple, optional): K-point mesh density. Defaults to None.
+        nbnds (int, optional): Number of bands. Defaults to None.
 
     Returns:
         str: The complete input file for Quantum ESPRESSO.
+
+    Raises:
+        InputGenerationError: If the calculation type is invalid.
     """
+    valid_calc_types = ("relax", "vc-relax", "scf", "bands", "nscf")
+
+    if calculation_type not in valid_calc_types:
+        raise InputGenerationError(f"Invalid calculation type: {calculation_type}. "
+                                   f"Valid types are: {', '.join(valid_calc_types)}")
+
     input_file_content = generate_control_section(calculation_type,
                                                   project.pseudo_dir
                                                   if not relativistic
@@ -351,16 +391,27 @@ def generate_pw_input_file(calculation_type: str,
     if calculation_type in ["nscf", "bands"]:
         while True:
             try:
-                number_of_bands = int(
-                    input(f"Enter the number of bands for {calculation_type + ('_soc' if relativistic else '')}: ")
-                )
-                if number_of_bands <= 0:
-                    raise ValueError("Number of bands must be a positive integer.")
-                input_file_content += generate_system_section(project.compound_data.number_of_atoms, project.compound_data.atom_types,
-                                                          number_of_bands=number_of_bands, relativistic=relativistic)
-                break
+                if nbnds is None:
+                    number_of_bands = int(
+                        prompt_input(
+                            f"Enter the number of bands for {calculation_type + ('_soc' if relativistic else '')}: ")
+                    )
+                    if number_of_bands <= 0:
+                        raise ValueError("Number of bands must be a positive integer.")
+                    input_file_content += generate_system_section(project.compound_data.number_of_atoms,
+                                                                  project.compound_data.atom_types,
+                                                                  number_of_bands=number_of_bands,
+                                                                  relativistic=relativistic)
+                    break
+                else:
+                    input_file_content += generate_system_section(project.compound_data.number_of_atoms,
+                                                                  project.compound_data.atom_types,
+                                                                  number_of_bands=nbnds,
+                                                                  relativistic=relativistic)
+                    break
             except ValueError as e:
-                print("Error in generating SYSTEM section:", str(e))
+                print_error("Error in generating SYSTEM section:")
+                print_error(str(e))
                 continue
     else:
         input_file_content += generate_system_section(project.compound_data.number_of_atoms,
@@ -383,25 +434,30 @@ def generate_pw_input_file(calculation_type: str,
     while True:
         try:
             if calculation_type != "bands":
-                k_mesh_density = tuple(
-                            map(
-                                int,
-                                input(
-                                    f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type + ('_soc' if relativistic else '')}: "
-                                ).split(),
-                            )
+                if kmesh is None:
+                    k_mesh_density = tuple(
+                        map(
+                            int,
+                            prompt_input(
+                                f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type + ('_soc' if relativistic else '')}: "
+                            ).split(),
                         )
+                    )
 
-                input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
+                    input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
+                else:
+                    input_file_content += generate_k_points_section(calculation_type, kmesh, is_wannier=True)
             else:
                 input_file_content += generate_k_points_section(calculation_type)
 
             return input_file_content
         except ValueError as e:
-            print("Error in generating K_POINTS section:", str(e))
+            print_error("Error in generating K_POINTS section:")
+            print_error(str(e))
             continue
         except InputGenerationError as e:
-            print("Fatal error in generating K_POINTS section:", str(e))
+            print_error("Fatal error in generating K_POINTS section:")
+            print_error(str(e))
             exit(1)
 
 
@@ -486,12 +542,13 @@ def generate_pw2wannier_input_file(compound_name: str, relativistic: bool = Fals
     else:
         input_file_content += f"  seedname   =  '{compound_name}_wannier' ! must be same as the file name of win file"
 
-    input_file_content +="""
+    input_file_content += """
   write_amn  =  .true.
   write_mmn  =  .true.
 /
 """
     return input_file_content
+
 
 def generate_wannier_input_file(element_names: List[str],
                                 atomic_positions: List[str],
@@ -500,7 +557,10 @@ def generate_wannier_input_file(element_names: List[str],
                                 relativistic: bool = False,
                                 *,
                                 num_iter: int = 250,
-                                dis_num_iter: int = 2500) -> str:
+                                dis_num_iter: int = 2500,
+                                stored_nbands: int = None,
+                                stored_kmesh: tuple[int, int, int] = None
+                                ) -> str:
     """
     Generates the input file for Wannier90.
 
@@ -512,19 +572,21 @@ def generate_wannier_input_file(element_names: List[str],
         relativistic (bool, optional): Whether the calculation is relativistic. Defaults to False.
         num_iter (int, optional): Number of minimization iterations. Defaults to 250.
         dis_num_iter (int, optional): Number of disentanglement iterations. Defaults to 2500.
-
+        stored_nbands: Number of bands from nscf_wannier calculation.
+        stored_kmesh: K-point mesh density from nscf_wannier calculation.
     Returns:
         str: The formatted Wannier90 input file content.
-    """
-    while True:
-        try:
-            number_of_bands = int(
-                input(f"Enter the number of bands for wannier{'_soc' if relativistic else ''}: ")
-            )
-            if number_of_bands <= 0:
-                raise ValueError("Number of bands must be a positive integer.")
 
-            input_file_content = f"""num_bands = {number_of_bands} ! number of bands
+    Raises:
+        InputGenerationError: If the number of bands or k-point mesh density is not provided.
+    """
+    if stored_nbands is None:
+        raise InputGenerationError("Number of bands must be provided from nscf_wannier calculation")
+
+    if stored_kmesh is None:
+        raise InputGenerationError("K-point mesh density must be provided from nscf_wannier calculation")
+
+    input_file_content = f"""num_bands = {stored_nbands} ! number of bands
 num_wann  = 0 ! Enter the number of wannier projections here
 num_iter  = {num_iter} ! number of minimization iterations
 
@@ -549,11 +611,6 @@ end kpoint_path
 
 begin projections  ! Enter the atomic projections here
 """
-
-            break
-        except ValueError as e:
-            print("Error in generating Wannier90 input file:", str(e))
-            continue
 
     for element in element_names:
         input_file_content += f"{element:<2}: proj\n"
@@ -582,32 +639,16 @@ begin atoms_frac
     for label, position in zip(atomic_labels, atomic_positions):
         input_file_content += f"{label:<2}    {position}\n"
 
-    while True:
-        try:
-            k_mesh_density = tuple(
-                map(
-                    int,
-                    input(
-                        f"Enter K-point mesh density (e.g., '12 12 1') for wannier{'_soc' if relativistic else ''}: "
-                    ).split(),
-                )
-            )
-            break
-        except ValueError as e:
-            print("Error in generating kpoints section:", str(e))
-            continue
-
     input_file_content += f"""end atoms_frac
     
-mp_grid = {k_mesh_density[0]} {k_mesh_density[1]} {k_mesh_density[2]}
+mp_grid = {stored_kmesh[0]} {stored_kmesh[1]} {stored_kmesh[2]}
 
 begin kpoints
 """
-    input_file_content += generate_k_points_section("wannier", k_mesh_density)
+    input_file_content += generate_k_points_section("wannier", stored_kmesh, is_wannier=True)
     input_file_content += "end kpoints\n"
 
     return input_file_content
-
 
 
 def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
@@ -620,20 +661,75 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
     """
 
     compound_name = project.compound_name
+    wannier_params = WannierParams()
 
+    print_info("Fetching atomic weights and POSCAR data...")
+
+    with console.status("Retrieving atomic weights and POSCAR data"):
+
+        atomic_weights = get_atomic_weights(project.compound_data.element_names)
+        lattice_vectors, atomic_positions = get_poscar_data(project.poscar_file)
+
+    print_info("Fetching the Pseudopotentials...")
     pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
                                                              project.pseudo_dir, relativistic=True,
                                                              rel_pseudo_path=project.rel_pseudo_dir
                                                              )
+    print_info("Pseudopotentials fetched successfully.")
+    print_info("Starting input file generation...\n")
+    print_header("Input File Generation")
 
-    atomic_weights = get_atomic_weights(project.compound_data.element_names)
-    lattice_vectors, atomic_positions = get_poscar_data(project.poscar_file)
+    def generate_nscf_wannier(rel: bool) -> str | None:
+        """Generate nscf_wannier input with parameter storage."""
+        while True:
+            try:
+                nbands = int(prompt_input(f"Enter the number of bands for wannier{'_soc' if rel else ''}: "))
+                if nbands <= 0:
+                    raise ValueError("Number of bands must be a positive integer.")
+
+                k_mesh = tuple(map(int, prompt_input(
+                    f"Enter K-point mesh density (e.g., '12 12 1') for wannier{'_soc' if rel else ''}: "
+                ).split()))
+
+                # Store parameters for later use
+                wannier_params.set_params(nbands, k_mesh, rel)
+
+                return generate_pw_input_file("nscf",
+                                              project,
+                                              atomic_weights,
+                                              pseudo_list,
+                                              atomic_positions,
+                                              lattice_vectors,
+                                              relativistic=rel,
+                                              rel_pseudo_list=rel_pseudo_list if rel else None,
+                                              kmesh=k_mesh,
+                                              nbnds=nbands)
+            except ValueError as e:
+                print_error(f"Error in input: {str(e)}")
+                continue
+
+    def generate_wannier(rel: bool) -> str:
+        """Generate wannier input using stored parameters."""
+        nbands, k_mesh = wannier_params.get_params(rel)
+        if nbands is None or k_mesh is None:
+            raise InputGenerationError("Wannier parameters not set. Generate nscf_wannier first.")
+
+        return generate_wannier_input_file(
+            project.compound_data.element_names,
+            atomic_positions,
+            lattice_vectors,
+            project.compound_data.atomic_labels,
+            relativistic=rel,
+            stored_nbands=nbands,
+            stored_kmesh=k_mesh
+        )
 
     # Map input patterns to their generator functions
     generator_map = {
         "relax_input": lambda rel: generate_pw_input_file("relax", project, atomic_weights,
-                                                            pseudo_list, atomic_positions, lattice_vectors,
-                                                          relativistic=rel, rel_pseudo_list=rel_pseudo_list if rel else None),
+                                                          pseudo_list, atomic_positions, lattice_vectors,
+                                                          relativistic=rel,
+                                                          rel_pseudo_list=rel_pseudo_list if rel else None),
         "vc_relax_input": lambda rel: generate_pw_input_file("vc-relax", project, atomic_weights,
                                                              pseudo_list, atomic_positions, lattice_vectors,
                                                              relativistic=rel,
@@ -653,17 +749,14 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
         "pdos_input": lambda _: generate_pdos_input_file(compound_name),
         "kpdos_input": lambda _: generate_kpdos_input_file(compound_name),
         "bands_input": lambda _: generate_bands_input_file(compound_name),
-        "nscf_wannier_input": lambda rel: generate_pw_input_file("nscf", project, atomic_weights,
-                                                                 pseudo_list, atomic_positions, lattice_vectors,
-                                                                 relativistic=rel,
-                                                                 rel_pseudo_list=rel_pseudo_list if rel else None),
+        "nscf_wannier_input": generate_nscf_wannier,
         "pw2wan_input": lambda rel: generate_pw2wannier_input_file(compound_name, relativistic=rel),
-        "wannier_input": lambda rel: generate_wannier_input_file(project.compound_data.element_names,
-                                                                    atomic_positions, lattice_vectors,
-                                                                    project.compound_data.atomic_labels,
-                                                                    relativistic=rel)
+        "wannier_input": generate_wannier
     }
 
+    generated_files = []
+
+    print_info("Generating input files...")
     for key, paths in project.input_paths.items():
         input_type = key.replace("_paths", "")
         if input_type in generator_map.keys():
@@ -671,25 +764,31 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
             # Generate the input files using the appropriate generator function
             if not project.include_stress:
                 for path, relativistic in zip(paths, [False, True]):
-                    file_name = path.split("/")[-1]
+                    file_name = os.path.basename(path)
+
                     if "_soc" in file_name and skip_soc:
-                        print(f"Skipping SOC file generation for {file_name}", flush=True)
+                        print_info(f"Skipping SOC file generation for {file_name}")
                         continue
+
                     if input_type == "nscf_wannier_input":
-                        print("\n(This is for wannier90 calculation)")
+                        print_info("\n(This is for wannier90 calculation)")
+
                     input_src = generator_map[input_type](relativistic)
-                    with open(path, "w") as file:
-                        file.write(input_src)
-                    print(f"Wrote {file_name} at:\n    {path}", flush=True)
+                    generated_files.append((file_name, path, input_src))
             else:
                 for path in paths:
-                    file_name = path.split("/")[-1]
+                    file_name = os.path.basename(path)
                     input_src = generator_map[input_type](False)
-                    with open(path, "w") as file:
-                        file.write(input_src)
-                    print(f"Wrote {file_name} at:\n    {path}", flush=True)
+                    generated_files.append((file_name, path, input_src))
 
-    print("\nInput files have been generated successfully.")
+    print_success("\nInput files have been generated successfully.\n")
+    print_header("Writing Input Files")
+    for file_name, path, content in progress_track(generated_files, description="Writing input files"):
+        with open(path, "w") as f:
+            f.write(content)
+        print_success(f"Wrote {file_name} at:\n    {path}")
+
+    print_success("All input files have been written successfully.")
 
 
 if __name__ == "__main__":
@@ -710,15 +809,17 @@ if __name__ == "__main__":
     project = initialize_project(argv, is_input)
 
     pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
-                                            project.pseudo_dir, relativistic=True, rel_pseudo_path=project.rel_pseudo_dir
-                                            )
+                                                             project.pseudo_dir,
+                                                             relativistic=True,
+                                                             rel_pseudo_path=project.rel_pseudo_dir
+                                                             )
 
     atomic_weights = get_atomic_weights(project.compound_data.element_names)
     lattice_vectors, atomic_positions = get_poscar_data(project.poscar_file)
 
     nscf_input = generate_pw_input_file(
         calculation_type="nscf",
-        project = project,
+        project=project,
         atomic_weights=atomic_weights,
         pseudo_list=pseudo_list,
         atomic_positions=atomic_positions,

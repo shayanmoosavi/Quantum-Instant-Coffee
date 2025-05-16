@@ -7,9 +7,11 @@ and building structured file paths for input and output files.
 
 from sys import argv
 import os
+from typing import List, Tuple, Dict
+
 from core.project_setup import initialize_project, ProjectInitializationError
 from core.config import ProjectConfig
-from typing import List, Tuple, Dict
+from ui.ui_helpers import *
 
 
 def validate_command_line_args(args: List[str], is_for_plot: bool = False) -> str | Tuple[str, str]:
@@ -28,18 +30,18 @@ def validate_command_line_args(args: List[str], is_for_plot: bool = False) -> st
     """
     if is_for_plot:
         if len(args) < 2:
-            print("Error: Missing compound name argument")
-            print("Usage: python <script>.py <compound_name>")
+            print_error("Error: Missing compound name argument")
+            print_info("Usage: python <script>.py <compound_name>")
             exit(1)
         return args[1]
     else:
         if len(args) < 3:
-            print("Error: Missing compound name and/or POSCAR file argument")
-            print("Usage: python <script>.py <compound_name> <poscar_file>")
+            print_error("Error: Missing compound name and/or POSCAR file argument")
+            print_info("Usage: python <script>.py <compound_name> <poscar_file>")
             exit(1)
         if len(args) > 3:
-            print("Error: Too many arguments provided")
-            print("Usage: python <script>.py <compound_name> <poscar_file>")
+            print_error("Error: Too many arguments provided")
+            print_info("Usage: python <script>.py <compound_name> <poscar_file>")
             exit(1)
         return args[1], args[2]
 
@@ -87,7 +89,7 @@ def append_file_paths(file_paths: Dict[str, Dict[str, List[str]]],
                 file_patterns[key].format(compound_name=compound_name, flag=flag)
             ))
         except KeyError:
-            print(f"Key '{key}' not found in provided config. Skipping...")
+            print_warning(f"Key '{key}' not found in provided config. Skipping...")
             continue
 
 
@@ -119,8 +121,8 @@ def add_paths_for_directories(
             for stress_amount in stress_amounts:
                 append_file_paths(file_paths, calculation,
                                   os.path.join(path, stress_amount), compound_name, file_patterns, flag,
-                                  ["pw_bands_input", "kpdos_input", "bands_input"] if is_input else
-                                  ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
+                                  ["scf_input", "pw_bands_input", "kpdos_input", "bands_input"] if is_input else
+                                  ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
 
         elif calculation == "strain":
             continue
@@ -212,7 +214,7 @@ def build_file_paths(
             elif key == "strain" and include_stress:
 
                 for i in range(len(stress_amounts)):
-                    for path_type in ["pw_bands_input", "kpdos_input", "bands_input"]:
+                    for path_type in ["scf_input", "pw_bands_input", "kpdos_input", "bands_input"]:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][i])
 
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
@@ -268,8 +270,8 @@ def build_file_paths(
 
                 for i in range(len(stress_amounts)):
                     for path_type, output_key in zip(
-                            ["pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
-                            ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
+                            ["scf_output_paths", "pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
+                            ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
                     ):
                         structured_paths[path_type].append(value[output_key][i])
 
@@ -319,13 +321,21 @@ def create_directories(project_dir: str,
     try:
         # Creating main project directory if it doesn't exist
         os.makedirs(project_dir, exist_ok=True)
-        print(f"\nProject directory initialized at:\n {project_dir}\n", flush=True)
+        print_success(f"\nProject directory initialized at:\n {project_dir}\n")
 
         # Changing current directory to project directory
         os.chdir(project_dir)
 
         # List to store the paths of created directories
         calculation_dirs = []
+
+        # Creating a table to show directory creation progress
+        table = Table(title="Directory Creation Progress")
+        table.add_column("Calculation Type", style="cyan")
+        table.add_column("Status")
+
+        print_header("Directory Creation", width=80)
+        print('\n')
 
         # Creating directories for each calculation type
         for calculation, path in dir_structure.items():
@@ -335,24 +345,31 @@ def create_directories(project_dir: str,
             if calculation in ["pseudo", "pseudo_rel"]:
                 # Skipping the creation of Pseudopotential directories as it needs to exist before running this script
                 continue
-
-            if include_stress:
-                if calculation == "strain":
-                    # Creating subdirectories for each strain amount if strain analysis is included
-                    for stress_amount in stress_amounts:
-                        stress_path = os.path.join(path, stress_amount)
-                        os.makedirs(stress_path, exist_ok=True)
-                        calculation_dirs.append(os.path.abspath(stress_path))
+            try:
+                if include_stress:
+                    if calculation == "strain":
+                        # Creating subdirectories for each strain amount if strain analysis is included
+                        for stress_amount in stress_amounts:
+                            stress_path = os.path.join(path, stress_amount)
+                            os.makedirs(stress_path, exist_ok=True)
+                            calculation_dirs.append(os.path.abspath(stress_path))
+                            table.add_row(f"strain_{stress_amount}", "[green]✓ Created[/green]")
+                    else:
+                        # Creating other calculation directories
+                        os.makedirs(path, exist_ok=True)
+                        calculation_dirs.append(os.path.abspath(path))
                 else:
-                    # Creating other calculation directories
+                    # Creating directories for calculations other than strain
                     os.makedirs(path, exist_ok=True)
                     calculation_dirs.append(os.path.abspath(path))
-            else:
-                # Creating directories for calculations other than strain
-                os.makedirs(path, exist_ok=True)
-                calculation_dirs.append(os.path.abspath(path))
+                    table.add_row(calculation, "[green]✓ Created[/green]")
 
-        print("Successfully created calculation directories.\n", flush=True)
+            except OSError as e:
+                table.add_row(calculation, "[bold red]✗ Failed[/bold red]")
+                print_error(f"Error creating directory: \n{str(e)}")
+
+        console.print(table)
+        print_success("\nSuccessfully created calculation directories.\n")
 
         # Changing the directory to the root directory of the script
         script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -361,7 +378,7 @@ def create_directories(project_dir: str,
         return calculation_dirs  # Return the list of created directories
 
     except OSError as e:
-        print(f"Error creating directories: {e}")
+        print_error(f"Error creating directories: {e}")
         return []  # Return an empty list to indicate failure
 
 
@@ -378,33 +395,40 @@ if __name__ == "__main__":
         # Initialize and prepare project
         project = initialize_project(argv, is_input)
 
-        # Print summary
-        print("\nInitialization complete. Project information:")
-        print(f"  Compound name: {project.compound_name}")
-        print(f"  Project directory: {project.project_dir}")
-        print(f"  Include stress: {project.include_stress}")
-        if project.include_stress:
-            print(f"  Stress amounts: {project.stress_amounts}")
-        print(f"  Pseudopotential directory: {project.pseudo_dir}")
-        print(f"  Relativistic Pseudopotential directory: {project.rel_pseudo_dir}")
-        if is_input:
-            print(f"  Calculation directories: {project.calculation_dirs}")
-        print(f"  Elements: {project.compound_data.element_names}")
-        print(f"  Atomic labels: {project.compound_data.atomic_labels}")
+        print_header("Project Initialization Summary")
+        print('\n')
+        # Creating a table for project information
+        info_table = Table(show_header=True, box=box.ROUNDED, title="Project Information", show_lines=True)
+        info_table.add_column("Property", style=custom_theme.styles["info"])
+        info_table.add_column("Value", style="green")
 
-        if is_input:
-            print("\nInput paths:")
-            for path_type, paths in project.input_paths.items():
-                print(f"  {path_type}: {paths}")
-        else:
-            print("\nOutput paths:")
-            for path_type, paths in project.output_paths.items():
-                print(f"  {path_type}: {paths}")
+        info_table.add_row("Compound name", project.compound_name)
+        info_table.add_row("Project directory", project.project_dir)
+        info_table.add_row("Include stress", str(project.include_stress))
+        if project.include_stress:
+            info_table.add_row("Stress amounts", ", ".join(project.stress_amounts))
+        info_table.add_row("Pseudo dir", project.pseudo_dir)
+        info_table.add_row("Rel pseudo dir", project.rel_pseudo_dir)
+        info_table.add_row("Elements", ", ".join(project.compound_data.element_names))
+        info_table.add_row("Atomic labels", ", ".join(project.compound_data.atomic_labels))
+
+        console.print(info_table, '\n')
+
+        # Display paths in a separate table
+        paths_table = Table(title="File Paths", show_header=True, show_lines=True)
+        paths_table.add_column("Type", style="cyan")
+        paths_table.add_column("Paths", style="green", overflow="fold")
+
+        paths_dict = project.input_paths if is_input else project.output_paths
+        for path_type, paths in paths_dict.items():
+            paths_table.add_row(path_type, "\n".join(paths))
+
+        console.print(paths_table)
 
     except ProjectInitializationError as e:
-        print(f"Error during project initialization: {str(e)}")
+        print_error(f"Error during project initialization: {str(e)}")
         exit(1)
 
     except Exception as e:
-        print(f"Unexpected Error: {str(e)}")
+        print_error(f"Unexpected Error: {str(e)}")
         exit(1)

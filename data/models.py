@@ -6,7 +6,7 @@ handling compound information, DFT calculation results, and project configuratio
 
 Classes:
     CompoundData: Parses and stores chemical compound information.
-    DFTInfo: Container for DFT calculation results.
+    BandInfo: Container for projected bands calculation results.
     BandData: Container for band structure calculation data.
     WannierSetup: Container for Wannier data and parameters.
     ProjectSetup: Main project configuration and data storage.
@@ -180,7 +180,7 @@ class ProjectSetup:
     stress_amounts: Optional[List[str]] = None
     rel_pseudo_dir: Optional[str] = None
     poscar_file: Optional[str] = None
-    dft_info: Optional[BandInfo] = None
+    band_info: Optional[BandInfo] = None
     band_data: Optional[BandData] = None
     wannier_setup: Optional[WannierSetup] = None
     dos_setup: Optional[DOSSetup] = None
@@ -188,13 +188,13 @@ class ProjectSetup:
     output_paths: Optional[Dict[str, List[str]]] = None
     skip_soc: bool = False
 
-    def add_dft_info(self, dft_info: BandInfo) -> None:
-        """Add DFT calculation results to the project setup.
+    def add_bands_info(self, band_info: BandInfo) -> None:
+        """Add projected bands calculation results to the project setup.
 
         Args:
-            dft_info (BandInfo): The DFT calculation results to add.
+            band_info (BandInfo): The projected bands calculation results to add.
         """
-        self.dft_info = dft_info
+        self.band_info = band_info
 
     def add_wannier_setup(self, wannier_setup: WannierSetup) -> None:
         """Add Wannier calculation setup to the project setup.
