@@ -633,12 +633,14 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     return project
 
 
-def display_dft_info(project: ProjectSetup, stress_amount: str | None = None) -> None:
+def display_dft_info(band: int, fermi_energy: float, states: int, stress_amount: str | None = None) -> None:
     """
     Display DFT (Density Functional Theory) calculation information in a formatted table.
 
     Args:
-        project (ProjectSetup): The project setup object containing DFT calculation data.
+        band (int): The number of bands in the calculation.
+        fermi_energy (float): The Fermi energy value in eV.
+        states (int): The number of atomic states.
         stress_amount (str | None): The stress amount in the format '1_<percent>' (e.g., '1_30')
                                     or None if no stress is applied.
 
@@ -654,30 +656,24 @@ def display_dft_info(project: ProjectSetup, stress_amount: str | None = None) ->
         table.caption = f"Results for {strain_percent:.2f}% strain"
 
     # Add rows for each property
-    for band, fermi, states in zip(
-            project.band_info.number_of_bands,
-            project.band_info.fermi_energies,
-            project.band_info.number_of_atomic_states
-    ):
-        table.add_row("Number of bands", str(band))
-        table.add_row("Fermi energy (eV)", f"{fermi:.4f}")
-        table.add_row("Atomic states", str(states))
+    table.add_row("Number of bands", str(band))
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
+    table.add_row("Atomic states", str(states))
 
     console.print(table)
 
 
-def display_atomic_states(atomic_states_info: Dict[str, Any], flag: str = "") -> None:
+def display_atomic_states(atomic_states_info: Dict[str, Any]) -> None:
     """
     Display atomic states information in a formatted table.
 
     Args:
         atomic_states_info (Dict[str, Any]): A dictionary containing atomic states and their properties.
-        flag (str): An optional flag to include in the table title (e.g., '(SOC)' for spin-orbit coupling).
 
     Returns:
         None: This function prints the atomic states information to the console.
     """
-    table = Table(title=f"Atomic States Info {flag}", box=box.ROUNDED)
+    table = Table(title="Atomic States Info", box=box.ROUNDED)
     table.add_column("State", style="cyan")
     table.add_column("Properties", style="green")
 
@@ -687,12 +683,13 @@ def display_atomic_states(atomic_states_info: Dict[str, Any], flag: str = "") ->
     console.print(table)
 
 
-def display_wannier_info(wannier_setup: WannierSetup) -> None:
+def display_wannier_info(fermi_energy: float, alat_parameter: float) -> None:
     """
     Display Wannier calculation information in a formatted table.
 
     Args:
-        wannier_setup (WannierSetup): The Wannier setup object containing calculation data.
+        fermi_energy (float): The Fermi energy value in eV.
+        alat_parameter (float): The lattice parameter in Ångströms.
 
     Returns:
         None: This function prints the Wannier calculation information to the console.
@@ -701,14 +698,9 @@ def display_wannier_info(wannier_setup: WannierSetup) -> None:
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="green")
 
-    for fermi_energy, alat_parameter in zip(
-            wannier_setup.fermi_energies,
-            wannier_setup.alat_parameters
-    ):
-        table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
-        table.add_row("Lattice parameter (Å)", f"{alat_parameter:.6f}")
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
+    table.add_row("Lattice parameter (Å)", f"{alat_parameter:.6f}")
 
-    table.add_row("Skip normal", str(wannier_setup.skip_normal))
     console.print(table)
 
 # Test to ensure the module works as expected
@@ -761,16 +753,29 @@ if __name__ == "__main__":
     if project.include_stress:
         print_header("Reporting Projected Bands Info")
         print('\n')
-        for stress in [None] + project.stress_amounts:
-            display_dft_info(project, stress)
+        for stress_amount, band, fermi_energy, states, atomic_states_info in zip(
+                [None] + project.stress_amounts,
+                project.band_info.number_of_bands,
+                project.band_info.fermi_energies,
+                project.band_info.number_of_atomic_states,
+                project.band_info.atomic_states_info
+        ):
+            display_dft_info(band, fermi_energy, states, stress_amount)
     else:
 
         if not is_wannier and not is_pdos:
             print_header("Reporting Projected Bands Info")
             print('\n')
-            for flag in ["", "(SOC)"]:
-                display_dft_info(project)
-                display_atomic_states(project.band_info.atomic_states_info[0], flag)
+            for band, fermi_energy, states, atomic_states_info, flag in zip(
+                    project.band_info.number_of_bands,
+                    project.band_info.fermi_energies,
+                    project.band_info.number_of_atomic_states,
+                    project.band_info.atomic_states_info,
+                    ["", "(SOC)"]
+            ):
+                console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
+                display_dft_info(band, fermi_energy, states)
+                display_atomic_states(project.band_info.atomic_states_info[0])
                 print('\n')
 
         elif is_pdos:
@@ -783,4 +788,10 @@ if __name__ == "__main__":
         else:
             print_header("Reporting Wannier Info")
             print('\n')
-            display_wannier_info(project.wannier_setup)
+            for fermi_energy, alat_parameter, flag in zip(
+                    project.wannier_setup.fermi_energies,
+                    project.wannier_setup.alat_parameters,
+                    ["(SOC)"] if project.wannier_setup.skip_normal else ["", "(SOC)"]
+            ):
+                console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
+                display_wannier_info(fermi_energy, alat_parameter)
