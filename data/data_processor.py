@@ -246,7 +246,6 @@ def process_band_data(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project configuration with processed band data
     """
-    print_info("Processing bands data...")
     processor = BandDataProcessor(project.project_dir)
     calculator = WeightCalculator()
     projection_processor = AtomicProjectionProcessor(list(project.band_info.atomic_states_info[0].keys()))
@@ -312,7 +311,6 @@ def process_comparison_data(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project with processed Wannier data
     """
-    print_info("Processing Wannier bands comparison data...")
     band_processor = BandDataProcessor(project.project_dir)
     wannier_processor = WannierDataProcessor(project.project_dir)
 
@@ -381,7 +379,6 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
     Returns:
         ProjectSetup: Updated project with processed PDOS data
     """
-    print_info("Processing PDOS data...")
     pdos_processor = DOSDataProcessor(project.project_dir)
 
     atomic_projection_list = project.dos_setup.atomic_states_info[0].keys()
