@@ -121,8 +121,8 @@ def add_paths_for_directories(
             for stress_amount in stress_amounts:
                 append_file_paths(file_paths, calculation,
                                   os.path.join(path, stress_amount), compound_name, file_patterns, flag,
-                                  ["pw_bands_input", "kpdos_input", "bands_input"] if is_input else
-                                  ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
+                                  ["scf_input", "pw_bands_input", "kpdos_input", "bands_input"] if is_input else
+                                  ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
 
         elif calculation == "strain":
             continue
@@ -214,7 +214,7 @@ def build_file_paths(
             elif key == "strain" and include_stress:
 
                 for i in range(len(stress_amounts)):
-                    for path_type in ["pw_bands_input", "kpdos_input", "bands_input"]:
+                    for path_type in ["scf_input", "pw_bands_input", "kpdos_input", "bands_input"]:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][i])
 
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
@@ -270,8 +270,8 @@ def build_file_paths(
 
                 for i in range(len(stress_amounts)):
                     for path_type, output_key in zip(
-                            ["pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
-                            ["pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
+                            ["scf_output_paths", "pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
+                            ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
                     ):
                         structured_paths[path_type].append(value[output_key][i])
 
