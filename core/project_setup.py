@@ -45,7 +45,7 @@ def initialize_project(
     from core.path_handler import get_project_directory, create_directories, validate_command_line_args, \
         build_file_paths
 
-    print_header("Project Initialization", width=80)
+    print_header("Project Initialization")
     config = load_config()
 
     if is_input:

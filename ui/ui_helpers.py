@@ -10,7 +10,7 @@ custom_theme = Theme({
     "warning": "bold yellow",
     "error": "bold red",
     "success": "green",
-    "header": "bold gold1",
+    "header": "bold purple",
     "prompt": "bold bright_blue",
     "highlight": "bold magenta"
 })
@@ -35,7 +35,7 @@ def print_success(message: str):
 
 
 def print_header(message: str, width=None):
-    console.print(Panel(message, style="header", width=width))
+    console.print(Panel(message, box.HORIZONTALS, style="header", width=width))
 
 
 def print_list(title: str, items: list[str]):
