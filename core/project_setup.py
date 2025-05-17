@@ -51,7 +51,7 @@ def initialize_project(
     if is_input:
         # For input file generation
         compound_name, poscar_file = validate_command_line_args(argv, is_for_plot=False)
-        stress_amounts = get_strain_amounts(is_input=True)
+        stress_amounts = get_strain_amounts(is_input=True) if "strain" in config.directory_structure else None
         include_stress = bool(stress_amounts)
     else:
         # For output/analysis

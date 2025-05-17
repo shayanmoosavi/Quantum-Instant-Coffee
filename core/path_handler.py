@@ -57,7 +57,9 @@ def get_project_directory(compound_name: str) -> str:
         str: The absolute path to the project directory.
     """
     script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # The root directory of the program
-    root_dir = os.path.abspath(os.path.join(script_root_dir, ".."))  # The root directory of the project
+    user_id = os.getenv("COFFEE")
+    user_path = os.path.join(script_root_dir, "../userfiles", user_id) if user_id else ".."
+    root_dir = os.path.abspath(user_path)  # The root directory of the project
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
 
@@ -334,7 +336,7 @@ def create_directories(project_dir: str,
         table.add_column("Calculation Type", style="cyan")
         table.add_column("Status")
 
-        print_header("Directory Creation", width=80)
+        print_header("Directory Creation")
         print('\n')
 
         # Creating directories for each calculation type
