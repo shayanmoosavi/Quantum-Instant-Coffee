@@ -99,29 +99,35 @@ If you encounter errors about missing pseudopotentials, ensure you have:
 In order to use these scripts to generate the input files, run `input_file_writer.py` as follows:
 
 ```bash
-python input_file_writer.py <name-of-the-compound> <path-to-POSCAR-file>
+COFFEE=<user-name> python input_file_writer.py <name-of-the-compound> <path-to-POSCAR-file>
 ```
-
-The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. The `input_file_writer.py` script will generate a folder named `<compound-name>`, and within that folder, it will create subfolders with the following directory structure:
+Where `<user-name>` is the user directory of the person who is running the script and want the input files 
+to be generated there, `<name-of-the-compound>` is the name of the compound you want to generate the input files for, 
+and `<path-to-POSCAR-file>` is the path to the POSCAR file. The POSCAR file is a widely used format in 
+[VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. 
+The `input_file_writer.py` script will generate a folder named `<compound-name>`, and within that folder, it will create 
+subfolders with the following directory structure:
 
 ```ansi
 .
-└── <compound-name>/
-    ├── scf
-    ├── projected_bands
-    ├── pdos
-    ├── strain
-    ├── spin_orbit/
-    │   ├── scf
-    │   ├── projected_bands
-    │   └── pdos
-    └── wannier
+└── userfiles/
+    └── user_name/
+        └── compound_name/
+            ├── scf
+            ├── projected_bands
+            ├── pdos
+            ├── strain
+            └── spin_orbit/
+                ├── scf
+                ├── projected_bands
+                ├── pdos
+                └── wannier
 ```
 
 After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
 
 ```bash
-python projected_bands_plotter.py <compound-name>
+COFFEE=<user-name> python projected_bands_plotter.py <compound-name>
 ```
 
 After successfully executing `projected_bands_plotter.py`, the script will plot the projected bands for every atom in the structure.
@@ -129,14 +135,14 @@ After successfully executing `projected_bands_plotter.py`, the script will plot 
 To compare the wannier interpolated bands with DFT bands, run the following command:
 
 ```bash
-python compare_bands_plotter.py <compound-name>
+COFFEE=<user-name> python compare_bands_plotter.py <compound-name>
 ```
 
 ## ⚙️ Configuration
 
 ### 1- Configuring Directory Structure and Input File Generation
-If you want to customize the list of generated input files, you can do so by modifying the `config.json` file. The following keys in the `input` section are 
-optional and can be removed if not needed:
+If you want to customize the list of generated input files, you can do so by writing your own `config.json` file in 
+`userfiles/user_name` directory. The following keys in the `input` section are optional and can be removed if not needed:
 - `relax_input`: The input file for Quantum ESPRESSO relax calculations
 - `nscf_input`: The input file for Quantum ESPRESSO nscf calculations
 - `pdos_input`: The input file for Quantum ESPRESSO pdos calculations
