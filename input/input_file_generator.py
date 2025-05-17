@@ -770,9 +770,6 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
                         print_info(f"Skipping SOC file generation for {file_name}")
                         continue
 
-                    if input_type == "nscf_wannier_input":
-                        print_info("\n(This is for wannier90 calculation)")
-
                     input_src = generator_map[input_type](relativistic)
                     generated_files.append((file_name, path, input_src))
             else:
