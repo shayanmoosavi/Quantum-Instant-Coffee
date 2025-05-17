@@ -18,6 +18,7 @@ from typing import List, Dict, Tuple
 
 from ui.ui_helpers import prompt_input, print_error, print_info, print_success, console, progress_track, print_header
 from utils.file_parser import get_poscar_data
+from utils.print_thanks import print_animated_ascii
 from core.project_setup import initialize_project
 from core.input_handler import get_pseudopotential_files
 from data.models import ProjectSetup
@@ -787,6 +788,8 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
 
     print_success("All input files have been written successfully.")
 
+    print_animated_ascii("ascii-art.txt")
+    console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
 
 if __name__ == "__main__":
     """
