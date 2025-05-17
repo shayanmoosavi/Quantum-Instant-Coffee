@@ -5,12 +5,12 @@ for the project. It supports loading configurations from a JSON file and
 provides default settings if the file is not found. It also validates the
 configuration structure to ensure correctness.
 """
-
+import os
 from dataclasses import dataclass
 from typing import Dict
 import json
 
-from ui.ui_helpers import print_error, print_info
+from ui.ui_helpers import print_error, print_info, print_success, print_warning
 from utils.config_validation import validate_config_structure, ConfigValidationError
 
 
@@ -135,12 +135,12 @@ class ProjectConfig:
 
         return config
 
-def load_config(config_file: str = "config.json") -> ProjectConfig:
+def load_config(config_file: str = None) -> ProjectConfig:
     """
     Load and validate the project configuration.
 
     Args:
-        config_file (str): Path to the JSON configuration file. Defaults to "config.json".
+        config_file (str): Path to the JSON configuration file. Defaults to None.
 
     Returns:
         ProjectConfig: An instance of ProjectConfig with the loaded or default configuration.
@@ -149,7 +149,25 @@ def load_config(config_file: str = "config.json") -> ProjectConfig:
         ConfigValidationError: If the configuration structure is invalid.
     """
     try:
+        if not config_file:
+            print_info("Loading configuration file...")
+            user_id = os.getenv("COFFEE")
+            if user_id:
+                script_root_dir = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
+                config_file = os.path.join(script_root_dir, "../userfiles", user_id, "config.json")
+                print_info(f"Config file path: {os.path.abspath(config_file)}")
+                if os.path.exists(os.path.abspath(config_file)):
+                    print_success(f"Config found for {user_id}")
+                else:
+                    print_warning(f"Config not found for {user_id}")
+                    print_info("Using default configuration instead.")
+                    config_file = "config.json"
+            else:
+                print_warning("Environment variable 'COFFEE' not set. Using default configuration.")
+                config_file = "config.json"
         return ProjectConfig.from_json(config_file)
+
     except ConfigValidationError as e:
         print_error(f"Configuration validation error: {str(e)}")
         print_info("Using default configuration instead.")
