@@ -6,10 +6,11 @@ using the provided configuration and data processing modules.
 
 from sys import argv
 
+from core.config import load_config
 from core.project_setup import initialize_project
 from data.data_processor import process_pdos_data
 from data.data_collector import prepare_pdos_info
-from utils.plot_handler import DOSPlotConfig, plot_pdos
+from utils.plot_handler import plot_pdos
 
 # Initialization of the project
 project = initialize_project(argv, is_input=False, is_pdos=True)
@@ -21,9 +22,7 @@ prepare_pdos_info(project)
 process_pdos_data(project)
 
 # Setting the plot configuration
-plot_config = DOSPlotConfig()
-# You can modify the plot configuration here
-# ...
+plot_config = load_config(config_type="dos")
 
 # Plotting the band structure (set save_fig to True if you want to save the figure)
 plot_pdos(project, plot_config, save_fig=False)
