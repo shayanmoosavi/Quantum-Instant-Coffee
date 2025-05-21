@@ -9,7 +9,8 @@ setup(
         "numpy",
         "matplotlib",
         "pandas",
-        "rich"
+        "rich",
+        "pyyaml"
     ],
     extras_requires={
         "fetch_info": [
@@ -22,6 +23,7 @@ setup(
             "matplotlib",
             "pandas",
             "rich",
+            "pyyaml",
             "requests",
             "beautifulsoup4",
             "lxml"

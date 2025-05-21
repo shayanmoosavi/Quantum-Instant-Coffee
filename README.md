@@ -39,6 +39,7 @@ The input files will be generated both with and without considering spin-orbit c
 - Matplotlib
 - Pandas
 - Rich
+- PyYAML
 - BeautifulSoup4 (Optional, for fetching the atomic weights table from IUPAC website)
 - Requests (Optional, for fetching the atomic weights table from IUPAC website)
 - lxml (Optional, for fetching the atomic weights table from IUPAC website)
