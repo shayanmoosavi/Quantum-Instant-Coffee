@@ -305,6 +305,7 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
                     break
             else:
                 atomic_states_info.update(data)
+                print_success(f"Successfully extracted projection info\n")
 
         atomic_states_info_list.append(atomic_states_info)
 

@@ -10,7 +10,7 @@ import re
 import json
 from typing import List, Tuple, Dict, Union
 
-from ui.ui_helpers import print_info, print_success, print_error
+from ui.ui_helpers import print_info, print_success, print_error, console
 
 
 def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
@@ -264,7 +264,7 @@ def extract_atomic_states_info(
         FileNotFoundError: If the file does not exist
         ValueError: If the atomic state cannot be extracted
     """
-    print_info(f"Getting atomic state {atom}-{orbital}...")
+    console.rule(f"Getting atomic projection {atom}-{orbital}")
 
     if not is_pdos:
         try:
@@ -312,7 +312,7 @@ def extract_atomic_states_info(
 
             if not projection_indices_list:
                 raise ValueError(
-                    f"Could not find atomic state information for {atom}-{orbital} in {file_path}"
+                    f"Could not find atomic projection {atom}-{orbital} in {file_path}"
                 )
 
             return {
@@ -323,7 +323,7 @@ def extract_atomic_states_info(
             }
 
         except ValueError as e:
-            print_error(f"There was an error in extracting the atomic state information.")
+            print_error(f"There was an error in extracting the atomic projection information.")
             raise
 
         except FileNotFoundError:
@@ -370,7 +370,7 @@ def extract_atomic_states_info(
             }
 
         except ValueError:
-            print_error("There was an error in extracting the atomic state information.")
+            print_error("There was an error in extracting the atomic projection information.")
             raise
 
         except FileNotFoundError:

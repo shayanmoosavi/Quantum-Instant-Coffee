@@ -10,7 +10,6 @@ import re
 from typing import List, Tuple, Dict
 
 from ui.ui_helpers import *
-from rich.markup import escape
 
 
 def select_pseudopotentials(pseudo_files: List[str],
