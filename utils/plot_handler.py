@@ -208,8 +208,7 @@ class BandPlotter:
             x = xdata[condition[:, band]]
             y = ydata[condition[:, band], band].T
 
-            # Multiplying the weights by a scaling factor to get thicker points
-            weights = 2 * orbital_weights[condition[:, band], band]
+            weights = orbital_weights[condition[:, band], band]
 
             # Apply alpha transparency if spin-orbit coupling is enabled
             if spin_orbit:
@@ -995,17 +994,17 @@ def plot_pdos(project: ProjectSetup,
                 print_success(f"Created: `{file_name}`")
 
             else:
-                    # Creating and displaying the plot
-                    with console.status("Creating PDOS plot..."):
-                        plotter.create_pdos_plot(
-                            compound_name,
-                            energy,
-                            pdos_total,
-                            projection_data,
-                            flag == "_soc"
-                        )
-                        plt.show()
-                    print_success("Plot displayed successfully.")
+                # Creating and displaying the plot
+                with console.status("Creating PDOS plot..."):
+                    plotter.create_pdos_plot(
+                        compound_name,
+                        energy,
+                        pdos_total,
+                        projection_data,
+                        flag == "_soc"
+                    )
+                    plt.show()
+                print_success("Plot displayed successfully.")
 
 if __name__ == "__main__":
     """
