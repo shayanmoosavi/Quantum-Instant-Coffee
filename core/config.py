@@ -155,7 +155,7 @@ def load_config(config_file: str = None) -> ProjectConfig:
             if user_id:
                 script_root_dir = os.path.abspath(
                     os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
-                config_file = os.path.join(script_root_dir, "../userfiles", user_id, "config.json")
+                config_file = os.path.join(script_root_dir, "..", user_id, "config.json")
                 print_info(f"Config file path: {os.path.abspath(config_file)}")
                 if os.path.exists(os.path.abspath(config_file)):
                     print_success(f"Config found for {user_id}")

@@ -110,18 +110,17 @@ subfolders with the following directory structure:
 
 ```ansi
 .
-└── userfiles/
-    └── user_name/
-        └── compound_name/
+└── user_name/
+    └── compound_name/
+        ├── scf
+        ├── projected_bands
+        ├── pdos
+        ├── strain
+        └── spin_orbit/
             ├── scf
             ├── projected_bands
             ├── pdos
-            ├── strain
-            └── spin_orbit/
-                ├── scf
-                ├── projected_bands
-                ├── pdos
-                └── wannier
+            └── wannier
 ```
 
 After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
@@ -142,7 +141,7 @@ COFFEE=<user-name> python compare_bands_plotter.py <compound-name>
 
 ### 1- Configuring Directory Structure and Input File Generation
 If you want to customize the list of generated input files, you can do so by writing your own `config.json` file in 
-`userfiles/user_name` directory. The following keys in the `input` section are optional and can be removed if not needed:
+`user_name` directory. The following keys in the `input` section are optional and can be removed if not needed:
 - `relax_input`: The input file for Quantum ESPRESSO relax calculations
 - `nscf_input`: The input file for Quantum ESPRESSO nscf calculations
 - `pdos_input`: The input file for Quantum ESPRESSO pdos calculations
