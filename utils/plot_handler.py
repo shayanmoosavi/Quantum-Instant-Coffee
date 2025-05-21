@@ -32,6 +32,7 @@ from data.data_collector import prepare_bands_info, prepare_wannier_info, prepar
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 from ui.ui_helpers import print_header, console, print_success, prompt_input
+from utils.print_thanks import print_animated_ascii
 
 
 class BandsPlotConfig:
@@ -677,7 +678,6 @@ def display_band_plot_info(projection_info: Dict,
                            spin_orbit_flag: str,
                            include_stress: bool = False,
                            stress_amount: str = None):
-
     debug_table = Table(title="Projection Info Debug", box=box.ROUNDED)
     debug_table.add_column("Parameter", style="cyan")
     debug_table.add_column("Value", style="green")
@@ -692,12 +692,10 @@ def display_band_plot_info(projection_info: Dict,
         debug_info = {k: v for k, v in info.items() if k != "orbital_weights"}
         debug_table.add_row(f"Element {atom}", str(debug_info))
 
-
     console.print(debug_table)
 
 
 def display_wannier_plot_info(fermi_energy: float, alat: float, flag: str):
-
     debug_table = Table(box=box.ROUNDED, title="Wannier Comparison Debug Info")
     debug_table.add_column("Parameter", style="cyan")
     debug_table.add_column("Value", style="green")
@@ -765,9 +763,9 @@ def plot_band_structure(project: ProjectSetup,
     if test_module:
         # Debug mode: Printing projection information for verification
         for projection_info, spin_orbit_flag, stress_amount in zip(
-            projection_info_list,
-            project.band_info.spin_orbit_flags or [False] * len(project.band_data.energy),
-            (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
+                projection_info_list,
+                project.band_info.spin_orbit_flags or [False] * len(project.band_data.energy),
+                (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
         ):
             print('\n')
             display_band_plot_info(projection_info,
@@ -777,7 +775,7 @@ def plot_band_structure(project: ProjectSetup,
     else:
         # Plotting mode: Generating plots for each dataset
         for i, (projection_data, k_points, energy, k_points_proj, energy_proj,
-             number_of_bands, spin_orbit, stress_amount) in enumerate(zip(
+                number_of_bands, spin_orbit, stress_amount) in enumerate(zip(
             projection_info_list,
             project.band_data.k_points,
             project.band_data.energy,
@@ -833,6 +831,9 @@ def plot_band_structure(project: ProjectSetup,
                 plt.show()
                 print_success("Plot displayed successfully.")
 
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
 
 def plot_wannier_comparison(project: ProjectSetup,
                             plot_config: BandsPlotConfig = BandsPlotConfig(),
@@ -856,11 +857,10 @@ def plot_wannier_comparison(project: ProjectSetup,
     if test_module:
 
         for i, (fermi_energy, alat, flag) in enumerate(zip(
-            project.wannier_setup.fermi_energies,
-            project.wannier_setup.alat_parameters,
-            spin_orbit_flags
+                project.wannier_setup.fermi_energies,
+                project.wannier_setup.alat_parameters,
+                spin_orbit_flags
         ), 1):
-
             console.rule(f"Processing dataset {i} of {total_plots}")
             display_wannier_plot_info(fermi_energy, alat, flag)
 
@@ -914,6 +914,9 @@ def plot_wannier_comparison(project: ProjectSetup,
                 plt.show()
                 print_success("Plot displayed successfully.")
 
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
 
 def plot_pdos(project: ProjectSetup,
               plot_config: DOSPlotConfig = DOSPlotConfig(),
@@ -949,7 +952,6 @@ def plot_pdos(project: ProjectSetup,
 
         for i, (projection_data, flag) in enumerate(
                 zip(projection_data_list, spin_orbit_flags), 1):
-
             console.rule(f"Processing dataset {i} of {total_plots}")
             print('\n')
             display_pdos_plot_info(unique_elements_list, projection_data)
@@ -1006,6 +1008,10 @@ def plot_pdos(project: ProjectSetup,
                     plt.show()
                 print_success("Plot displayed successfully.")
 
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
+
 if __name__ == "__main__":
     """
     Main entry point for the script. Prepares configuration, processes data, and plots band structures.
@@ -1032,7 +1038,8 @@ if __name__ == "__main__":
     # Check if the script is being run for input generation (3 arguments passed)
     is_input = len(argv) == 3
 
-    response = prompt_input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input(
+        "Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
     match response:
         case "wannier":
