@@ -27,59 +27,13 @@ import numpy as np
 from rich import box
 from rich.table import Table
 
+from core.config import BandsPlotConfig, DOSPlotConfig
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
 from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 from ui.ui_helpers import print_header, console, print_success, prompt_input
 from utils.print_thanks import print_animated_ascii
-
-
-class BandsPlotConfig:
-    """Configuration class containing constants for plot styling and parameters.
-
-    Attributes:
-        HIGH_SYMMETRY_K_POINTS (list): K-point coordinates for high symmetry points in k-space
-        K_LABELS (list): LaTeX formatted labels for high symmetry k-points
-        ORBITAL_COLORS (dict): Color codes for different orbital types
-        FIGURE_HEIGHT (int): Default figure height in inches
-        FIGURE_WIDTH (int): Default figure width in inches
-        ENERGY_LIMITS (tuple): Y-axis energy range in eV
-    """
-    HIGH_SYMMETRY_K_POINTS = [0.0000, 0.5774, 0.9107, 1.5774]
-    K_LABELS = [r"$\Gamma$", r"$M$", r"$K$", r"$\Gamma$"]
-    ORBITAL_COLORS = {
-        "s": "#FF00ED",
-        "p": "#0BF317",
-        "d": "#FF2B11",
-        "pz": "#0D3EE0",
-        "px+py": "#0BF317",
-        "dz2": "#0D3EE0",
-        "dxz+dyz": "#0BF317",
-        "dx2y2+dxy": "#FF2B11",
-    }
-    FIGURE_HEIGHT = 6
-    FIGURE_WIDTH = 12
-    ENERGY_LIMITS = (-5, 5)
-
-
-class DOSPlotConfig:
-    """Configuration class for PDOS plotting.
-
-    Attributes:
-        ORBITAL_COLORS (dict): Color codes for different orbital types
-        FIGURE_HEIGHT (int): Default figure height in inches
-        FIGURE_WIDTH (int): Default figure width in inches
-        ENERGY_LIMITS (tuple): Y-axis energy range in eV
-    """
-    ORBITAL_COLORS = {
-        "s": "#FF00ED",
-        "p": "#0BF317",
-        "d": "#FF2B11",
-    }
-    FIGURE_HEIGHT = 6
-    FIGURE_WIDTH = 12
-    ENERGY_LIMITS = (-5, 5)
 
 
 class CompoundNameFormatter:
@@ -146,7 +100,7 @@ class BandPlotter:
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(title)
-        ax.set_xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
+        ax.set_xticks(self.config.high_symmetry_points, self.config.k_labels)
         ax.grid("on")
 
     @staticmethod
@@ -251,8 +205,8 @@ class BandPlotter:
         fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
 
         # Setting figure dimensions
-        fig.set_figheight(self.config.FIGURE_HEIGHT)
-        fig.set_figwidth(self.config.FIGURE_WIDTH)
+        fig.set_figheight(self.config.figure_height)
+        fig.set_figwidth(self.config.figure_width)
 
         # Formatting compound name for plot title
         latex_name = CompoundNameFormatter.format_compound_name(compound_name)
@@ -304,7 +258,7 @@ class BandPlotter:
             axs[element_index].legend(loc="lower center", handles=legend_labels)
 
         # Setting energy limits
-        plt.ylim(self.config.ENERGY_LIMITS)
+        plt.ylim(self.config.energy_limits)
 
         # Saving plot if path is provided
         if save_path:
@@ -342,7 +296,7 @@ class WannierComparePlotter:
         else:
             plt.title(f"Band Structure Comparison for {latex_name} without Spin-Orbit Coupling")
 
-        plt.xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
+        plt.xticks(self.config.high_symmetry_points, self.config.k_labels)
 
     def plot_comparison(self,
                         k_points_dft: np.ndarray,
@@ -369,7 +323,7 @@ class WannierComparePlotter:
         for band in range(len(dft_energies)):
             plt.plot(k_points_dft, dft_energies[band, :], color="blue")
 
-        plt.ylim(self.config.ENERGY_LIMITS)
+        plt.ylim(self.config.energy_limits)
         plt.legend(loc=(0.4, 0.6))
 
         if save_path:
@@ -400,7 +354,7 @@ class DOSPlotter:
         ax.set_ylabel("PDOS")
         ax.set_title(title)
         ax.grid("on")
-        ax.set_xlim(self.config.ENERGY_LIMITS)
+        ax.set_xlim(self.config.energy_limits)
 
     @staticmethod
     def plot_pdos(ax: matplotlib.axes.Axes,
@@ -448,8 +402,8 @@ class DOSPlotter:
         fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
 
         # Setting figure dimensions
-        fig.set_figheight(self.config.FIGURE_HEIGHT)
-        fig.set_figwidth(self.config.FIGURE_WIDTH)
+        fig.set_figheight(self.config.figure_height)
+        fig.set_figwidth(self.config.figure_width)
 
         # Formatting compound name for plot title
         latex_name = CompoundNameFormatter.format_compound_name(compound_name)
@@ -525,7 +479,7 @@ class ProjectionDataProcessor:
             dos_data_list (list): List of dictionaries containing DOS data
         """
         if not is_pdos:
-            self.config = config or BandsPlotConfig()
+            self.config = config or BandsPlotConfig.get_default_config()
             self.weights_info_list = weights_info_list
             self.elements_list = unique_elements_list
             self.is_pdos = is_pdos
@@ -591,7 +545,7 @@ class ProjectionDataProcessor:
             colors = []
             weights = []
 
-            for orbital, color in self.config.ORBITAL_COLORS.items():
+            for orbital, color in self.config.orbital_colors.items():
                 projection = f"{element}-{orbital}"
 
                 # Check if this projection exists in the weights_info
@@ -613,7 +567,7 @@ class ProjectionDataProcessor:
             energies = []
             pdos = []
 
-            for orbital, color in self.config.ORBITAL_COLORS.items():
+            for orbital, color in self.config.orbital_colors.items():
                 projection = f"{element}-{orbital}"
 
                 # Check if this projection exists in the weights_info
@@ -755,7 +709,7 @@ def display_pdos_plot_info(elements: List[str], projection_data: Dict[str, Dict]
 
 
 def plot_band_structure(project: ProjectSetup,
-                        plot_config: BandsPlotConfig = BandsPlotConfig(),
+                        plot_config: BandsPlotConfig = BandsPlotConfig.get_default_config(),
                         save_fig: bool = True,
                         test_module: bool = False) -> None:
     """
@@ -865,7 +819,7 @@ def plot_band_structure(project: ProjectSetup,
 
 
 def plot_wannier_comparison(project: ProjectSetup,
-                            plot_config: BandsPlotConfig = BandsPlotConfig(),
+                            plot_config: BandsPlotConfig = BandsPlotConfig.get_default_config(),
                             save_fig: bool = True,
                             test_module: bool = False) -> None:
     """Plot Wannier and DFT band structure comparison.
@@ -948,7 +902,7 @@ def plot_wannier_comparison(project: ProjectSetup,
 
 
 def plot_pdos(project: ProjectSetup,
-              plot_config: DOSPlotConfig = DOSPlotConfig(),
+              plot_config: DOSPlotConfig = DOSPlotConfig.get_default_config(),
               save_fig: bool = False,
               test_module: bool = False) -> None:
     """Plot projected DOS.
