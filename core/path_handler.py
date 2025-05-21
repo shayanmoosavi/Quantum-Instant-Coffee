@@ -58,7 +58,7 @@ def get_project_directory(compound_name: str) -> str:
     """
     script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # The root directory of the program
     user_id = os.getenv("COFFEE")
-    user_path = os.path.join(script_root_dir, "../userfiles", user_id) if user_id else ".."
+    user_path = os.path.join(script_root_dir, "..", user_id) if user_id else ".."
     root_dir = os.path.abspath(user_path)  # The root directory of the project
     return os.path.join(root_dir, compound_name)  # The calculation directory
 
