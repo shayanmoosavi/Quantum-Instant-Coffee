@@ -12,6 +12,7 @@
 - [Features](#-features)
 - [Troubleshooting](#-troubleshooting)
 - [Usage](#-usage)
+- [Limitations](#-limitations)
 - [Configuration](#-configuration)
 - [License](#-license)
 - [Contributing](#-contributing)
@@ -137,6 +138,19 @@ To compare the wannier interpolated bands with DFT bands, run the following comm
 ```bash
 COFFEE=<user-name> python compare_bands_plotter.py <compound-name>
 ```
+
+## 🚧 Limitations
+
+### 1- Projected Bands
+The input file generation and plotting for projected bands currently only supports 2D hexagonal structures. You may need to modify the code to support other structures.
+
+### 2- Atomic Projections
+The software currently lacks whole atom projections for the projected bands and projected DOS (PDOS).
+
+> ℹ️ Info
+> 
+> These limitations are due to the fact that the software is still in its early stages and is being actively developed. They are planned to be addressed in future releases.
+
 
 ## ⚙️ Configuration
 
@@ -274,15 +288,71 @@ required_patterns = {
 ```
 
 ### 2- Configuring Plot Settings
-You can modify the plot settings in the main plotting scripts (e.g., `projected_bands_plotter.py`) after instantiating the `BandsPlotConfig` or `DOSPlotConfig` objects.
+You can modify the plot settings by creating a `plot_config.yaml` file in the `user_name` directory.
 
-An example of modified `BandsPlotConfig`:
+The default config:
+```yaml
+# Bands plot configuration
+bands_plot:
+  high_symmetry_points: [ 0.0000, 0.5774, 0.9107, 1.5774 ] # Coordinates of high symmetry points in the Brillouin zone
+  k_labels: [ "Gamma", "M", "K", "Gamma" ] # Labels for the high symmetry points
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+    pz: "#0D3EE0"
+    "px+py": "#0BF317"
+    dz2: "#0D3EE0"
+    "dxz+dyz": "#0BF317"
+    "dx2y2+dxy": "#FF2B11"
+  figure:
+    height: 6 # Height of the figure in inches
+    width: 12 # Width of the figure in inches
+    energy_limits: [ -5, 5 ] # Energy limits for the plot
 
-```python
-from utils.plot_handler import BandsPlotConfig
+# Density of States (DOS) plot configuration
+dos_plot:
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+  figure:
+    height: 6
+    width: 12
+    energy_limits: [ -5, 5 ]
+```
 
-plot_config = BandsPlotConfig()
-plot_config.ENERGY_LIMITS = (-8, 8)
+An example of modified `plot_config.yaml` with changed energy limits:
+
+```yaml
+# Bands plot configuration
+bands_plot:
+  high_symmetry_points: [ 0.0000, 0.5774, 0.9107, 1.5774 ] # Coordinates of high symmetry points in the Brillouin zone
+  k_labels: [ "Gamma", "M", "K", "Gamma" ] # Labels for the high symmetry points
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+    pz: "#0D3EE0"
+    "px+py": "#0BF317"
+    dz2: "#0D3EE0"
+    "dxz+dyz": "#0BF317"
+    "dx2y2+dxy": "#FF2B11"
+  figure:
+    height: 6 # Height of the figure in inches
+    width: 12 # Width of the figure in inches
+    energy_limits: [ -10, 5 ] # Energy limits for the plot
+
+# Density of States (DOS) plot configuration
+dos_plot:
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+  figure:
+    height: 6
+    width: 12
+    energy_limits: [ -10, 5 ]
 ```
 
 ## 📄 License
