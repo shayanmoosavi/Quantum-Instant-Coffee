@@ -1,0 +1,28 @@
+# Bands plot configuration
+bands_plot:
+  high_symmetry_points: [ 0.0000, 0.5774, 0.9107, 1.5774 ] # Coordinates of high symmetry points in the Brillouin zone
+  k_labels: [ "Gamma", "M", "K", "Gamma" ] # Labels for the high symmetry points
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+    pz: "#0D3EE0"
+    "px+py": "#0BF317"
+    dz2: "#0D3EE0"
+    "dxz+dyz": "#0BF317"
+    "dx2y2+dxy": "#FF2B11"
+  figure:
+    height: 6 # Height of the figure in inches
+    width: 12 # Width of the figure in inches
+    energy_limits: [ -5, 5 ] # Energy limits for the plot
+
+# Density of States (DOS) plot configuration
+dos_plot:
+  orbital_colors:
+    s: "#FF00ED"
+    p: "#0BF317"
+    d: "#FF2B11"
+  figure:
+    height: 6
+    width: 12
+    energy_limits: [ -5, 5 ]

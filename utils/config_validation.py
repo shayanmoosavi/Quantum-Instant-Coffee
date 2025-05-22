@@ -117,3 +117,95 @@ def validate_config_structure(config: Dict[str, Any]) -> None:
     # Validate individual sections
     validate_directory_structure(config["directory_structure"])
     validate_file_patterns(config["file_patterns"])
+
+
+def validate_plot_config_structure(config: Dict[str, Any], config_type: str) -> None:
+    """
+    Validate plot configuration structure.
+
+    Args:
+        config: Configuration dictionary to validate
+        config_type: Type of config ('bands' or 'dos')
+
+    Raises:
+        ConfigValidationError: If validation fails
+    """
+    required_sections = {
+        'bands': 'bands_plot',
+        'dos': 'dos_plot'
+    }
+
+    section_name = required_sections[config_type]
+
+    if section_name not in config:
+        raise ConfigValidationError(f"Missing required section: {section_name}")
+
+    section_config = config[section_name]
+
+    def validate_sections(section_config: Dict[str, Any], config_type: str = "bands"):
+        """
+        Validates sections of the plot configuration.
+
+        Args:
+            section_config: Configuration dictionary for the specific section
+            config_type: Type of config ('bands' or 'dos')
+
+        Raises:
+            ConfigValidationError: If validation fails
+        """
+        if 'orbital_colors' in section_config:
+            if not isinstance(section_config['orbital_colors'], dict):
+                raise ConfigValidationError(
+                    "Invalid orbital_colors section! Check default plot_config.yaml to see the correct format.")
+
+        if 'figure' in section_config:
+            figure_config = section_config['figure']
+            if not isinstance(figure_config, dict):
+                raise ConfigValidationError(
+                    "Invalid figure section! Check default plot_config.yaml to see the correct format.")
+
+            # Validate numeric fields if present
+            for field in ['height', 'width']:
+                if field in figure_config and not isinstance(figure_config[field], (int, float)):
+                    raise ConfigValidationError(f"figure.{field} must be numeric")
+
+            if 'energy_limits' in figure_config:
+                energy_limits = figure_config['energy_limits']
+
+                if not isinstance(energy_limits, list) or len(energy_limits) != 2:
+                    raise ConfigValidationError(
+                        "figure.energy_limits must be a list of two numeric values.")
+
+                if not all(isinstance(val, (int, float)) for val in energy_limits):
+                    raise ConfigValidationError(
+                        "figure.energy_limits must be a list of two numeric values.")
+
+        if config_type == 'bands':
+            if 'high_symmetry_points' in section_config:
+                high_symmetry_points = section_config['high_symmetry_points']
+                if not isinstance(high_symmetry_points, list):
+                    raise ConfigValidationError(
+                        "high_symmetry_points section must be a list of floats.")
+                else:
+                    for point in high_symmetry_points:
+                        if not isinstance(point, float):
+                            raise ConfigValidationError(
+                                "high_symmetry_points section must be a list of floats.")
+
+            if 'k_labels' in section_config:
+                k_labels = section_config['k_labels']
+                if not isinstance(k_labels, list):
+                    raise ConfigValidationError(
+                        "k_labels section must be a list of strings.")
+                else:
+                    for label in k_labels:
+                        if not isinstance(label, str):
+                            raise ConfigValidationError(
+                                "k_labels section must be a list of strings.")
+
+    # Validate based on config type
+    if config_type == 'bands':
+        validate_sections(section_config, config_type="bands")
+
+    elif config_type == 'dos':
+        validate_sections(section_config, config_type="dos")

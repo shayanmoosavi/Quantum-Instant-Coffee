@@ -27,58 +27,13 @@ import numpy as np
 from rich import box
 from rich.table import Table
 
+from core.config import BandsPlotConfig, DOSPlotConfig
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
 from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.models import ProjectSetup
 from core.project_setup import initialize_project
 from ui.ui_helpers import print_header, console, print_success, prompt_input
-
-
-class BandsPlotConfig:
-    """Configuration class containing constants for plot styling and parameters.
-
-    Attributes:
-        HIGH_SYMMETRY_K_POINTS (list): K-point coordinates for high symmetry points in k-space
-        K_LABELS (list): LaTeX formatted labels for high symmetry k-points
-        ORBITAL_COLORS (dict): Color codes for different orbital types
-        FIGURE_HEIGHT (int): Default figure height in inches
-        FIGURE_WIDTH (int): Default figure width in inches
-        ENERGY_LIMITS (tuple): Y-axis energy range in eV
-    """
-    HIGH_SYMMETRY_K_POINTS = [0.0000, 0.5774, 0.9107, 1.5774]
-    K_LABELS = [r"$\Gamma$", r"$M$", r"$K$", r"$\Gamma$"]
-    ORBITAL_COLORS = {
-        "s": "#FF00ED",
-        "p": "#0BF317",
-        "d": "#FF2B11",
-        "pz": "#0D3EE0",
-        "px+py": "#0BF317",
-        "dz2": "#0D3EE0",
-        "dxz+dyz": "#0BF317",
-        "dx2y2+dxy": "#FF2B11",
-    }
-    FIGURE_HEIGHT = 6
-    FIGURE_WIDTH = 12
-    ENERGY_LIMITS = (-5, 5)
-
-
-class DOSPlotConfig:
-    """Configuration class for PDOS plotting.
-
-    Attributes:
-        ORBITAL_COLORS (dict): Color codes for different orbital types
-        FIGURE_HEIGHT (int): Default figure height in inches
-        FIGURE_WIDTH (int): Default figure width in inches
-        ENERGY_LIMITS (tuple): Y-axis energy range in eV
-    """
-    ORBITAL_COLORS = {
-        "s": "#FF00ED",
-        "p": "#0BF317",
-        "d": "#FF2B11",
-    }
-    FIGURE_HEIGHT = 6
-    FIGURE_WIDTH = 12
-    ENERGY_LIMITS = (-5, 5)
+from utils.print_thanks import print_animated_ascii
 
 
 class CompoundNameFormatter:
@@ -145,7 +100,7 @@ class BandPlotter:
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(title)
-        ax.set_xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
+        ax.set_xticks(self.config.high_symmetry_points, self.config.k_labels)
         ax.grid("on")
 
     @staticmethod
@@ -208,8 +163,7 @@ class BandPlotter:
             x = xdata[condition[:, band]]
             y = ydata[condition[:, band], band].T
 
-            # Multiplying the weights by a scaling factor to get thicker points
-            weights = 2 * orbital_weights[condition[:, band], band]
+            weights = orbital_weights[condition[:, band], band]
 
             # Apply alpha transparency if spin-orbit coupling is enabled
             if spin_orbit:
@@ -251,8 +205,8 @@ class BandPlotter:
         fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
 
         # Setting figure dimensions
-        fig.set_figheight(self.config.FIGURE_HEIGHT)
-        fig.set_figwidth(self.config.FIGURE_WIDTH)
+        fig.set_figheight(self.config.figure_height)
+        fig.set_figwidth(self.config.figure_width)
 
         # Formatting compound name for plot title
         latex_name = CompoundNameFormatter.format_compound_name(compound_name)
@@ -304,7 +258,7 @@ class BandPlotter:
             axs[element_index].legend(loc="lower center", handles=legend_labels)
 
         # Setting energy limits
-        plt.ylim(self.config.ENERGY_LIMITS)
+        plt.ylim(self.config.energy_limits)
 
         # Saving plot if path is provided
         if save_path:
@@ -342,7 +296,7 @@ class WannierComparePlotter:
         else:
             plt.title(f"Band Structure Comparison for {latex_name} without Spin-Orbit Coupling")
 
-        plt.xticks(self.config.HIGH_SYMMETRY_K_POINTS, self.config.K_LABELS)
+        plt.xticks(self.config.high_symmetry_points, self.config.k_labels)
 
     def plot_comparison(self,
                         k_points_dft: np.ndarray,
@@ -369,7 +323,7 @@ class WannierComparePlotter:
         for band in range(len(dft_energies)):
             plt.plot(k_points_dft, dft_energies[band, :], color="blue")
 
-        plt.ylim(self.config.ENERGY_LIMITS)
+        plt.ylim(self.config.energy_limits)
         plt.legend(loc=(0.4, 0.6))
 
         if save_path:
@@ -400,7 +354,7 @@ class DOSPlotter:
         ax.set_ylabel("PDOS")
         ax.set_title(title)
         ax.grid("on")
-        ax.set_xlim(self.config.ENERGY_LIMITS)
+        ax.set_xlim(self.config.energy_limits)
 
     @staticmethod
     def plot_pdos(ax: matplotlib.axes.Axes,
@@ -448,8 +402,8 @@ class DOSPlotter:
         fig, axs = plt.subplots(1, number_of_subplots, sharey=True, layout="constrained")
 
         # Setting figure dimensions
-        fig.set_figheight(self.config.FIGURE_HEIGHT)
-        fig.set_figwidth(self.config.FIGURE_WIDTH)
+        fig.set_figheight(self.config.figure_height)
+        fig.set_figwidth(self.config.figure_width)
 
         # Formatting compound name for plot title
         latex_name = CompoundNameFormatter.format_compound_name(compound_name)
@@ -525,7 +479,7 @@ class ProjectionDataProcessor:
             dos_data_list (list): List of dictionaries containing DOS data
         """
         if not is_pdos:
-            self.config = config or BandsPlotConfig()
+            self.config = config or BandsPlotConfig.get_default_config()
             self.weights_info_list = weights_info_list
             self.elements_list = unique_elements_list
             self.is_pdos = is_pdos
@@ -591,7 +545,7 @@ class ProjectionDataProcessor:
             colors = []
             weights = []
 
-            for orbital, color in self.config.ORBITAL_COLORS.items():
+            for orbital, color in self.config.orbital_colors.items():
                 projection = f"{element}-{orbital}"
 
                 # Check if this projection exists in the weights_info
@@ -613,7 +567,7 @@ class ProjectionDataProcessor:
             energies = []
             pdos = []
 
-            for orbital, color in self.config.ORBITAL_COLORS.items():
+            for orbital, color in self.config.orbital_colors.items():
                 projection = f"{element}-{orbital}"
 
                 # Check if this projection exists in the weights_info
@@ -678,27 +632,45 @@ def display_band_plot_info(projection_info: Dict,
                            spin_orbit_flag: str,
                            include_stress: bool = False,
                            stress_amount: str = None):
+    """
+    Display debug information for band structure plots in a formatted table.
 
+    Args:
+        projection_info (Dict): Dictionary containing projection data for each element.
+        spin_orbit_flag (str): Flag indicating whether spin-orbit coupling (SOC) is enabled.
+        include_stress (bool, optional): Whether to include stress information in the table. Defaults to False.
+        stress_amount (str, optional): Stress amount as a string (e.g., '1_30'). Defaults to None.
+    """
+    # Creating a table with a title and rounded box style
     debug_table = Table(title="Projection Info Debug", box=box.ROUNDED)
     debug_table.add_column("Parameter", style="cyan")
     debug_table.add_column("Value", style="green")
 
+    # Add strain information if stress is included, otherwise add SOC status
     if include_stress:
         strain = float(stress_amount.replace('_', '.')) * 100
         debug_table.add_row("Strain", f"{strain:.2f}%")
     else:
         debug_table.add_row("SOC", "Yes" if spin_orbit_flag else "No")
 
+    # Add rows for each element's projection data, excluding orbital weights
     for atom, info in projection_info.items():
         debug_info = {k: v for k, v in info.items() if k != "orbital_weights"}
         debug_table.add_row(f"Element {atom}", str(debug_info))
-
 
     console.print(debug_table)
 
 
 def display_wannier_plot_info(fermi_energy: float, alat: float, flag: str):
+    """
+    Display debug information for Wannier comparison plots in a formatted table.
 
+    Args:
+        fermi_energy (float): Fermi energy value in eV.
+        alat (float): Lattice parameter in Å.
+        flag (str): Spin-orbit coupling (SOC) flag (e.g., '_soc').
+    """
+    # Creating a table with a title and rounded box style
     debug_table = Table(box=box.ROUNDED, title="Wannier Comparison Debug Info")
     debug_table.add_column("Parameter", style="cyan")
     debug_table.add_column("Value", style="green")
@@ -711,6 +683,14 @@ def display_wannier_plot_info(fermi_energy: float, alat: float, flag: str):
 
 
 def display_pdos_plot_info(elements: List[str], projection_data: Dict[str, Dict]):
+    """
+    Display debug information for projected density of states (PDOS) plots in a formatted table.
+
+    Args:
+        elements (List[str]): List of unique chemical elements.
+        projection_data (Dict[str, Dict]): Dictionary containing projection data for each element.
+    """
+    # Creating a table with a title and rounded box style
     debug_table = Table(box=box.ROUNDED, title="PDOS Debug Info")
     debug_table.add_column("Parameter", style="cyan")
     debug_table.add_column("Value", style="green")
@@ -729,7 +709,7 @@ def display_pdos_plot_info(elements: List[str], projection_data: Dict[str, Dict]
 
 
 def plot_band_structure(project: ProjectSetup,
-                        plot_config: BandsPlotConfig = BandsPlotConfig(),
+                        plot_config: BandsPlotConfig = BandsPlotConfig.get_default_config(),
                         save_fig: bool = True,
                         test_module: bool = False) -> None:
     """
@@ -766,9 +746,9 @@ def plot_band_structure(project: ProjectSetup,
     if test_module:
         # Debug mode: Printing projection information for verification
         for projection_info, spin_orbit_flag, stress_amount in zip(
-            projection_info_list,
-            project.band_info.spin_orbit_flags or [False] * len(project.band_data.energy),
-            (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
+                projection_info_list,
+                project.band_info.spin_orbit_flags or [False] * len(project.band_data.energy),
+                (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(project.band_data.energy)
         ):
             print('\n')
             display_band_plot_info(projection_info,
@@ -778,7 +758,7 @@ def plot_band_structure(project: ProjectSetup,
     else:
         # Plotting mode: Generating plots for each dataset
         for i, (projection_data, k_points, energy, k_points_proj, energy_proj,
-             number_of_bands, spin_orbit, stress_amount) in enumerate(zip(
+                number_of_bands, spin_orbit, stress_amount) in enumerate(zip(
             projection_info_list,
             project.band_data.k_points,
             project.band_data.energy,
@@ -834,9 +814,12 @@ def plot_band_structure(project: ProjectSetup,
                 plt.show()
                 print_success("Plot displayed successfully.")
 
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
 
 def plot_wannier_comparison(project: ProjectSetup,
-                            plot_config: BandsPlotConfig = BandsPlotConfig(),
+                            plot_config: BandsPlotConfig = BandsPlotConfig.get_default_config(),
                             save_fig: bool = True,
                             test_module: bool = False) -> None:
     """Plot Wannier and DFT band structure comparison.
@@ -857,11 +840,10 @@ def plot_wannier_comparison(project: ProjectSetup,
     if test_module:
 
         for i, (fermi_energy, alat, flag) in enumerate(zip(
-            project.wannier_setup.fermi_energies,
-            project.wannier_setup.alat_parameters,
-            spin_orbit_flags
+                project.wannier_setup.fermi_energies,
+                project.wannier_setup.alat_parameters,
+                spin_orbit_flags
         ), 1):
-
             console.rule(f"Processing dataset {i} of {total_plots}")
             display_wannier_plot_info(fermi_energy, alat, flag)
 
@@ -915,9 +897,12 @@ def plot_wannier_comparison(project: ProjectSetup,
                 plt.show()
                 print_success("Plot displayed successfully.")
 
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
 
 def plot_pdos(project: ProjectSetup,
-              plot_config: DOSPlotConfig = DOSPlotConfig(),
+              plot_config: DOSPlotConfig = DOSPlotConfig.get_default_config(),
               save_fig: bool = False,
               test_module: bool = False) -> None:
     """Plot projected DOS.
@@ -950,7 +935,6 @@ def plot_pdos(project: ProjectSetup,
 
         for i, (projection_data, flag) in enumerate(
                 zip(projection_data_list, spin_orbit_flags), 1):
-
             console.rule(f"Processing dataset {i} of {total_plots}")
             print('\n')
             display_pdos_plot_info(unique_elements_list, projection_data)
@@ -995,17 +979,21 @@ def plot_pdos(project: ProjectSetup,
                 print_success(f"Created: `{file_name}`")
 
             else:
-                    # Creating and displaying the plot
-                    with console.status("Creating PDOS plot..."):
-                        plotter.create_pdos_plot(
-                            compound_name,
-                            energy,
-                            pdos_total,
-                            projection_data,
-                            flag == "_soc"
-                        )
-                        plt.show()
-                    print_success("Plot displayed successfully.")
+                # Creating and displaying the plot
+                with console.status("Creating PDOS plot..."):
+                    plotter.create_pdos_plot(
+                        compound_name,
+                        energy,
+                        pdos_total,
+                        projection_data,
+                        flag == "_soc"
+                    )
+                    plt.show()
+                print_success("Plot displayed successfully.")
+
+        print_animated_ascii("ascii-art.txt")
+        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
 
 if __name__ == "__main__":
     """
@@ -1033,7 +1021,8 @@ if __name__ == "__main__":
     # Check if the script is being run for input generation (3 arguments passed)
     is_input = len(argv) == 3
 
-    response = prompt_input("Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
+    response = prompt_input(
+        "Enter the initialization type you want to test for (wannier, bands, pdos): ").strip().lower()
 
     match response:
         case "wannier":
