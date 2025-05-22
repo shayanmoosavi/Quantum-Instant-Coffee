@@ -27,7 +27,7 @@ from core.project_setup import initialize_project
 from plotting.plotters import BandPlotter, WannierComparePlotter, DOSPlotter
 from ui.plot_info_display import display_band_plot_info, display_wannier_plot_info, display_pdos_plot_info
 from ui.ui_helpers import print_header, console, print_success, prompt_input
-from utils.print_thanks import print_animated_ascii
+from ui.print_thanks import print_animated_ascii
 
 
 class ProjectionDataProcessor:

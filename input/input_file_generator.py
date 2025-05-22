@@ -18,7 +18,7 @@ from typing import List, Dict, Tuple
 
 from ui.ui_helpers import prompt_input, print_error, print_info, print_success, console, progress_track, print_header
 from utils.file_parser import get_poscar_data
-from utils.print_thanks import print_animated_ascii
+from ui.print_thanks import print_animated_ascii
 from core.project_setup import initialize_project
 from core.input_handler import get_pseudopotential_files
 from data.models import ProjectSetup
