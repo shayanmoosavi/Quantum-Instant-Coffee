@@ -12,7 +12,7 @@ from core.config import load_config
 from data.data_processor import process_band_data
 from data.data_collector import prepare_bands_info
 from ui.ui_helpers import print_warning
-from utils.plot_handler import plot_band_structure
+from plotting.plot_handler import plot_band_structure
 
 
 parser = argparse.ArgumentParser(description="Plot projected band structure.")

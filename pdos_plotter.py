@@ -12,7 +12,7 @@ from core.project_setup import initialize_project
 from data.data_processor import process_pdos_data
 from data.data_collector import prepare_pdos_info
 from ui.ui_helpers import print_warning
-from utils.plot_handler import plot_pdos
+from plotting.plot_handler import plot_pdos
 
 
 parser = argparse.ArgumentParser(description="Plot projected band structure.")

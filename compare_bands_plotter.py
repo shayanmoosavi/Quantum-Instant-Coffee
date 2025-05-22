@@ -11,7 +11,7 @@ from core.project_setup import initialize_project
 from data.data_processor import process_comparison_data
 from data.data_collector import prepare_wannier_info
 from ui.ui_helpers import print_warning
-from utils.plot_handler import plot_wannier_comparison
+from plotting.plot_handler import plot_wannier_comparison
 
 
 parser = argparse.ArgumentParser(description="Plot projected band structure.")
