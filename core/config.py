@@ -13,7 +13,7 @@ import json
 from yaml import safe_load
 
 from ui.ui_helpers import print_error, print_info, print_success, print_warning
-from utils.config_validation import validate_config_structure, ConfigValidationError
+from utils.config_validation import validate_config_structure, ConfigValidationError, validate_plot_config_structure
 
 
 @dataclass
@@ -142,6 +142,24 @@ class ProjectConfig:
         return config
 
 
+def overwrite_plot_config_values(default_config: Dict, user_config: Dict) -> Dict:
+    """
+    Recursively overwrites default configuration values with user-defined values.
+    Args:
+        default_config (Dict): The default configuration dictionary.
+        user_config (Dict): The user-defined configuration dictionary.
+
+    Returns:
+        Dict: The merged configuration dictionary.
+    """
+    for key, value in user_config.items():
+        if isinstance(value, Dict) and key in default_config and isinstance(default_config[key], Dict):
+            default_config[key] = overwrite_plot_config_values(default_config[key], value)
+        else:
+            default_config[key] = value
+    return default_config
+
+
 @dataclass
 class BandsPlotConfig:
     """Configuration class containing constants for plot styling and parameters.
@@ -164,28 +182,65 @@ class BandsPlotConfig:
     @classmethod
     def from_yaml(cls, config_file: str = "plot_config.yaml") -> 'BandsPlotConfig':
         """Creates configuration from YAML file."""
+        default_config_instance = cls.get_default_config()
+        default_config_dict = default_config_instance.__dict__
         try:
 
             with open(config_file, 'r') as f:
-                config = safe_load(f)['bands_plot']
+                user_config = safe_load(f)
+
+            validate_plot_config_structure(user_config, config_type="bands")
+
+            user_bands_plot_config = user_config['bands_plot']
+
+            # Merging user config with default config
+            merged_config_dict = overwrite_plot_config_values(default_config_dict.copy(), user_bands_plot_config)
+
+            # Reconstructing k_labels with LaTeX formatting if they were overridden
+            if 'k_labels' in user_bands_plot_config:
+                merged_config_dict['k_labels'] = [
+                    r"$\{}$".format(label) if label == "Gamma" else r"${}$".format(label)
+                    for label in merged_config_dict['k_labels']
+                ]
+
+            # Reconstructing energy_limits as a tuple
+            if 'figure' in user_bands_plot_config:
+                if 'energy_limits' in user_bands_plot_config['figure']:
+                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['figure']['energy_limits'])
+
+            # Extracting figure height and width from the merged 'figure' dictionary
+            merged_config_dict['figure_height'] = merged_config_dict['figure']['height']
+            merged_config_dict['figure_width'] = merged_config_dict['figure']['width']
+            del merged_config_dict['figure']
 
             return cls(
-                high_symmetry_points=config['high_symmetry_points'],
-                k_labels=[r"$\{}$".format(label) if label == "Gamma" else
-                          r"${}$".format(label) for label in config['k_labels']],
-                orbital_colors=config['orbital_colors'],
-                figure_height=config['figure']['height'],
-                figure_width=config['figure']['width'],
-                energy_limits=tuple(config['figure']['energy_limits'])
-            )
+                high_symmetry_points=merged_config_dict['high_symmetry_points'],
+                k_labels=merged_config_dict['k_labels'],
+                orbital_colors=merged_config_dict['orbital_colors'],
+                figure_height=merged_config_dict['figure_height'],
+                figure_width=merged_config_dict['figure_width'],
+                energy_limits=merged_config_dict['energy_limits'])
+
+        except ConfigValidationError as e:
+            print_error("An error occurred while validating the configuration file:")
+            print_error(f"{str(e)}")
+            print_warning("Using default configuration instead.")
+            return cls.get_default_config()
+
         except FileNotFoundError:
-            print_warning(f"Config file not found at `{config_file}`. Using defaults.")
+            print_warning(f"Config file not found at `{config_file}`. Using default configuration.")
+            return cls.get_default_config()
+
+        except Exception as e:
+            print_error(f"Unexpected error while loading config file:")
+            print_error(f"{str(e)}")
+            print_warning("Using default configuration instead.")
             return cls.get_default_config()
 
     @classmethod
     def get_default_config(cls) -> 'BandsPlotConfig':
         """Create configuration with default values."""
-        plot_config = cls(
+        return cls(
             high_symmetry_points=[0.0000, 0.5774, 0.9107, 1.5774],
             k_labels=[r"$\Gamma$", r"$M$", r"$K$", r"$\Gamma$"],
             orbital_colors={
@@ -202,7 +257,7 @@ class BandsPlotConfig:
             figure_width=12,
             energy_limits=(-5, 5)
         )
-        return plot_config
+
 
 @dataclass
 class DOSPlotConfig:
@@ -222,16 +277,43 @@ class DOSPlotConfig:
     @classmethod
     def from_yaml(cls, config_file: str = "plot_config.yaml") -> 'DOSPlotConfig':
         """Creates configuration from YAML file."""
+        default_config_instance = cls.get_default_config()
+        default_config_dict = default_config_instance.__dict__
+
         try:
             with open(config_file, 'r') as f:
-                config = safe_load(f)['dos_plot']
+                user_config = safe_load(f)
+
+            validate_plot_config_structure(user_config, config_type="dos")
+
+            user_dos_plot_config = user_config['dos_plot']
+
+            # Merging user config with default config
+            merged_config_dict = overwrite_plot_config_values(default_config_dict.copy(), user_dos_plot_config)
+
+            # Reconstructing energy_limits as a tuple
+            if 'figure' in user_dos_plot_config:
+                if 'energy_limits' in user_dos_plot_config['figure']:
+                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['figure']['energy_limits'])
+
+            # Extracting figure height and width from the merged 'figure' dictionary
+            merged_config_dict['figure_height'] = merged_config_dict['figure']['height']
+            merged_config_dict['figure_width'] = merged_config_dict['figure']['width']
+            del merged_config_dict['figure']
 
             return cls(
-                orbital_colors=config['orbital_colors'],
-                figure_height=config['figure']['height'],
-                figure_width=config['figure']['width'],
-                energy_limits=tuple(config['figure']['energy_limits'])
+                orbital_colors=merged_config_dict['orbital_colors'],
+                figure_height=merged_config_dict['figure_height'],
+                figure_width=merged_config_dict['figure_width'],
+                energy_limits=merged_config_dict['energy_limits']
             )
+
+        except ConfigValidationError as e:
+            print_error("An error occurred while validating the configuration file:")
+            print_error(f"{str(e)}")
+            print_warning("Using default configuration instead.")
+            return cls.get_default_config()
+
         except FileNotFoundError:
             print_warning(f"Config file not found at `{config_file}`. Using defaults.")
             return cls.get_default_config()
@@ -240,14 +322,14 @@ class DOSPlotConfig:
     def get_default_config(cls) -> 'DOSPlotConfig':
         """Creates configuration with default values."""
         return cls(
-            orbital_colors= {
+            orbital_colors={
                 "s": "#FF00ED",
                 "p": "#0BF317",
                 "d": "#FF2B11"
             },
-        figure_height = 6,
-        figure_width= 12,
-        energy_limits = (-5, 5)
+            figure_height=6,
+            figure_width=12,
+            energy_limits=(-5, 5)
         )
 
 
@@ -273,12 +355,13 @@ def load_config(config_file: str = None,
     try:
         if not config_file:
             print_info("Loading project configuration file...") if is_project_config \
-                else print_info("Loading plot configuration file...")
+                else print_info("Plot configuration file not explicitly set. Finding an existing one...")
             user_id = os.getenv("COFFEE")
             if user_id:
                 script_root_dir = os.path.abspath(
                     os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
-                config_file = os.path.join(script_root_dir, "..", user_id, "config.json" if is_project_config else "plot_config.yaml")
+                config_file = os.path.join(script_root_dir, "..", user_id,
+                                           "config.json" if is_project_config else "plot_config.yaml")
                 print_info(f"Config file path: {os.path.abspath(config_file)}")
                 if os.path.exists(os.path.abspath(config_file)):
                     print_success(f"Config found for {user_id}")
@@ -289,7 +372,9 @@ def load_config(config_file: str = None,
             else:
                 print_warning("Environment variable 'COFFEE' not set. Using default configuration.")
                 config_file = "config.json" if is_project_config else "plot_config.yaml"
-
+        else:
+            print_info(f"Loaded project configuration file: {config_file}") if is_project_config \
+                else print_info(f"Loaded plot configuration file: {os.path.abspath(config_file)}")
         match config_type:
             case "project":
                 return ProjectConfig.from_json(config_file)
