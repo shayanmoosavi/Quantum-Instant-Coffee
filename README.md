@@ -68,7 +68,7 @@ pip install numpy matplotlib pandas rich beautifulsoup4 requests lxml
 
 For the required packages:
 ```bash
-pip install numpy matplotlib pandas rich
+pip install numpy matplotlib pandas rich pyyaml
 ```
 
 ### 3 - Install the repository as a package
