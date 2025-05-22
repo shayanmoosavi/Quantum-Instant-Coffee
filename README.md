@@ -355,6 +355,16 @@ dos_plot:
     energy_limits: [ -10, 5 ]
 ```
 
+You can also provide partial configurations in the `plot_config.yaml` file. The script will use the default values for any missing keys. 
+To provide a partial configuration, simply include the keys you want to modify, along with the plot type you want to modify.
+
+For example, if you want to change the energy limits for the bands plot, you can create a `plot_config.yaml` file with the following content:
+
+```yaml
+bands_plot:
+  energy_limits: [ -10, 5 ]
+```
+
 ## 📄 License
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
 
