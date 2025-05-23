@@ -4,7 +4,7 @@ from rich import box
 from rich.table import Table
 
 from data.models import CompoundData, ProjectSetup
-from core.config import load_config
+from core.config_handler import load_project_config
 from core.input_handler import get_strain_amounts, get_pbands_type
 from typing import Optional
 
@@ -23,6 +23,8 @@ class ProjectInitializationError(Exception):
 
 def initialize_project(
         compound_name: str,
+        config_file: str = None,
+        config_type: str = "default",
         poscar_file: Optional[str] = None,
         is_input: bool = True,
         is_wannier: bool = False,
@@ -33,6 +35,8 @@ def initialize_project(
 
     Args:
         compound_name (str): The name of the compound (e.g., "SiO2").
+        config_file (str): Path to the JSON configuration file. Defaults to None.
+        config_type (str): Type of config, either 'default', 'bands', 'dos', or 'wannier'.
         poscar_file (str): Path to the POSCAR file. Only used if is_input is True.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
@@ -47,7 +51,7 @@ def initialize_project(
     from core.path_handler import get_project_directory, create_directories, build_file_paths
     print('\n')
     print_header("Project Initialization")
-    config = load_config()
+    config = load_project_config(config_file, config_type)
 
     if is_input:
         # For input file generation
@@ -57,7 +61,9 @@ def initialize_project(
         include_stress = bool(stress_amounts)
     else:
         # For output/analysis
-        include_stress = get_pbands_type() if (not is_wannier and not is_pdos) else False
+        include_stress = get_pbands_type() if (
+                (not is_wannier and not is_pdos) and ("strain" in config.directory_structure)
+        ) else False
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
@@ -119,23 +125,23 @@ def initialize_project(
     else:
         # For output/analysis, return the project setup details
         paths, skip_soc = build_file_paths(project_dir,
-                                 compound_name,
-                                 config,
-                                 is_input,
-                                 include_stress,
-                                 stress_amounts)
+                                           compound_name,
+                                           config,
+                                           is_input,
+                                           include_stress,
+                                           stress_amounts)
 
         print_success("Project analysis setup completed successfully.\n")
 
         return ProjectSetup(
             compound_name=compound_name,
             project_dir=project_dir,
-            pseudo_dir=os.path.abspath(config.directory_structure["pseudo"]),
+            pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo"])),
             calculation_dirs=[],
             compound_data=compound_data,
             include_stress=include_stress,
             stress_amounts=stress_amounts,
-            rel_pseudo_dir=os.path.abspath(config.directory_structure["pseudo_rel"]),
+            rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
             output_paths=paths,
             skip_soc=skip_soc
         )
