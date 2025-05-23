@@ -6,7 +6,7 @@ from rich.table import Table
 from data.models import CompoundData, ProjectSetup
 from core.config_handler import load_project_config
 from core.input_handler import get_strain_amounts, get_pbands_type
-from typing import Optional
+from typing import Optional, Dict
 
 from ui.ui_helpers import print_header, print_info, console, print_success
 
@@ -20,6 +20,26 @@ class ProjectInitializationError(Exception):
     """
     pass
 
+
+def has_soc_directories(directory_structure: Dict[str, str]) -> bool:
+    """
+    Check if the configuration contains SOC-related directories.
+
+    Args:
+        directory_structure (Dict[str, str]): A dictionary where keys are directory names
+            and values are their corresponding paths.
+
+    Returns:
+        bool: True if SOC directories are present, False otherwise.
+    """
+    soc_dirs = {
+        "scf_soc",
+        "projected_bands_soc",
+        "pdos_soc",
+        "pseudo_rel"
+    }
+
+    return bool(soc_dirs & set(directory_structure.keys()))
 
 def initialize_project(
         compound_name: str,
@@ -36,7 +56,7 @@ def initialize_project(
     Args:
         compound_name (str): The name of the compound (e.g., "SiO2").
         config_file (str): Path to the JSON configuration file. Defaults to None.
-        config_type (str): Type of config, either 'default', 'bands', 'dos', or 'wannier'.
+        config_type (str): Type of config, either 'default', 'bands', 'pdos', or 'wannier'.
         poscar_file (str): Path to the POSCAR file. Only used if is_input is True.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
@@ -52,6 +72,18 @@ def initialize_project(
     print('\n')
     print_header("Project Initialization")
     config = load_project_config(config_file, config_type)
+
+    # Detect if SOC directories are available in config
+    soc_available = has_soc_directories(config.directory_structure)
+    print(f"Soc available: {soc_available}")
+    # Determine skip_soc flag
+    if not soc_available:
+        # No SOC directories in config, automatically skip SOC
+        skip_soc = True
+        print_info("No SOC directories found in configuration. SOC calculations will be skipped.")
+    else:
+        # SOC directories are available, let SpinOrbitHandler manage user prompts
+        skip_soc = False
 
     if is_input:
         # For input file generation
@@ -116,10 +148,13 @@ def initialize_project(
             compound_data=compound_data,
             include_stress=include_stress,
             stress_amounts=stress_amounts,
-            rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
+            rel_pseudo_dir=os.path.abspath(
+                os.path.join(
+                    project_dir, config.directory_structure["pseudo_rel"])
+            ) if skip_soc else None,
             input_paths=paths,
             poscar_file=os.path.abspath(poscar_file),
-            skip_soc=True if include_stress else False
+            skip_soc=True if include_stress or skip_soc else False
         )
 
     else:
@@ -141,7 +176,10 @@ def initialize_project(
             compound_data=compound_data,
             include_stress=include_stress,
             stress_amounts=stress_amounts,
-            rel_pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo_rel"])),
+            rel_pseudo_dir=os.path.abspath(
+                os.path.join(
+                    project_dir, config.directory_structure["pseudo_rel"])
+            ) if skip_soc else None,
             output_paths=paths,
             skip_soc=skip_soc
         )
