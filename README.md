@@ -64,7 +64,7 @@ To install the required packages, you can use pip.
 
 For all the dependencies:
 ```bash
-pip install numpy matplotlib pandas rich beautifulsoup4 requests lxml
+pip install numpy matplotlib pandas rich pyyaml beautifulsoup4 requests lxml
 ```
 
 For the required packages:
@@ -130,9 +130,9 @@ After successfully executing `input_file_writer.py`, the input files will be cre
 with Quantum ESPRESSO and Wannier90, you can run the `plotter.py` script using the following command:
 
 ```bash
-COFFEE=<user-name> python plotter.py <compound-name> <plot-command>
+COFFEE=<user-name> python plotter.py <compound-name> <plot-type>
 ```
-Where `<plot-commend>` is one of the following:
+Where `<plot-type>` is one of the following:
 - `pdos`: Plots the projected density of states (PDOS)
 - `bands`: Plots the projected band structure
 - `wannier`: Compares the DFT bands with Wannier interpolated bands
@@ -140,7 +140,7 @@ Where `<plot-commend>` is one of the following:
 You can also provide optional arguments to the `plotter.py` script:
 
 ```bash
-COFFEE=<user-name> python plotter.py <compound-name> --plot-config /path/to/plot_config.yaml --save-fig <plot-command>
+COFFEE=<user-name> python plotter.py --plot-config /path/to/plot_config.yaml --save-fig <compound-name> <plot-type>
 ```
 
 Where `--plot-config` is the path to the custom user-defined plot configuration file, which will be explained in the
