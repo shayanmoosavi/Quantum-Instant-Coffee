@@ -30,9 +30,10 @@ The input files will be generated both with and without considering spin-orbit c
 
 ### 🧰 Toolkit:
 - `input_file_writer.py`: Generates input files for common QE/Wannier90 workflows
-- `projected_bands_plotter.py`: Plots projected band structures
-- `pdos_plotter.py`: Plots projected density of states
-- `compare_bands.py`: Compares DFT bands with Wannier-interpolated bands 
+- `plotter.py`: Visualizes results from QE and Wannier90 calculations, including:
+  - Projected band structure
+  - Projected density of states (PDOS)
+  - Comparison of DFT vs Wannier interpolated bands
 
 ## 📦 Requirements
 - Tested on Python 3.10
@@ -125,19 +126,26 @@ subfolders with the following directory structure:
             └── wannier
 ```
 
-After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations with Quantum ESPRESSO and Wannier90, you can run the `projected_bands_plotter.py` script using the following command:
+After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations 
+with Quantum ESPRESSO and Wannier90, you can run the `plotter.py` script using the following command:
 
 ```bash
-COFFEE=<user-name> python projected_bands_plotter.py <compound-name>
+COFFEE=<user-name> python plotter.py <compound-name> <plot-command>
 ```
+Where `<plot-commend>` is one of the following:
+- `pdos`: Plots the projected density of states (PDOS)
+- `bands`: Plots the projected band structure
+- `wannier`: Compares the DFT bands with Wannier interpolated bands
 
-After successfully executing `projected_bands_plotter.py`, the script will plot the projected bands for every atom in the structure.
-
-To compare the wannier interpolated bands with DFT bands, run the following command:
+You can also provide optional arguments to the `plotter.py` script:
 
 ```bash
-COFFEE=<user-name> python compare_bands_plotter.py <compound-name>
+COFFEE=<user-name> python plotter.py <compound-name> --plot-config /path/to/plot_config.yaml --save-fig <plot-command>
 ```
+
+Where `--plot-config` is the path to the custom user-defined plot configuration file, which will be explained in the
+[Configuration](#-configuration) section, and `--save-fig` is a flag to save the figure instead of displaying it.
+
 
 ## 🚧 Limitations
 
@@ -151,6 +159,8 @@ The software currently lacks whole atom projections for the projected bands and 
 > 
 > These limitations are due to the fact that the software is still in its early stages and is being actively developed. They are planned to be addressed in future releases.
 
+### 3- Python Version
+The software has been tested on Python 3.10. If you are using an older version of Python and encounter issues, open an issue on GitHub and I try to address it.
 
 ## ⚙️ Configuration
 
