@@ -6,7 +6,7 @@ from rich.table import Table
 from data.models import CompoundData, ProjectSetup
 from core.config import load_config
 from core.input_handler import get_strain_amounts, get_pbands_type
-from typing import List
+from typing import Optional
 
 from ui.ui_helpers import print_header, print_info, console, print_success
 
@@ -22,7 +22,8 @@ class ProjectInitializationError(Exception):
 
 
 def initialize_project(
-        argv: List[str],
+        compound_name: str,
+        poscar_file: Optional[str] = None,
         is_input: bool = True,
         is_wannier: bool = False,
         is_pdos: bool = False
@@ -31,7 +32,8 @@ def initialize_project(
     Initialize the project directory and parse compound information.
 
     Args:
-        argv (list): Command-line arguments containing the compound name and POSCAR file path.
+        compound_name (str): The name of the compound (e.g., "SiO2").
+        poscar_file (str): Path to the POSCAR file. Only used if is_input is True.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
         is_pdos (bool): Flag indicating if the function is called for PDOS initialization. Defaults to False.
@@ -42,20 +44,19 @@ def initialize_project(
     Raises:
         ProjectInitializationError: If parsing the compound name fails.
     """
-    from core.path_handler import get_project_directory, create_directories, validate_command_line_args, \
-        build_file_paths
+    from core.path_handler import get_project_directory, create_directories, build_file_paths
     print('\n')
     print_header("Project Initialization")
     config = load_config()
 
     if is_input:
         # For input file generation
-        compound_name, poscar_file = validate_command_line_args(argv, is_for_plot=False)
+        if not poscar_file:
+            raise ProjectInitializationError("POSCAR file is required for input file generation.")
         stress_amounts = get_strain_amounts(is_input=True) if "strain" in config.directory_structure else None
         include_stress = bool(stress_amounts)
     else:
         # For output/analysis
-        compound_name = validate_command_line_args(argv, is_for_plot=True)
         include_stress = get_pbands_type() if (not is_wannier and not is_pdos) else False
         stress_amounts = get_strain_amounts() if include_stress else None
 
