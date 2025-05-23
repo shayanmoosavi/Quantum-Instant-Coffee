@@ -4,7 +4,7 @@ This module provides functions to handle file paths for Quantum ESPRESSO calcula
 It includes functionality for validating command-line arguments, creating directory structures,
 and building structured file paths for input and output files.
 """
-
+import argparse
 from sys import argv
 import os
 from typing import List, Tuple, Dict
@@ -12,38 +12,6 @@ from typing import List, Tuple, Dict
 from core.project_setup import initialize_project, ProjectInitializationError
 from core.config import ProjectConfig
 from ui.ui_helpers import *
-
-
-def validate_command_line_args(args: List[str], is_for_plot: bool = False) -> str | Tuple[str, str]:
-    """
-    Validate command line arguments.
-
-    Args:
-    args (list): List of command line arguments.
-    is_for_plot (bool): Whether the command line arguments are validated for plotting or input file generation.
-
-    Returns:
-        str or tuple: The compound name (and optionally the POSCAR file) provided as command line arguments.
-
-    Raises:
-        SystemExit: If the required arguments are missing or too many arguments are provided.
-    """
-    if is_for_plot:
-        if len(args) < 2:
-            print_error("Error: Missing compound name argument")
-            print_info("Usage: python <script>.py <compound_name>")
-            exit(1)
-        return args[1]
-    else:
-        if len(args) < 3:
-            print_error("Error: Missing compound name and/or POSCAR file argument")
-            print_info("Usage: python <script>.py <compound_name> <poscar_file>")
-            exit(1)
-        if len(args) > 3:
-            print_error("Error: Too many arguments provided")
-            print_info("Usage: python <script>.py <compound_name> <poscar_file>")
-            exit(1)
-        return args[1], args[2]
 
 
 def get_project_directory(compound_name: str) -> str:
@@ -56,7 +24,8 @@ def get_project_directory(compound_name: str) -> str:
     Returns:
         str: The absolute path to the project directory.
     """
-    script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # The root directory of the program
+    script_root_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
     user_id = os.getenv("COFFEE")
     user_path = os.path.join(script_root_dir, "..", user_id) if user_id else ".."
     root_dir = os.path.abspath(user_path)  # The root directory of the project
@@ -147,9 +116,9 @@ def add_paths_for_directories(
                               flag, ["nscf_input", "pdos_input"] if is_input else ["nscf_output", "pdos_output"])
 
         elif calculation in ["wannier", "wannier_soc"]:
-                append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag,
-                                  ["nscf_wannier_input", "pw2wan_input", "wannier_input"] if is_input
-                                  else ["nscf_wannier_output", "wannier_bands"])
+            append_file_paths(file_paths, calculation, path, compound_name, file_patterns, flag,
+                              ["nscf_wannier_input", "pw2wan_input", "wannier_input"] if is_input
+                              else ["nscf_wannier_output", "wannier_bands"])
 
 
 def build_file_paths(
@@ -204,10 +173,10 @@ def build_file_paths(
         for key, value in paths.items():
 
             if key in ["pseudo", "pseudo_rel"]:
-                continue # Skip pseudopotential directories
+                continue  # Skip pseudopotential directories
 
             if key in ["scf", "scf_soc"] and not (include_stress and "soc" in key):
-                for path_type in [ "relax_input", "vc_relax_input", "scf_input"]:
+                for path_type in ["relax_input", "vc_relax_input", "scf_input"]:
                     if not value[path_type]:
                         print(f"Warning: No {path_type} found in {key} directory.")
                     else:
@@ -263,7 +232,7 @@ def build_file_paths(
         for key, value in paths.items():
 
             if key in ["pseudo", "pseudo_rel"]:
-                continue # Skip pseudopotential directories
+                continue  # Skip pseudopotential directories
 
             if key in ["scf", "scf_soc"] and not (include_stress and "soc" in key):
                 structured_paths["scf_output_paths"].append(value["scf_output"][0])
@@ -272,7 +241,8 @@ def build_file_paths(
 
                 for i in range(len(stress_amounts)):
                     for path_type, output_key in zip(
-                            ["scf_output_paths", "pw_bands_output_paths", "kpdos_output_paths", "projbands_paths", "bands_paths"],
+                            ["scf_output_paths", "pw_bands_output_paths", "kpdos_output_paths", "projbands_paths",
+                             "bands_paths"],
                             ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"]
                     ):
                         structured_paths[path_type].append(value[output_key][i])
@@ -391,11 +361,29 @@ if __name__ == "__main__":
     
     Validates the functionality of the `prepare_paths` function and checks if all required files exist.
     """
-    is_input = len(argv) == 3
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Tests the path handler module.")
 
+    # Add arguments
+    parser.add_argument(
+        "compound_name",
+        type=str,
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+    )
+    parser.add_argument(
+        "poscar_file",
+        type=str,
+        nargs='?',
+        help="Path to the POSCAR file (required for input file generation)."
+    )
+
+    args = parser.parse_args(argv[1:])
+    is_input = len(args.__dict__) == 2
     try:
         # Initialize and prepare project
-        project = initialize_project(argv, is_input)
+        project = initialize_project(args.compound_name,
+                                     args.poscar_file if is_input else None,
+                                     is_input=is_input)
 
         print_header("Project Initialization Summary")
         print('\n')

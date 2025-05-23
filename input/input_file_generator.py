@@ -10,6 +10,7 @@ complete input file.
 The module is designed to handle both relativistic and non-relativistic
 calculations and supports flexible configuration of input parameters.
 """
+import argparse
 import os
 from sys import argv
 import sqlite3
@@ -18,7 +19,7 @@ from typing import List, Dict, Tuple
 
 from ui.ui_helpers import prompt_input, print_error, print_info, print_success, console, progress_track, print_header
 from utils.file_parser import get_poscar_data
-from utils.print_thanks import print_animated_ascii
+from ui.print_thanks import print_animated_ascii
 from core.project_setup import initialize_project
 from core.input_handler import get_pseudopotential_files
 from data.models import ProjectSetup
@@ -804,9 +805,26 @@ if __name__ == "__main__":
     5. Generates the NSCF input file using the provided data and configuration.
     6. Prints the generated NSCF input file content.
     """
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")
 
-    is_input = len(argv) == 3
-    project = initialize_project(argv, is_input)
+    # Add arguments
+    parser.add_argument(
+        "compound_name",
+        type=str,
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+    )
+    parser.add_argument(
+        "poscar_file",
+        type=str,
+        help="Path to the POSCAR file."
+    )
+
+    # Parse the arguments
+    args = parser.parse_args(argv[1:])
+    compound_name, poscar_file = args.compound_name, args.poscar_file
+
+    project = initialize_project(compound_name, poscar_file, is_input=True)
 
     pseudo_list, rel_pseudo_list = get_pseudopotential_files(project.compound_data.element_names,
                                                              project.pseudo_dir,
@@ -828,4 +846,4 @@ if __name__ == "__main__":
         rel_pseudo_list=rel_pseudo_list
     )
 
-    print(nscf_input)
+    print_info(nscf_input)
