@@ -155,12 +155,12 @@ The input file generation and plotting for projected bands currently only suppor
 ### 2- Atomic Projections
 The software currently lacks whole atom projections for the projected bands and projected DOS (PDOS).
 
-> ℹ️ Info
-> 
+> [!NOTE]
 > These limitations are due to the fact that the software is still in its early stages and is being actively developed. They are planned to be addressed in future releases.
 
 ### 3- Python Version
-The software has been tested on Python 3.10. If you are using an older version of Python and encounter issues, open an issue on GitHub and I try to address it.
+> [!WARNING]
+> The software has been tested on Python 3.10. If you are using an older version of Python and encounter issues, open an issue on GitHub and I try to address it.
 
 ## ⚙️ Configuration
 
