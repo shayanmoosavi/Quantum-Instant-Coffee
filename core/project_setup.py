@@ -75,7 +75,7 @@ def initialize_project(
 
     # Detect if SOC directories are available in config
     soc_available = has_soc_directories(config.directory_structure)
-    print(f"Soc available: {soc_available}")
+
     # Determine skip_soc flag
     if not soc_available:
         # No SOC directories in config, automatically skip SOC
@@ -138,7 +138,6 @@ def initialize_project(
                                  stress_amounts)
 
         print_success("Project initialization completed successfully.\n")
-
         # Return the project setup details
         return ProjectSetup(
             compound_name=compound_name,
@@ -151,7 +150,7 @@ def initialize_project(
             rel_pseudo_dir=os.path.abspath(
                 os.path.join(
                     project_dir, config.directory_structure["pseudo_rel"])
-            ) if skip_soc else None,
+            ) if not skip_soc else None,
             input_paths=paths,
             poscar_file=os.path.abspath(poscar_file),
             skip_soc=True if include_stress or skip_soc else False
@@ -179,7 +178,7 @@ def initialize_project(
             rel_pseudo_dir=os.path.abspath(
                 os.path.join(
                     project_dir, config.directory_structure["pseudo_rel"])
-            ) if skip_soc else None,
+            ) if not skip_soc else None,
             output_paths=paths,
             skip_soc=skip_soc
         )
