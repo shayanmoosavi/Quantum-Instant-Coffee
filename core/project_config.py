@@ -62,7 +62,7 @@ class ProjectConfig:
                 file_patterns=FilePatterns(**config_dict['file_patterns'])
             )
         except FileNotFoundError:
-            return cls.get_default_config()
+            return cls.get_default_config(config_type)
         except json.JSONDecodeError as e:
             raise ConfigValidationError(f"Invalid JSON format in config file: {str(e)}")
 
@@ -162,7 +162,7 @@ class ProjectConfig:
                     )
                 )
 
-            case "dos":
+            case "pdos":
 
                 config = cls(
                     directory_structure={

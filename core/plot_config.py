@@ -5,7 +5,7 @@ It includes methods for loading configurations from YAML files, merging user-def
 and validating the configuration structure.
 """
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 from yaml import safe_load
 
@@ -60,7 +60,7 @@ class BandsPlotConfig:
             with open(config_file, 'r') as f:
                 user_config = safe_load(f)
 
-            validate_plot_config_structure(user_config, config_type="bands")
+            validate_plot_config_structure(user_config, plot_config_type="bands")
 
             user_bands_plot_config = user_config['bands_plot']
 
@@ -155,7 +155,7 @@ class DOSPlotConfig:
             with open(config_file, 'r') as f:
                 user_config = safe_load(f)
 
-            validate_plot_config_structure(user_config, config_type="dos")
+            validate_plot_config_structure(user_config, plot_config_type="dos")
 
             user_dos_plot_config = user_config['dos_plot']
 
