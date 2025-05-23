@@ -8,7 +8,7 @@ import argparse
 import os
 from sys import argv
 
-from core.config import load_config
+from core.config_handler import load_project_config, load_plot_config
 from core.project_setup import initialize_project
 from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data
@@ -31,6 +31,11 @@ parser.add_argument(
     help="Type of plot to generate (bands, wannier, pdos)."
 )
 parser.add_argument(
+    "--project-config",
+    type=str,
+    help="Path to a custom JSON project configuration file."
+)
+parser.add_argument(
     "--plot-config",
     type=str,
     help="Path to a custom YAML plot configuration file. This file can be a partial config to override defaults."
@@ -44,26 +49,34 @@ parser.add_argument(
 # Parsing the arguments
 args = parser.parse_args(argv[1:])
 compound_name = args.compound_name
-
+project_config_file = args.project_config
 
 # Initialize project based on plot type
 if args.plot_type == "bands":
-    project = initialize_project(compound_name, is_input=False)
+    project = initialize_project(compound_name,
+                                 project_config_file,
+                                 config_type="bands",
+                                 is_input=False)
     prepare_bands_info(project)
     process_band_data(project)
-    config_type = "bands"
 
 elif args.plot_type == "wannier":
-    project = initialize_project(compound_name, is_input=False, is_wannier=True)
+    project = initialize_project(compound_name,
+                                 project_config_file,
+                                 config_type="wannier",
+                                 is_input=False,
+                                 is_wannier=True)
     prepare_wannier_info(project)
     process_comparison_data(project)
-    config_type = "bands"
 
 elif args.plot_type == "pdos":
-    project = initialize_project(compound_name, is_input=False, is_pdos=True)
+    project = initialize_project(compound_name,
+                                 project_config_file,
+                                 config_type="pdos",
+                                 is_input=False,
+                                 is_pdos=True)
     prepare_pdos_info(project)
     process_pdos_data(project)
-    config_type = "dos"
 
 else:
     raise ValueError("Invalid plot type.")
@@ -76,7 +89,7 @@ if args.plot_config:
     else:
         print_warning(f"Plot config file '{args.plot_config}' not found. Using default config.")
 
-plot_config = load_config(plot_config_file, config_type=config_type)
+plot_config = load_plot_config(plot_config_file, config_type="pdos" if args.plot_type == "pdos" else "bands")
 
 # Plotting
 if args.plot_type == "bands":
