@@ -1,8 +1,34 @@
-"""Script to write input files for the project."""
+"""Script to write input files for the project.
 
-from input.input_file_generator import *
+This script is designed to be run from the command line and takes two arguments:
+1. `compound_name`: The name of the compound (e.g., 'GaAs', 'SiO2').
+2. `poscar_file`: The path to the POSCAR file.
+"""
+import argparse
+from sys import argv
 
+from core.project_setup import initialize_project
+from input.input_file_generator import write_input_files
 
-project = initialize_project(argv, is_input=True)
+# Create the parser
+parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")
+
+# Add arguments
+parser.add_argument(
+    "compound_name",
+    type=str,
+    help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+)
+parser.add_argument(
+    "poscar_file",
+    type=str,
+    help="Path to the POSCAR file."
+)
+
+# Parse the arguments
+args = parser.parse_args(argv[1:])
+compound_name, poscar_file = args.compound_name, args.poscar_file
+
+project = initialize_project(compound_name, poscar_file, is_input=True)
 skip_soc = project.skip_soc
 write_input_files(project, skip_soc)

@@ -15,7 +15,15 @@ from data.data_processor import process_band_data, process_comparison_data, proc
 from plotting.plot_handler import plot_band_structure, plot_wannier_comparison, plot_pdos
 from ui.ui_helpers import print_warning
 
+# Creating the parser
 parser = argparse.ArgumentParser(description="Plot band structures, Wannier comparisons, and PDOS.")
+
+# Adding arguments
+parser.add_argument(
+    "compound_name",
+    type=str,
+    help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+)
 parser.add_argument(
     "plot_type",
     type=str,
@@ -32,23 +40,27 @@ parser.add_argument(
     action="store_true",
     help="Save the figure to a file instead of displaying it."
 )
-args = parser.parse_args(argv[2:])
+
+# Parsing the arguments
+args = parser.parse_args(argv[1:])
+compound_name = args.compound_name
+
 
 # Initialize project based on plot type
 if args.plot_type == "bands":
-    project = initialize_project(argv, is_input=False)
+    project = initialize_project(compound_name, is_input=False)
     prepare_bands_info(project)
     process_band_data(project)
     config_type = "bands"
 
 elif args.plot_type == "wannier":
-    project = initialize_project(argv, is_input=False, is_wannier=True)
+    project = initialize_project(compound_name, is_input=False, is_wannier=True)
     prepare_wannier_info(project)
     process_comparison_data(project)
     config_type = "bands"
 
 elif args.plot_type == "pdos":
-    project = initialize_project(argv, is_input=False, is_pdos=True)
+    project = initialize_project(compound_name, is_input=False, is_pdos=True)
     prepare_pdos_info(project)
     process_pdos_data(project)
     config_type = "dos"
