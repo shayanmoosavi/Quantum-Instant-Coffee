@@ -26,7 +26,7 @@ Quantum Instant Coffee streamlines quantum materials calculations by automatical
 - **Projected Band Structure** (projected_bands)
 - **Wannier interpolated bands** (wannier)
 
-The input files will be generated both with and without considering spin-orbit coupling, with files organized a clear directory structure.
+The input files will be generated both with and without considering spin-orbit coupling, with files organized in a clear directory structure.
 
 ### 🧰 Toolkit:
 - `input_file_writer.py`: Generates input files for common QE/Wannier90 workflows
@@ -57,7 +57,7 @@ Clone the repository:
 git clone https://github.com/shayanmoosavi/Quantum-Instant-Coffee.git 
 ````
 
-Or download the latest release from the releases section of the repository.
+Or alternatively, download the latest release from the releases section of the repository.
 
 ### 2 - Install the required packages
 To install the required packages, you can use pip.
@@ -88,7 +88,7 @@ pip install .
 
 ### Visualization Tools
 - Projected band structure plotting with customizable projection options
-- PDOS visualization with element-specific contributions
+- PDOS visualization with orbital-specific contributions
 - Comparative analysis of DFT vs Wannier interpolated bands
 
 ## 🔍 Troubleshooting
@@ -115,6 +115,13 @@ COFFEE=<user-name> python input_file_writer.py --project-config /path/to/project
   - `pdos`: Projected density of states calculations only
   - `wannier`: Wannier function calculations only
 - `--project-config` (optional): Path to a custom JSON project configuration file
+
+You can also set the `COFFEE` environment variable before running the script, which will be used as the user name for the directory structure.
+
+```bash
+export COFFEE=<user-name>
+python input_file_writer.py <compound-name> <POSCAR-file> <config-type>
+```
 
 ### Examples
 ```bash
@@ -225,6 +232,13 @@ The software currently lacks whole atom projections for the projected bands and 
 ### 3- Python Version
 > [!WARNING]
 > The software has been tested on Python 3.10. If you are using an older version of Python and encounter issues, open an issue on GitHub and I try to address it.
+
+### 4- Operating System
+> [!WARNING]
+> The software has only been tested on Linux. If you are using Windows or MacOS and encounter issues, open an issue on GitHub and I try to address it.
+
+If you have experience in developing for these platforms and would like to contribute and add better support for platforms other than Linux, please feel free 
+to submit a pull request.
 
 ## ⚙️ Configuration
 
