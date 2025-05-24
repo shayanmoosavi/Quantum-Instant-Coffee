@@ -10,7 +10,7 @@ import os
 from typing import List, Tuple, Dict
 
 from core.project_setup import initialize_project, ProjectInitializationError
-from core.config import ProjectConfig
+from core.config_handler import ProjectConfig
 from ui.ui_helpers import *
 
 
@@ -178,7 +178,7 @@ def build_file_paths(
             if key in ["scf", "scf_soc"] and not (include_stress and "soc" in key):
                 for path_type in ["relax_input", "vc_relax_input", "scf_input"]:
                     if not value[path_type]:
-                        print(f"Warning: No {path_type} found in {key} directory.")
+                        print_warning(f"No {path_type} found in {key} directory.")
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
@@ -191,7 +191,7 @@ def build_file_paths(
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
                 for path_type in ["nscf_input", "pdos_input"]:
                     if not value[path_type]:
-                        print(f"Warning: No {path_type} found in {key} directory.")
+                        print_warning(f"No {path_type} found in {key} directory.")
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
@@ -202,7 +202,7 @@ def build_file_paths(
             elif key in ["wannier", "wannier_soc"] and not include_stress:
                 for path_type in ["nscf_wannier_input", "pw2wan_input", "wannier_input"]:
                     if not value[path_type]:
-                        print(f"Warning: No {path_type} found in {key} directory.")
+                        print_warning(f"No {path_type} found in {key} directory.")
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
@@ -257,14 +257,14 @@ def build_file_paths(
             elif key in ["pdos", "pdos_soc"] and not (include_stress and "soc" in key):
                 for path_type in ["nscf_output", "pdos_output"]:
                     if not value[path_type]:
-                        print(f"Warning: No {path_type} found in {key} directory.")
+                        print_warning(f"No {path_type} found in {key} directory.")
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
             elif key in ["wannier", "wannier_soc"] and not include_stress:
                 for path_type in ["nscf_wannier_output", "wannier_bands"]:
                     if not value[path_type]:
-                        print(f"Warning: No {path_type} found in {key} directory.")
+                        print_warning(f"No {path_type} found in {key} directory.")
                     else:
                         structured_paths[f"{path_type}_paths"].append(value[path_type][0])
 
@@ -361,13 +361,18 @@ if __name__ == "__main__":
     
     Validates the functionality of the `prepare_paths` function and checks if all required files exist.
     """
+    def validate_compound_name(value):
+        if os.path.sep in value or os.path.altsep and os.path.altsep in value:
+            raise argparse.ArgumentTypeError(f"'{value}' is not a valid compound name as it contains path separators.")
+        return value
+
     # Create the parser
     parser = argparse.ArgumentParser(description="Tests the path handler module.")
 
     # Add arguments
     parser.add_argument(
         "compound_name",
-        type=str,
+        type=validate_compound_name,
         help="Name of the compound (e.g., 'GaAs', 'SiO2')."
     )
     parser.add_argument(
@@ -377,11 +382,33 @@ if __name__ == "__main__":
         help="Path to the POSCAR file (required for input file generation)."
     )
 
+    parser.add_argument(
+        "--initialize-input",
+        action="store_true",
+        help="Initialize the project for input files."
+    )
+
+    parser.add_argument(
+        "--project-config",
+        type=str,
+        help="Path to a custom JSON project configuration file."
+    )
+
+    parser.add_argument(
+        "--config-type",
+        type=str,
+        default="default",
+        choices=["default", "bands", "pdos", "wannier"],
+        help="Type of configuration to use (default: 'default')."
+    )
+
     args = parser.parse_args(argv[1:])
-    is_input = len(args.__dict__) == 2
+    is_input = args.initialize_input
     try:
         # Initialize and prepare project
         project = initialize_project(args.compound_name,
+                                     args.project_config,
+                                     args.config_type,
                                      args.poscar_file if is_input else None,
                                      is_input=is_input)
 

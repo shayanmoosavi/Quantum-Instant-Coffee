@@ -24,11 +24,29 @@ parser.add_argument(
     type=str,
     help="Path to the POSCAR file."
 )
+parser.add_argument(
+    "config_type",
+    type=str,
+    choices=["default", "bands", "pdos", "wannier"],
+    default="default",
+    help="Type of configuration to use (default, bands, pdos, wannier). Defaults to 'default'."
+)
+parser.add_argument(
+    "--project-config",
+    type=str,
+    help="Path to a custom JSON project configuration file."
+)
 
 # Parse the arguments
 args = parser.parse_args(argv[1:])
 compound_name, poscar_file = args.compound_name, args.poscar_file
+config_type = args.config_type
+config_file = args.project_config
 
-project = initialize_project(compound_name, poscar_file, is_input=True)
+project = initialize_project(compound_name,
+                             config_file,
+                             config_type,
+                             poscar_file,
+                             is_input=True)
 skip_soc = project.skip_soc
 write_input_files(project, skip_soc)
