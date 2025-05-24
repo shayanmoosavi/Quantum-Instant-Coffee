@@ -102,15 +102,40 @@ If you encounter errors about missing pseudopotentials, ensure you have:
 In order to use these scripts to generate the input files, run `input_file_writer.py` as follows:
 
 ```bash
-COFFEE=<user-name> python input_file_writer.py <name-of-the-compound> <path-to-POSCAR-file>
+COFFEE=<user-name> python input_file_writer.py --project-config /path/to/project_congig.json <compound-name> <POSCAR-file> <config-type>
 ```
-Where `<user-name>` is the user directory of the person who is running the script and want the input files 
-to be generated there, `<name-of-the-compound>` is the name of the compound you want to generate the input files for, 
-and `<path-to-POSCAR-file>` is the path to the POSCAR file. The POSCAR file is a widely used format in 
-[VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions for a given compound. 
-The `input_file_writer.py` script will generate a folder named `<compound-name>`, and within that folder, it will create 
-subfolders with the following directory structure:
 
+### Arguments
+- `<user-name>`: The user directory of the person who is running the script and want the input files to be generated there
+- `<compound-name>`: The name of the compound you want to generate the input files for (e.g., 'GaAs', 'SiO2')
+- `<POSCAR-file>`: The path to the POSCAR file containing lattice vectors and atomic positions
+- `<config-type>`: Type of configuration to use. Choose from:
+  - `default`: Complete workflow including all calculation types
+  - `bands`: Band structure calculations only
+  - `pdos`: Projected density of states calculations only
+  - `wannier`: Wannier function calculations only
+- `--project-config` (optional): Path to a custom JSON project configuration file
+
+### Examples
+```bash
+# Generate input files for all calculation types (default configuration)
+python input_file_writer.py GaAs /path/to/POSCAR default
+
+# Generate input files for band structure calculations only
+python input_file_writer.py SiO2 ./structures/SiO2_POSCAR bands
+
+# Use a custom project configuration file
+python input_file_writer.py InAs POSCAR_InAs default --project-config my_config.json
+```
+
+The POSCAR file is a widely used format in [VASP](https://vasp.at/) software, which stores the lattice vectors and atomic positions 
+for a given compound.
+
+### Directory Structure
+The `input_file_writer.py` script will generate a directory tree `user_name/compound_name`, and within that directory, 
+it will create subdirectories based on the selected configuration type:
+
+#### Default Configuration
 ```ansi
 .
 └── user_name/
@@ -118,6 +143,7 @@ subfolders with the following directory structure:
         ├── scf
         ├── projected_bands
         ├── pdos
+        ├── wannier
         ├── strain
         └── spin_orbit/
             ├── scf
@@ -125,6 +151,44 @@ subfolders with the following directory structure:
             ├── pdos
             └── wannier
 ```
+#### Bands Configuration
+```ansi
+.
+└── user_name/
+    └── compound_name/
+        ├── scf
+        ├── projected_bands
+        └── spin_orbit/
+            ├── scf
+            └── projected_bands
+```
+#### PDOS Configuration
+```ansi
+.
+└── user_name/
+    └── compound_name/
+        ├── scf
+        ├── pdos
+        └── spin_orbit/
+            ├── scf
+            └── pdos
+```
+#### Wannier Configuration
+```ansi
+.
+└── user_name/
+    └── compound_name/
+        ├── scf
+        ├── wannier
+        └── spin_orbit/
+            ├── scf
+            └── wannier
+```
+
+The script also references pseudopotential directories:
+
+- `../Pseudopotentials/`: For standard pseudopotential files
+- `../Pseudopotentials_rel/`: For relativistic pseudopotential files
 
 After successfully executing `input_file_writer.py`, the input files will be created. Once you've done the usual calculations 
 with Quantum ESPRESSO and Wannier90, you can run the `plotter.py` script using the following command:
@@ -165,27 +229,20 @@ The software currently lacks whole atom projections for the projected bands and 
 ## ⚙️ Configuration
 
 ### 1- Configuring Directory Structure and Input File Generation
-If you want to customize the list of generated input files, you can do so by writing your own `config.json` file in 
-`user_name` directory. The following keys in the `input` section are optional and can be removed if not needed:
-- `relax_input`: The input file for Quantum ESPRESSO relax calculations
-- `nscf_input`: The input file for Quantum ESPRESSO nscf calculations
-- `pdos_input`: The input file for Quantum ESPRESSO pdos calculations
-- `nscf_wannier_input`: The input file for Quantum ESPRESSO nscf calculations for usage in wannier90
-- `pw2wan_input`: The input file for Quantum ESPRESSO pw2wannier90 calculations
-- `wannier_input`: The input file for wannier90 calculations
-
-The directory structure can also be modified by removing the following optional keys:
-- `pdos`: The directory for pdos calculations
-- `pdos_soc`: The directory for pdos calculations with spin-orbit coupling
-- `wannier`: The directory for wannier calculations
-- `wannier_soc`: The directory for wannier calculations with spin-orbit coupling
-- `strain`: The directory for strain calculations
+If you want to customize the list of generated input files, you can do so by writing your own `project_config.json` file in 
+`user_name` directory. For example, you can remove the soc related directories if you don't need the 
+relativistic calculations. However, you must pay attention to the required keys in the `config_validatoin.py` file. The default
+configuration types are defined in `project_config.py` file, which contains the default directory structure and file patterns for input and output files.
+It supports four config types of `default`, `bands`, `pdos`, and `wannier`. The `default` config type includes all the necessary directories and file patterns 
+for all calculations, while the other three config types only include the necessary directories and file patterns for their respective calculations. For example, 
+the `bands` config type only includes the directories and file patterns for the band structure calculations, while the `pdos` config type only includes the directories 
+and file patterns for the projected density of states calculations.
 
 If you're not happy with the required keys, you can modify the `required_dirs` and `required_patterns` variables in the `config_validation.py` file. 
 The `required_dirs` variable contains the list of required directories, while the `required_patterns` variable contains the list of required patterns 
 for the input files.
 
-The default config:
+The default `project_config.json`
 ```json
 {
   "directory_structure": {
@@ -229,19 +286,15 @@ The default config:
 }
 ```
 
-An example of modified `config.json`:
+An example of modified `project_config.json`:
 
 ```json
 {
   "directory_structure": {
     "scf": "scf",
-    "scf_soc": "spin_orbit/scf",
     "projected_bands": "projected_bands",
-    "projected_bands_soc": "spin_orbit/projected_bands",
     "pdos": "pdos",
-    "pdos_soc": "spin_orbit/pdos",
-    "pseudo": "../Pseudopotentials",
-    "pseudo_rel": "../Pseudopotentials_rel"
+    "pseudo": "../Pseudopotentials"
   },
   "file_patterns": {
     "input": {
@@ -254,7 +307,6 @@ An example of modified `config.json`:
       "pdos_input": "{compound_name}{flag}.pdos.in"
     },
     "output": {
-      "relax_output": "{compound_name}_relax{flag}.pw.out",
       "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",
       "scf_output": "{compound_name}_scf{flag}.pw.out",
       "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
