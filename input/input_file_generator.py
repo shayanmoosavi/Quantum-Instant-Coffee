@@ -345,6 +345,10 @@ def generate_k_points_section(calculation_type: str,
 """
         return k_points_section
 
+    else:
+        raise InputGenerationError(f"Unsupported calculation type: {calculation_type}. "
+                                   f"Valid types are: {', '.join(valid_calc_types)}")
+
 
 def generate_pw_input_file(calculation_type: str,
                            project: ProjectSetup,
