@@ -158,15 +158,21 @@ def initialize_project(
 
     else:
         # For output/analysis, return the project setup details
-        paths, skip_soc = build_file_paths(project_dir,
-                                           compound_name,
-                                           config,
-                                           is_input,
-                                           include_stress,
-                                           stress_amounts)
-
+        if skip_soc:
+            paths, _ = build_file_paths(project_dir,
+                                               compound_name,
+                                               config,
+                                               is_input,
+                                               include_stress,
+                                               stress_amounts)
+        else:
+            paths, skip_soc = build_file_paths(project_dir,
+                                               compound_name,
+                                               config,
+                                               is_input,
+                                               include_stress,
+                                               stress_amounts)
         print_success("Project analysis setup completed successfully.\n")
-
         return ProjectSetup(
             compound_name=compound_name,
             project_dir=project_dir,
