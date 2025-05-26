@@ -17,7 +17,8 @@ from typing import Tuple
 from data.fetch_atomic_info import get_atomic_weights
 from input.generators.kpoints import generate_k_points_section
 from input.generators.sections import *
-from ui.ui_helpers import prompt_input, print_error, print_info, print_success, console, progress_track, print_header
+from input.user_prompts import prompt_nbands, prompt_kmesh
+from ui.ui_helpers import print_error, print_info, print_success, console, progress_track, print_header
 from utils.file_parser import get_poscar_data
 from ui.print_thanks import print_animated_ascii
 from core.project_setup import initialize_project
@@ -73,12 +74,7 @@ def generate_pw_input_file(calculation_type: str,
         while True:
             try:
                 if nbnds is None:
-                    number_of_bands = int(
-                        prompt_input(
-                            f"Enter the number of bands for {calculation_type + ('_soc' if relativistic else '')}: ")
-                    )
-                    if number_of_bands <= 0:
-                        raise ValueError("Number of bands must be a positive integer.")
+                    number_of_bands = prompt_nbands(calculation_type, relativistic)
                     input_file_content += generate_system_section(project.compound_data.number_of_atoms,
                                                                   project.compound_data.atom_types,
                                                                   number_of_bands=number_of_bands,
@@ -116,15 +112,7 @@ def generate_pw_input_file(calculation_type: str,
         try:
             if calculation_type != "bands":
                 if kmesh is None:
-                    k_mesh_density = tuple(
-                        map(
-                            int,
-                            prompt_input(
-                                f"Enter K-point mesh density (e.g., '12 12 1') for {calculation_type + ('_soc' if relativistic else '')}: "
-                            ).split(),
-                        )
-                    )
-
+                    k_mesh_density = prompt_kmesh(calculation_type, relativistic)
                     input_file_content += generate_k_points_section(calculation_type, k_mesh_density)
                 else:
                     input_file_content += generate_k_points_section(calculation_type, kmesh, is_wannier=True)
@@ -132,12 +120,13 @@ def generate_pw_input_file(calculation_type: str,
                 input_file_content += generate_k_points_section(calculation_type)
 
             return input_file_content
+
         except ValueError as e:
             print_error("Error in generating K_POINTS section:")
             print_error(str(e))
-            continue
+
         except InputGenerationError as e:
-            print_error("Fatal error in generating K_POINTS section:")
+            print_error("Fatal Error in generating K_POINTS section:")
             print_error(str(e))
             exit(1)
 
@@ -299,7 +288,8 @@ begin projections  ! Enter the atomic projections here
     input_file_content += "end projections\n"
 
     if relativistic:
-        input_file_content += f"""! Required for spin orbit
+        input_file_content += f"""
+! Required for spin orbit
 spinors = true
 
 begin unit_cell_cart
@@ -364,13 +354,9 @@ def write_input_files(project: ProjectSetup, skip_soc: bool = False) -> None:
         """Generate nscf_wannier input with parameter storage."""
         while True:
             try:
-                nbands = int(prompt_input(f"Enter the number of bands for wannier{'_soc' if rel else ''}: "))
-                if nbands <= 0:
-                    raise ValueError("Number of bands must be a positive integer.")
+                nbands = prompt_nbands("wannier", rel)
 
-                k_mesh = tuple(map(int, prompt_input(
-                    f"Enter K-point mesh density (e.g., '12 12 1') for wannier{'_soc' if rel else ''}: "
-                ).split()))
+                k_mesh = prompt_kmesh("wannier", rel)
 
                 # Store parameters for later use
                 wannier_params.set_params(nbands, k_mesh, rel)
