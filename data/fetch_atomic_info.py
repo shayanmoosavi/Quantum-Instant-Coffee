@@ -9,13 +9,17 @@ This module performs the following tasks:
 import sqlite3
 import os
 from io import StringIO
+from typing import List
+
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+from input.generators.sections import InputGenerationError
+
 
 # Fetching the webpage
-def fetch_elements_data(url: str = "https://iupac.qmul.ac.uk/AtWt/") -> BeautifulSoup.Tag:
+def fetch_elements_data(url: str = "https://iupac.qmul.ac.uk/AtWt/"):
     """
     Fetches the atomic weights, names, and labels of elements from the IUPAC website.
 
@@ -49,7 +53,7 @@ def fetch_elements_data(url: str = "https://iupac.qmul.ac.uk/AtWt/") -> Beautifu
     return table_2_html
 
 
-def process_elements_data(html_data: BeautifulSoup.Tag) -> pd.DataFrame:
+def process_elements_data(html_data) -> pd.DataFrame:
     """
     Processes the HTML table containing atomic data into a cleaned pandas DataFrame.
 
@@ -163,6 +167,37 @@ def create_sqlite_database(data: pd.DataFrame) -> bool:
     conn.close()
     return True
 
+
+def get_atomic_weights(element_names: List[str]) -> List[float] | None:
+    """
+    Retrieves the atomic weights for the given element names.
+
+    Args:
+        element_names (list): List of element names.
+
+    Returns:
+        list: List of atomic weights corresponding to the element names.
+    """
+    if not element_names:
+        raise ValueError("Element names list cannot be empty.")
+    try:
+        conn = sqlite3.connect("data/elements.db")
+        cursor = conn.cursor()
+        atomic_weights = []
+
+        for element in element_names:
+            cursor.execute("""
+            SELECT atomic_weight FROM elements WHERE symbol=?;""", (element,))
+            result = cursor.fetchone()
+            atomic_weights.append(result[0] if result else None)
+
+        return atomic_weights
+    except sqlite3.Error as e:
+        raise InputGenerationError(f"Database error: {str(e)}")
+
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == "__main__":
     """
