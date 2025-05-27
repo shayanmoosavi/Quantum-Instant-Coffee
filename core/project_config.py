@@ -197,6 +197,8 @@ class ProjectConfig:
                         "scf_soc": "spin_orbit/scf",  # Directory for spin-orbit SCF calculations
                         "wannier": "wannier",  # Directory for Wannier calculations
                         "wannier_soc": "spin_orbit/wannier",  # Directory for spin-orbit Wannier calculations
+                        "projected_bands": "projected_bands",  # Directory for projected band data
+                        "projected_bands_soc": "spin_orbit/projected_bands",  # Directory for spin-orbit projected bands
                         "pseudo": "../Pseudopotentials",  # Directory for pseudopotential files
                         "pseudo_rel": "../Pseudopotentials_rel"  # Directory for relativistic pseudopotential files
                     },
@@ -206,13 +208,22 @@ class ProjectConfig:
                             "scf_input": "{compound_name}_scf{flag}.pw.in",  # Pattern for SCF input files
                             "nscf_input": "{compound_name}_nscf{flag}.pw.in",  # Pattern for NSCF input files
                             "pw2wan_input": "{compound_name}{flag}.pw2wan.in",  # Pattern for pw2wannier90 input files
-                            "wannier_input": "{compound_name}_wannier{flag}.win"  # Pattern for wannier input files
+                            "wannier_input": "{compound_name}_wannier{flag}.win",  # Pattern for wannier input files
+                            "pw_bands_input": "{compound_name}_bands{flag}.pw.in",  # Pattern for PW Bands input files
+                            "kpdos_input": "{compound_name}{flag}.kpdos.in",  # Pattern for KPDOS input files
+                            "bands_input": "{compound_name}{flag}.bands.in"  # Pattern for Bands input files
                         },
                         output={
                             "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",  # Pattern for vc-relax output files
                             "scf_output": "{compound_name}_scf{flag}.pw.out",  # Pattern for SCF output files
                             "nscf_output": "{compound_name}_nscf{flag}.pw.out",  # Pattern for NSCF output files
-                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat"  # Pattern for wannier band data
+                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat",  # Pattern for wannier band data
+                            "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
+                            # Pattern for PW Bands output files
+                            "kpdos_output": "{compound_name}{flag}.kpdos.out",  # Pattern for KPDOS output files
+                            "projbands_output": "{compound_name}{flag}.projbands",
+                            # Pattern for generated projbands files from the AWK script
+                            "bands_gnu": "{compound_name}.bands.gnu"  # Pattern for DFT band data
                         }
                     )
                 )
