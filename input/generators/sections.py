@@ -7,31 +7,6 @@ class InputGenerationError(Exception):
     pass
 
 
-class WannierParams:
-    """Store shared parameters between nscf_wannier and wannier input files."""
-
-    def __init__(self):
-        self.normal_nbands = None
-        self.normal_kmesh = None
-        self.soc_nbands = None
-        self.soc_kmesh = None
-
-    def set_params(self, nbands: int, kmesh: tuple[int, int, int], is_soc: bool = False) -> None:
-        """Set parameters for either normal or SOC calculation."""
-        if is_soc:
-            self.soc_nbands = nbands
-            self.soc_kmesh = kmesh
-        else:
-            self.normal_nbands = nbands
-            self.normal_kmesh = kmesh
-
-    def get_params(self, is_soc: bool = False) -> tuple[int | None, tuple[int, int, int] | None]:
-        """Get parameters for either normal or SOC calculation."""
-        if is_soc:
-            return self.soc_nbands, self.soc_kmesh
-        return self.normal_nbands, self.normal_kmesh
-
-
 def generate_control_section(
         calculation_type: str,
         pseudo_dir: str,
