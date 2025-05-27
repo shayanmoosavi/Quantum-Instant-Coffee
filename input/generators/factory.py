@@ -1,8 +1,11 @@
+import argparse
 from dataclasses import dataclass
+from sys import argv
 from typing import List, Optional, Tuple
 from abc import ABC, abstractmethod
 
 from core.input_handler import get_pseudopotential_files
+from core.project_setup import initialize_project
 from data.fetch_atomic_info import get_atomic_weights
 from data.models import ProjectSetup
 from input.generators.kpoints import generate_k_points_section
@@ -571,3 +574,48 @@ class InputFileManager:
         print_success("All input files have been written successfully.")
         print_animated_ascii("ascii-art.txt")
         console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
+
+
+if __name__ == "__main__":
+    """
+    Main entry point for the script.
+
+    This block initializes the project, retrieves necessary data, and generates
+    the NSCF input file for Quantum ESPRESSO calculations. It performs the following steps:
+    1. Determines if the script is called for input file generation.
+    2. Initializes the project setup using command-line arguments.
+    3. Retrieves pseudopotential files for the specified elements.
+    4. Fetches atomic weights and POSCAR data (lattice vectors and atomic positions).
+    5. Generates the NSCF input file using the provided data and configuration.
+    6. Prints the generated NSCF input file content.
+    """
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")
+
+    # Add arguments
+    parser.add_argument(
+        "compound_name",
+        type=str,
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+    )
+    parser.add_argument(
+        "poscar_file",
+        type=str,
+        help="Path to the POSCAR file."
+    )
+
+    # Parse the arguments
+    args = parser.parse_args(argv[1:])
+    compound_name, poscar_file = args.compound_name, args.poscar_file
+
+    os.chdir("../..")
+
+    project = initialize_project(compound_name, poscar_file=poscar_file, is_input=True)
+
+    manager = InputFileManager(project)
+
+    try:
+        nscf_input = manager.generate_input_file("nscf", relativistic=True)
+        print_info(nscf_input)
+    except Exception as e:
+        print_error(f"Error generating NSCF input: {str(e)}")
