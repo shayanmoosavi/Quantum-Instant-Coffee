@@ -1,3 +1,8 @@
+""" Module for running external tools
+
+This module provides utility functions for running external tools
+such as AWK scripts and Quantum ESPRESSO's sumpdos.x.
+"""
 from subprocess import run
 from typing import Tuple
 
