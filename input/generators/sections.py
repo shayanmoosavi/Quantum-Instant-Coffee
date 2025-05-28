@@ -1,3 +1,10 @@
+"""Quantum ESPRESSO Input File Sections Generator
+
+This module provides functions for generating sections of Quantum ESPRESSO input files,
+including the &CONTROL, &SYSTEM, &ELECTRONS, ATOMIC_SPECIES, ATOMIC_POSITIONS,
+and CELL_PARAMETERS sections. It also defines a custom exception,
+`InputGenerationError`, for handling errors during input file generation.
+"""
 import os
 from typing import List, Dict
 

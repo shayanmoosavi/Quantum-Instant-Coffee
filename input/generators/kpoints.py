@@ -1,3 +1,18 @@
+"""K-points Section Generator for Quantum ESPRESSO and Wannier90
+
+This module provides a function to generate the K_POINTS section for
+Quantum ESPRESSO input files, as well as the kpoints section for Wannier90
+input files. It supports various calculation types such as 'scf', 'bands',
+'nscf', 'relax', 'vc-relax', and 'wannier'. The K-point mesh density can be
+specified, and for 'nscf'points Section Generator for Quantum ESPRESSO and Wannier90
+
+This module provides a function to generate the K_POINTS section for
+Quantum ESPRESSO input files, as well as the kpoints section for Wannier90
+input files. It supports various calculation types such as 'scf', 'bands',
+'nscf', 'relax', 'vc-relax', and 'wannier'. The K-point mesh density can be
+specified, and for 'nscf' and 'wannier' calculations, it can utilize a
+`kmesh.pl` script to generate the K-points.
+"""
 from subprocess import run, CalledProcessError
 from typing import Tuple
 
