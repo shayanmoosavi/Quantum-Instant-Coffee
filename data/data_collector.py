@@ -48,16 +48,23 @@ class SpinOrbitHandler:
 
     Attributes:
         skip_soc (bool): Indicates whether SOC cases should be skipped automatically.
+        skip_normal (bool): Indicates whether non-SOC cases should be skipped automatically.
+        soc_found (bool): Tracks whether SOC files have been successfully found.
+        normal_found (bool): Tracks whether non-SOC files have been successfully found.
     """
 
-    def __init__(self, skip_soc: bool = False) -> None:
+    def __init__(self, skip_soc: bool = False, skip_normal: bool = False) -> None:
         """
-        Initializes the SpinOrbitHandler with the option to skip SOC cases.
+        Initializes the SpinOrbitHandler with options to skip SOC or non-SOC cases.
 
         Args:
             skip_soc (bool): Whether to skip SOC cases. Defaults to False.
+            skip_normal (bool): Whether to skip non-SOC cases. Defaults to False.
         """
         self.skip_soc = skip_soc
+        self.skip_normal = skip_normal
+        self.soc_found = False
+        self.normal_found = False
 
     def should_skip(self, flag: str) -> bool:
         """
@@ -69,38 +76,99 @@ class SpinOrbitHandler:
         Returns:
             bool: True if the case should be skipped, False otherwise.
         """
-        return self.skip_soc and flag == "_soc"
+        if flag == "_soc":
+            return self.skip_soc
+        else:
+            return self.skip_normal
+
+    def mark_found(self, flag: str) -> None:
+        """
+        Mark that files for a specific case (SOC or non-SOC) have been found.
+
+        Args:
+            flag (str): The flag indicating whether the case involves SOC (e.g., "_soc" or "").
+        """
+        if flag == "_soc":
+            self.soc_found = True
+        else:
+            self.normal_found = True
 
     def handle_error(self, flag: str) -> bool:
         """
-        Handles errors encountered during data collection. For SOC cases, it provides
-        the user with the option to skip the case or exit the program. For non-SOC cases,
-        the program exits immediately.
+        Handles errors encountered during data collection. Provides the user with the option
+        to skip the case or exit the program based on what files are available.
 
         Args:
-            flag (str): The flag indicating whether the case involves SOC (e.g., "_soc").
+            flag (str): The flag indicating whether the case involves SOC (e.g., "_soc" or "").
 
         Returns:
-            bool: True if the SOC case is skipped, False otherwise.
+            bool: True if the case should be skipped, False otherwise.
 
         Raises:
-            SystemExit: If the user chooses not to skip the SOC case or if the error is
-                        not related to SOC.
+            SystemExit: If the user chooses not to skip the case and no other cases are available,
+                       or if neither SOC nor non-SOC files are found.
         """
-        if flag != "_soc":
-            exit(1) # Exit immediately for non spin-orbit cases
+        # Determine case type for user-friendly messaging
+        case_type = "spin-orbit (SOC)" if flag == "_soc" else "non-SOC"
+        opposite_case = "non-SOC" if flag == "_soc" else "spin-orbit (SOC)"
 
-        if self.skip_soc:
-            print_info("Spin-orbit was set to be skipped. Continuing...")
+        # Check if this case was already set to be skipped
+        if (flag == "_soc" and self.skip_soc) or (flag == "" and self.skip_normal):
+            print_info(f"{case_type.capitalize()} was set to be skipped. Continuing...")
             return True
 
-        skip_soc_input = prompt_input(
-            'Do you want to skip spin-orbit case? Enter "y" if you want to skip spin-orbit or "n" to quit the program: '
-        ).lower()
+        # If neither case has been found yet, prompt the user to skip or exit
+        if not self.soc_found and not self.normal_found:
 
-        if skip_soc_input == "n":
+            skip_input = prompt_input(
+                f'{case_type} file not found. Do you want to skip {case_type} case? Enter "y" to skip {case_type} '
+                f'or "n" to quit the program: '
+            ).lower()
+
+            if skip_input == "y":
+                # Set the appropriate skip flag for future reference
+                if flag == "_soc":
+                    self.skip_soc = True
+                else:
+                    self.skip_normal = True
+                return True
+            else:
+                exit(1)
+
+        # If we have found files for the opposite case, allow skipping this one
+        elif (flag == "_soc" and self.normal_found) or (flag == "" and self.soc_found):
+            skip_input = prompt_input(
+                f'{case_type.capitalize()} files not found, but {opposite_case} files are available. '
+                f'Do you want to skip {case_type} case? Enter "y" to skip {case_type} '
+                f'or "n" to quit the program: '
+            ).lower()
+
+            if skip_input == "y":
+                # Set the appropriate skip flag for future reference
+                if flag == "_soc":
+                    self.skip_soc = True
+                else:
+                    self.skip_normal = True
+                return True
+            else:
+                exit(1)
+
+        # If no files have been found for either case, exit
+        else:
+            print_error("No valid files found for either SOC or non-SOC calculations.")
             exit(1)
-        return True
+
+    def validate_at_least_one_case(self) -> None:
+        """
+        Validates that at least one case (SOC or non-SOC) has been successfully processed.
+
+        Raises:
+            SystemExit: If neither SOC nor non-SOC files were found and processed.
+        """
+        if not self.soc_found and not self.normal_found:
+            print_error("No valid files found for either SOC or non-SOC calculations.")
+            print_error("Cannot proceed without at least one valid calculation type.")
+            exit(1)
 
 def collect_dft_data(path: str,
                      compound_name: str,
@@ -155,11 +223,13 @@ def collect_dft_data(path: str,
         print_error(f"Error: {e}")
         return None, False
 
+    return None, False
 
 def collect_band_numbers(paths: Dict[str, List[str]],
                          compound_name: str,
                          spin_orbit_flags: List[str],
-                         skip_soc: bool = False) -> list[int]:
+                         skip_soc: bool = False,
+                         skip_normal: bool = False) -> list[int]:
     """
     Collect band numbers from Quantum ESPRESSO output files.
 
@@ -167,12 +237,13 @@ def collect_band_numbers(paths: Dict[str, List[str]],
         paths (dict): Dictionary of file paths
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
-        skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        skip_soc (bool): Whether to skip SOC calculations
+        skip_normal (bool): Whether to skip non-SOC calculations
 
     Returns:
         list: List of band numbers
     """
-    soc_handler = SpinOrbitHandler(skip_soc)
+    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
     number_of_bands_list = []
 
     for path, flag in zip(paths["pw_bands_output_paths"], spin_orbit_flags):
@@ -183,10 +254,13 @@ def collect_band_numbers(paths: Dict[str, List[str]],
 
         if not success:
             if soc_handler.handle_error(flag):
-                return number_of_bands_list
+                continue  # Skip this case
         else:
+            soc_handler.mark_found(flag)  # Mark this case as found
             number_of_bands_list.append(data)
 
+    # Validate that at least one case was successful
+    soc_handler.validate_at_least_one_case()
     return number_of_bands_list
 
 
@@ -194,6 +268,7 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
                            compound_name: str,
                            spin_orbit_flags: List[str],
                            skip_soc: bool = False,
+                           skip_normal: bool = False,
                            is_pdos: bool = False) -> List[float]:
     """
     Collect Fermi energies from Quantum ESPRESSO output files.
@@ -203,12 +278,13 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        skip_normal (bool): Whether to skip non-SOC calculations
         is_pdos (bool): Whether to collect Fermi energies from PDOS files
 
     Returns:
         list: List of Fermi energies
     """
-    soc_handler = SpinOrbitHandler(skip_soc)
+    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
     fermi_energy_list = []
 
     for path, flag in zip(paths["nscf_output_paths"] if is_pdos else paths["scf_output_paths"],
@@ -221,16 +297,19 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
 
         if not success:
             if soc_handler.handle_error(flag):
-                return fermi_energy_list
+                continue
         else:
+            soc_handler.mark_found(flag)
             fermi_energy_list.append(data)
 
+    soc_handler.validate_at_least_one_case()
     return fermi_energy_list
 
 def collect_number_of_atomic_states(paths: Dict[str, List[str]],
                                     compound_name: str,
                                     spin_orbit_flags: List[str],
-                                    skip_soc: bool = False) -> List[int]:
+                                    skip_soc: bool = False,
+                                    skip_normal: bool = False) -> List[int]:
     """
     Collect the number of atomic states from Quantum ESPRESSO KPDOS output files.
 
@@ -239,11 +318,12 @@ def collect_number_of_atomic_states(paths: Dict[str, List[str]],
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        skip_normal (bool): Whether to skip non-SOC calculations
 
     Returns:
         list: List of number of atomic states
     """
-    soc_handler = SpinOrbitHandler(skip_soc)
+    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
     number_of_atomic_states_list = []
 
     for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flags):
@@ -254,10 +334,12 @@ def collect_number_of_atomic_states(paths: Dict[str, List[str]],
 
         if not success:
             if soc_handler.handle_error(flag):
-                return number_of_atomic_states_list
+                continue
         else:
+            soc_handler.mark_found(flag)
             number_of_atomic_states_list.append(data)
 
+    soc_handler.validate_at_least_one_case()
     return number_of_atomic_states_list
 
 
@@ -265,6 +347,7 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
                                compound_name: str,
                                spin_orbit_flags: List[str],
                                skip_soc: bool = False,
+                               skip_normal: bool = False,
                                is_pdos: bool = False) -> List[Dict[Any, Any]]:
     """
     Collect the atomic info states from Quantum ESPRESSO KPDOS output files.
@@ -274,12 +357,13 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
         compound_name (str): Name of the compound
         spin_orbit_flags (list): List of flags for spin-orbit coupling
         skip_soc (bool): Whether to skip spin-orbit coupling calculations
+        skip_normal (bool): Whether to skip non-SOC calculations
         is_pdos (bool): Whether to collect atomic states info from PDOS files
 
     Returns:
         list: A list of dictionaries containing the indices and orbital weights of each atomic state
     """
-    soc_handler = SpinOrbitHandler(skip_soc)
+    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
     atomic_states_info_list = []
 
     atomic_projection_list = get_atomic_states()
@@ -288,6 +372,8 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
                           else paths["pdos_output_paths"], spin_orbit_flags):
 
         atomic_states_info = {}
+        case_successful = True  # Track if this entire case was successful
+
         if soc_handler.should_skip(flag):
             continue
 
@@ -302,13 +388,19 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
 
             if not success:
                 if soc_handler.handle_error(flag):
+                    # User chose to skip this case entirely
+                    case_successful = False
                     break
             else:
                 atomic_states_info.update(data)
                 print_success(f"Successfully extracted projection info\n")
 
-        atomic_states_info_list.append(atomic_states_info)
+        # Only add to results and mark as found if the entire case was successful
+        if case_successful and atomic_states_info:
+            soc_handler.mark_found(flag)
+            atomic_states_info_list.append(atomic_states_info)
 
+    soc_handler.validate_at_least_one_case()
     return atomic_states_info_list
 
 
