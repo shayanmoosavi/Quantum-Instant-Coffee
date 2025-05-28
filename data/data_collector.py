@@ -171,6 +171,7 @@ class SpinOrbitHandler:
             print_error("Cannot proceed without at least one valid calculation type.")
             exit(1)
 
+
 def collect_dft_data(path: str,
                      compound_name: str,
                      flag: str,
@@ -205,9 +206,9 @@ def collect_dft_data(path: str,
         match (atom is None, orbital is None):
 
             case (True, True):
-                    data = extractor_func(path, compound_name, flag) if \
-                        not is_pdos else extractor_func(path, compound_name, flag, is_pdos)
-                    return data, True
+                data = extractor_func(path, compound_name, flag) if \
+                    not is_pdos else extractor_func(path, compound_name, flag, is_pdos)
+                return data, True
 
             case (True, False) | (False, True):
                 raise ValueError(
@@ -225,6 +226,7 @@ def collect_dft_data(path: str,
         return None, False
 
     return None, False
+
 
 def collect_band_numbers(paths: Dict[str, List[str]],
                          compound_name: str,
@@ -305,6 +307,7 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
 
     soc_handler.validate_at_least_one_case()
     return fermi_energy_list
+
 
 def collect_number_of_atomic_states(paths: Dict[str, List[str]],
                                     compound_name: str,
@@ -475,7 +478,7 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
     # Iterating over the KPDOS output paths and corresponding projbands paths
     for i, (projbands_dir, kpdos_output_dir,
-         number_of_atomic_states, fermi_energy) in enumerate(zip(
+            number_of_atomic_states, fermi_energy) in enumerate(zip(
         paths["projbands_paths"], paths["kpdos_output_paths"],
         number_of_atomic_states_list, fermi_energies
     )):
@@ -715,8 +718,8 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
                                                          is_pdos=True)
 
     dos_setup = DOSSetup(fermi_energies=fermi_energies,
-                        spin_orbit_flags=spin_orbit_flags,
-                        atomic_states_info=atomic_states_info_list)
+                         spin_orbit_flags=spin_orbit_flags,
+                         atomic_states_info=atomic_states_info_list)
 
     project.add_dos_setup(dos_setup)
 
@@ -737,31 +740,14 @@ if __name__ == "__main__":
     """
     os.chdir("..")
 
-    def validate_compound_name(value):
-        if os.path.sep in value or os.path.altsep and os.path.altsep in value:
-            raise argparse.ArgumentTypeError(f"'{value}' is not a valid compound name as it contains path separators.")
-        return value
-
     # Create the parser
-    parser = argparse.ArgumentParser(description="Tests the path handler module.")
+    parser = argparse.ArgumentParser(description="Tests the data collector module.")
 
     # Add arguments
     parser.add_argument(
         "compound_name",
-        type=validate_compound_name,
-        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
-    )
-    parser.add_argument(
-        "poscar_file",
         type=str,
-        nargs='?',
-        help="Path to the POSCAR file (required for input file generation)."
-    )
-
-    parser.add_argument(
-        "--initialize-input",
-        action="store_true",
-        help="Initialize the project for input files."
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
     )
 
     parser.add_argument(
@@ -779,41 +765,33 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args(argv[1:])
-    is_input = args.initialize_input
 
-    # Create initialization options table
-    options_table = Table(title="Available Initialization Types")
-    options_table.add_column("Type", style="cyan")
-    options_table.add_column("Description", style="green")
-    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
-    options_table.add_row("bands", "Extract band structure information")
-    options_table.add_row("pdos", "Process projected density of states")
-    console.print(options_table)
+    print_info(f"\n{args.config_type} config type was chosen for collecting data.")
 
     match args.config_type:
         case "wannier":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input, is_wannier=True)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_wannier=True)
             prepare_wannier_info(project)
             is_wannier = True
             is_pdos = False
 
         case "bands":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False)
             prepare_bands_info(project)
             is_wannier = False
             is_pdos = False
 
         case "pdos":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input, is_pdos=True)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_pdos=True)
             prepare_pdos_info(project)
             is_wannier = False
             is_pdos = True

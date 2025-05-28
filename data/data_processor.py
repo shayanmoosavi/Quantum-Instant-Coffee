@@ -385,13 +385,14 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
 
     atomic_projection_list = project.dos_setup.atomic_states_info[0].keys()
     pdos_data_filename_list = [f"pdos_{atomic_projection.split('-')[0]}_{atomic_projection.split('-')[1]}.dat"
-                       for atomic_projection in atomic_projection_list]
+                               for atomic_projection in atomic_projection_list]
     dos_data_list = []
 
     for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"], project.dos_setup.fermi_energies):
 
         dos_data = {}
-        pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in pdos_data_filename_list]
+        pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in
+                                pdos_data_filename_list]
 
         for pdos_data, atomic_projection in zip(pdos_data_file_paths, atomic_projection_list):
             energy, dos = pdos_processor.load_pdos_data(pdos_data, fermi_energy)
@@ -424,6 +425,7 @@ def display_dft_data_info(bands: int, kpoints: np.ndarray, fermi_energy: float, 
 
     console.print(table)
 
+
 # Testing to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -434,31 +436,14 @@ if __name__ == "__main__":
     """
     os.chdir("..")
 
-    def validate_compound_name(value):
-        if os.path.sep in value or os.path.altsep and os.path.altsep in value:
-            raise argparse.ArgumentTypeError(f"'{value}' is not a valid compound name as it contains path separators.")
-        return value
-
     # Create the parser
-    parser = argparse.ArgumentParser(description="Tests the path handler module.")
+    parser = argparse.ArgumentParser(description="Tests the data processor module.")
 
     # Add arguments
     parser.add_argument(
         "compound_name",
-        type=validate_compound_name,
-        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
-    )
-    parser.add_argument(
-        "poscar_file",
         type=str,
-        nargs='?',
-        help="Path to the POSCAR file (required for input file generation)."
-    )
-
-    parser.add_argument(
-        "--initialize-input",
-        action="store_true",
-        help="Initialize the project for input files."
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
     )
 
     parser.add_argument(
@@ -476,23 +461,15 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args(argv[1:])
-    is_input = args.initialize_input
 
-    # Create initialization options table
-    options_table = Table(title="Available Initialization Types")
-    options_table.add_column("Type", style="cyan")
-    options_table.add_column("Description", style="green")
-    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
-    options_table.add_row("bands", "Extract band structure information")
-    options_table.add_row("pdos", "Process projected density of states")
-    console.print(options_table)
+    print_info(f"\n{args.config_type} config type was chosen for processing data.")
 
     match args.config_type:
         case "wannier":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input, is_wannier=True)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_wannier=True)
             prepare_wannier_info(project)
             process_comparison_data(project)
             is_wannier = True
@@ -500,9 +477,9 @@ if __name__ == "__main__":
 
         case "bands":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False)
             prepare_bands_info(project)
             process_band_data(project)
             is_wannier = False
@@ -510,9 +487,9 @@ if __name__ == "__main__":
 
         case "pdos":
             project = initialize_project(args.compound_name,
-                                     args.project_config,
-                                     args.config_type,
-                                     args.poscar_file if is_input else None, is_input, is_pdos=True)
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_pdos=True)
             prepare_pdos_info(project)
             process_pdos_data(project)
             is_wannier = False
@@ -583,6 +560,6 @@ if __name__ == "__main__":
                     project.band_data.k_points,
                     project.band_info.fermi_energies,
                     ["", "(SOC)"]
-                    ):
+            ):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} bands")
                 display_dft_data_info(bands, k_points, fermi_energy)
