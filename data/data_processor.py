@@ -6,6 +6,8 @@ weights, and processing atomic projections.
 """
 import os.path
 
+from rich import box
+
 from data.data_collector import *
 import numpy as np
 from data.models import BandData, ProjectSetup
@@ -431,6 +433,51 @@ if __name__ == "__main__":
     atomic projections and weights are calculated correctly.
     """
     os.chdir("..")
+
+    def validate_compound_name(value):
+        if os.path.sep in value or os.path.altsep and os.path.altsep in value:
+            raise argparse.ArgumentTypeError(f"'{value}' is not a valid compound name as it contains path separators.")
+        return value
+
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Tests the path handler module.")
+
+    # Add arguments
+    parser.add_argument(
+        "compound_name",
+        type=validate_compound_name,
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+    )
+    parser.add_argument(
+        "poscar_file",
+        type=str,
+        nargs='?',
+        help="Path to the POSCAR file (required for input file generation)."
+    )
+
+    parser.add_argument(
+        "--initialize-input",
+        action="store_true",
+        help="Initialize the project for input files."
+    )
+
+    parser.add_argument(
+        "--project-config",
+        type=str,
+        help="Path to a custom JSON project configuration file."
+    )
+
+    parser.add_argument(
+        "--config-type",
+        type=str,
+        default="bands",
+        choices=["bands", "pdos", "wannier"],
+        help="Type of configuration to use (default: 'bands')."
+    )
+
+    args = parser.parse_args(argv[1:])
+    is_input = args.initialize_input
+
     # Create initialization options table
     options_table = Table(title="Available Initialization Types")
     options_table.add_column("Type", style="cyan")
@@ -440,34 +487,40 @@ if __name__ == "__main__":
     options_table.add_row("pdos", "Process projected density of states")
     console.print(options_table)
 
-    is_input = len(argv) == 3
-
-    response = prompt_input("Select initialization type: ").strip().lower()
-
-    match response:
+    match args.config_type:
         case "wannier":
-            project = initialize_project(argv, is_input, is_wannier=True)
+            project = initialize_project(args.compound_name,
+                                     args.project_config,
+                                     args.config_type,
+                                     args.poscar_file if is_input else None, is_input, is_wannier=True)
             prepare_wannier_info(project)
             process_comparison_data(project)
             is_wannier = True
             is_pdos = False
 
         case "bands":
-            project = initialize_project(argv, is_input)
+            project = initialize_project(args.compound_name,
+                                     args.project_config,
+                                     args.config_type,
+                                     args.poscar_file if is_input else None, is_input)
             prepare_bands_info(project)
             process_band_data(project)
             is_wannier = False
             is_pdos = False
 
         case "pdos":
-            project = initialize_project(argv, is_input, is_pdos=True)
+            project = initialize_project(args.compound_name,
+                                     args.project_config,
+                                     args.config_type,
+                                     args.poscar_file if is_input else None, is_input, is_pdos=True)
             prepare_pdos_info(project)
             process_pdos_data(project)
             is_wannier = False
             is_pdos = True
 
         case _:
-            raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")
+            print_error(f"Invalid configuration type: {args.config_type}")
+            exit(1)
 
     print_info("Data processed successfully and ready for plotting.\n")
 
