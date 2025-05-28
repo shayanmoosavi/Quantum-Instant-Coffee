@@ -24,8 +24,10 @@ Functions:
 """
 import argparse
 import os.path
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from sys import argv
-from typing import Any
+from typing import Any, Callable, Optional
 
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
 from ui.ui_helpers import prompt_input, print_warning, print_header, console
@@ -170,7 +172,7 @@ class SpinOrbitHandler:
 def collect_dft_data(path: str,
                      compound_name: str,
                      flag: str,
-                     extractor_func: callable,
+                     extractor_func: Callable,
                      *,
                      atom: str = None,
                      orbital: str = None,
@@ -182,7 +184,7 @@ def collect_dft_data(path: str,
         path (dict): The file path.
         compound_name (str): Name of the compound being analyzed.
         flag (str): Suffix for the file name (e.g., "_soc" or "").
-        extractor_func (callable): Function used to extract specific data from the file.
+        extractor_func (Callable): Function used to extract specific data from the file.
         atom (str): Atomic symbol
         orbital (str): Orbital type (e.g., "s", "p", "d")
         is_pdos (bool): Whether the data is from a PDOS file.
@@ -223,6 +225,188 @@ def collect_dft_data(path: str,
     return None, False
 
 
+@dataclass
+class CollectionConfig:
+    """Configuration for data collection operations."""
+    paths: Dict[str, List[str]]
+    compound_name: str
+    spin_orbit_flags: List[str]
+    skip_soc: bool = False
+    skip_normal: bool = False
+    is_pdos: bool = False
+
+
+class DataExtractor(ABC):
+    """Abstract base class for data extraction strategies."""
+
+    @abstractmethod
+    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
+        """Extract data from a file."""
+        pass
+
+    @abstractmethod
+    def get_path_key(self) -> str:
+        """Return the key for accessing paths in the paths dictionary."""
+        pass
+
+    @abstractmethod
+    def get_success_message(self, **kwargs) -> str:
+        """Return success message for logging."""
+        pass
+
+
+class SimpleDataExtractor(DataExtractor):
+    """Extractor for single value extraction."""
+
+    def __init__(self, extractor_func: Callable, path_key: str, data_name: str):
+        self.extractor_func = extractor_func
+        self.path_key = path_key
+        self.data_name = data_name
+
+    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
+        is_pdos = kwargs.get('is_pdos', False)
+        return collect_dft_data(path, compound_name, flag, self.extractor_func, is_pdos=is_pdos)
+
+    def get_path_key(self) -> str:
+        return self.path_key
+
+    def get_success_message(self, **kwargs) -> str:
+        return f"Successfully extracted {self.data_name}.\n"
+
+
+class AtomicStatesExtractor(DataExtractor):
+    """Extractor for atomic states information."""
+
+    def __init__(self, path_key: str):
+        self.path_key = path_key
+        self.atomic_projection_list = get_atomic_states()
+
+    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
+        atomic_states_info = {}
+        is_pdos = kwargs.get('is_pdos', False)
+
+        for atom, orbital in self.atomic_projection_list:
+            data, success = collect_dft_data(
+                path, compound_name, flag, extract_atomic_states_info,
+                atom=atom, orbital=orbital, is_pdos=is_pdos
+            )
+
+            if not success:
+                return None, False
+
+            atomic_states_info.update(data)
+
+        return atomic_states_info, True
+
+    def get_path_key(self) -> str:
+        return self.path_key
+
+    def get_success_message(self, **kwargs) -> str:
+        return "\nSuccessfully extracted atomic states information.\n"
+
+
+class DataCollector:
+    """Template method class for collecting data from Quantum ESPRESSO files."""
+
+    def __init__(self, extractor: DataExtractor):
+        self.extractor = extractor
+
+    def collect(self, config: CollectionConfig) -> List[Any]:
+        """
+        Template method for data collection.
+
+        Args:
+            config: Collection configuration
+
+        Returns:
+            List of collected data
+        """
+        soc_handler = SpinOrbitHandler(config.skip_soc, config.skip_normal)
+        results = []
+
+        # Get the appropriate paths based on the extractor
+        paths = self._get_paths(config)
+
+        for path, flag in zip(paths, config.spin_orbit_flags):
+            if isinstance(self.extractor, AtomicStatesExtractor):
+                console.rule(f"Getting atomic projections info {'(SOC)' if flag else '(Non-SOC)'}")
+            if soc_handler.should_skip(flag):
+                continue
+
+            result = self._process_single_case(path, config, flag, soc_handler)
+            if result is not None:
+                results.append(result)
+
+        # Validate that at least one case was successful
+        soc_handler.validate_at_least_one_case()
+        return results
+
+    def _get_paths(self, config: CollectionConfig) -> List[str]:
+        """Get the appropriate paths for this extractor."""
+        path_key = self.extractor.get_path_key()
+
+        # Handle special cases for PDOS
+        if config.is_pdos and path_key == "kpdos_output_paths":
+            path_key = "pdos_output_paths"
+        elif config.is_pdos and path_key == "scf_output_paths":
+            path_key = "nscf_output_paths"
+
+        return config.paths[path_key]
+
+    def _process_single_case(self, path: str, config: CollectionConfig,
+                             flag: str, soc_handler: SpinOrbitHandler) -> Optional[Any]:
+        """Process a single case (SOC or non-SOC)."""
+        data, success = self.extractor.extract_data(
+            path, config.compound_name, flag, is_pdos=config.is_pdos
+        )
+
+        if not success:
+            if soc_handler.handle_error(flag):
+                return None  # Skip this case
+        else:
+            soc_handler.mark_found(flag)
+            print_success(self.extractor.get_success_message())
+            return data
+
+        return None
+
+
+class CollectorFactory:
+    """Factory for creating data collectors."""
+
+    @staticmethod
+    def create_band_collector() -> DataCollector:
+        extractor = SimpleDataExtractor(
+            extractor_func=extract_band_number,
+            path_key="pw_bands_output_paths",
+            data_name="band numbers"
+        )
+        return DataCollector(extractor)
+
+    @staticmethod
+    def create_fermi_collector() -> DataCollector:
+        extractor = SimpleDataExtractor(
+            extractor_func=extract_fermi_energy,
+            path_key="scf_output_paths",
+            data_name="Fermi energies"
+        )
+        return DataCollector(extractor)
+
+    @staticmethod
+    def create_atomic_states_count_collector() -> DataCollector:
+        extractor = SimpleDataExtractor(
+            extractor_func=extract_number_of_atomic_states,
+            path_key="kpdos_output_paths",
+            data_name="number of atomic states"
+        )
+        return DataCollector(extractor)
+
+    @staticmethod
+    def create_atomic_states_info_collector() -> DataCollector:
+        extractor = AtomicStatesExtractor("kpdos_output_paths")
+        return DataCollector(extractor)
+
+
 def collect_band_numbers(paths: Dict[str, List[str]],
                          compound_name: str,
                          spin_orbit_flags: List[str],
@@ -241,25 +425,16 @@ def collect_band_numbers(paths: Dict[str, List[str]],
     Returns:
         list: List of band numbers
     """
-    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
-    number_of_bands_list = []
+    config = CollectionConfig(
+        paths=paths,
+        compound_name=compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=skip_soc,
+        skip_normal=skip_normal
+    )
 
-    for path, flag in zip(paths["pw_bands_output_paths"], spin_orbit_flags):
-        if soc_handler.should_skip(flag):
-            continue
-
-        data, success = collect_dft_data(path, compound_name, flag, extract_band_number)
-
-        if not success:
-            if soc_handler.handle_error(flag):
-                continue  # Skip this case
-        else:
-            soc_handler.mark_found(flag)  # Mark this case as found
-            number_of_bands_list.append(data)
-
-    # Validate that at least one case was successful
-    soc_handler.validate_at_least_one_case()
-    return number_of_bands_list
+    collector = CollectorFactory.create_band_collector()
+    return collector.collect(config)
 
 
 def collect_fermi_energies(paths: Dict[str, List[str]],
@@ -282,26 +457,18 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
     Returns:
         list: List of Fermi energies
     """
-    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
-    fermi_energy_list = []
+    config = CollectionConfig(
+        paths=paths,
+        compound_name=compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=skip_soc,
+        skip_normal=skip_normal,
+        is_pdos=is_pdos
+    )
 
-    for path, flag in zip(paths["nscf_output_paths"] if is_pdos else paths["scf_output_paths"],
-                          spin_orbit_flags):
+    collector = CollectorFactory.create_fermi_collector()
+    return collector.collect(config)
 
-        if soc_handler.should_skip(flag):
-            continue
-
-        data, success = collect_dft_data(path, compound_name, flag, extract_fermi_energy, is_pdos=is_pdos)
-
-        if not success:
-            if soc_handler.handle_error(flag):
-                continue
-        else:
-            soc_handler.mark_found(flag)
-            fermi_energy_list.append(data)
-
-    soc_handler.validate_at_least_one_case()
-    return fermi_energy_list
 
 
 def collect_number_of_atomic_states(paths: Dict[str, List[str]],
@@ -322,24 +489,16 @@ def collect_number_of_atomic_states(paths: Dict[str, List[str]],
     Returns:
         list: List of number of atomic states
     """
-    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
-    number_of_atomic_states_list = []
+    config = CollectionConfig(
+        paths=paths,
+        compound_name=compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=skip_soc,
+        skip_normal=skip_normal
+    )
 
-    for path, flag in zip(paths["kpdos_output_paths"], spin_orbit_flags):
-        if soc_handler.should_skip(flag):
-            continue
-
-        data, success = collect_dft_data(path, compound_name, flag, extract_number_of_atomic_states)
-
-        if not success:
-            if soc_handler.handle_error(flag):
-                continue
-        else:
-            soc_handler.mark_found(flag)
-            number_of_atomic_states_list.append(data)
-
-    soc_handler.validate_at_least_one_case()
-    return number_of_atomic_states_list
+    collector = CollectorFactory.create_atomic_states_count_collector()
+    return collector.collect(config)
 
 
 def collect_atomic_states_info(paths: Dict[str, List[str]],
@@ -362,45 +521,17 @@ def collect_atomic_states_info(paths: Dict[str, List[str]],
     Returns:
         list: A list of dictionaries containing the indices and orbital weights of each atomic state
     """
-    soc_handler = SpinOrbitHandler(skip_soc, skip_normal)
-    atomic_states_info_list = []
+    config = CollectionConfig(
+        paths=paths,
+        compound_name=compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=skip_soc,
+        skip_normal=skip_normal,
+        is_pdos=is_pdos
+    )
 
-    atomic_projection_list = get_atomic_states()
-
-    for path, flag in zip(paths["kpdos_output_paths"] if not is_pdos
-                          else paths["pdos_output_paths"], spin_orbit_flags):
-
-        atomic_states_info = {}
-        case_successful = True  # Track if this entire case was successful
-
-        if soc_handler.should_skip(flag):
-            continue
-
-        for atom, orbital in atomic_projection_list:
-            data, success = collect_dft_data(path,
-                                             compound_name,
-                                             flag,
-                                             extract_atomic_states_info,
-                                             atom=atom,
-                                             orbital=orbital,
-                                             is_pdos=is_pdos)
-
-            if not success:
-                if soc_handler.handle_error(flag):
-                    # User chose to skip this case entirely
-                    case_successful = False
-                    break
-            else:
-                atomic_states_info.update(data)
-                print_success(f"Successfully extracted projection info\n")
-
-        # Only add to results and mark as found if the entire case was successful
-        if case_successful and atomic_states_info:
-            soc_handler.mark_found(flag)
-            atomic_states_info_list.append(atomic_states_info)
-
-    soc_handler.validate_at_least_one_case()
-    return atomic_states_info_list
+    collector = CollectorFactory.create_atomic_states_info_collector()
+    return collector.collect(config)
 
 
 def run_awk_script(number_of_atomic_states: int,

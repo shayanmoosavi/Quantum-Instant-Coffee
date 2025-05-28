@@ -7,6 +7,7 @@ weights, and processing atomic projections.
 import os.path
 
 from rich import box
+from rich.table import Table
 
 from data.data_collector import *
 import numpy as np
