@@ -30,8 +30,6 @@ import os.path
 from sys import argv
 from typing import Any
 
-from rich.table import Table
-
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
 from ui.ui_helpers import prompt_input, print_warning, print_header, console
 from utils.file_parser import *
