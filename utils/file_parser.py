@@ -69,6 +69,7 @@ def extract_band_number(file_path: str, compound_name: str, flag: str) -> int:
         FileNotFoundError: If the file does not exist
         ValueError: If the band number cannot be extracted
     """
+    console.rule(f"Getting number of bands {'(SOC)' if flag else '(Non-SOC)'}")
     print_info(f"Reading {compound_name}_bands{flag}.pw.out...")
 
     try:
@@ -84,8 +85,8 @@ def extract_band_number(file_path: str, compound_name: str, flag: str) -> int:
 
         try:
             number_of_bands = int(next(band_number_matches).group(1))
-            print_success(
-                f"Band number extracted successfully. There are {number_of_bands} bands in this calculation.\n"
+            print_info(
+                f"There are {number_of_bands} bands in this calculation.\n"
             )
             return number_of_bands
 
@@ -118,7 +119,7 @@ def extract_fermi_energy(
         FileNotFoundError: If the file does not exist
         ValueError: If the Fermi energy cannot be extracted
     """
-    print_info("Getting Fermi energy...")
+    console.rule(f"Getting Fermi energy {'(SOC)' if flag else '(Non-SOC)'}")
 
     if not is_pdos:
         print_info(f"Reading {compound_name}_scf{flag}.pw.out...")
@@ -136,8 +137,8 @@ def extract_fermi_energy(
 
             try:
                 fermi_energy = float(next(fermi_energy_matches).group(1))
-                print_success(
-                    f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n"
+                print_info(
+                    f"Fermi energy is {fermi_energy} eV.\n"
                 )
                 return fermi_energy
 
@@ -168,8 +169,8 @@ def extract_fermi_energy(
 
             try:
                 fermi_energy = float(next(fermi_energy_matches).group(1))
-                print_success(
-                    f"Fermi energy extracted successfully. Fermi energy is {fermi_energy} eV.\n"
+                print_info(
+                    f"Fermi energy is {fermi_energy} eV.\n"
                 )
                 return fermi_energy
 
@@ -203,6 +204,7 @@ def extract_number_of_atomic_states(
         FileNotFoundError: If the file does not exist
         ValueError: If the number of atomic states cannot be extracted
     """
+    console.rule(f"Getting number of atomic states {'(SOC)' if flag else '(Non-SOC)'}")
     print_info(f"Reading {compound_name}{flag}.kpdos.out...")
 
     try:
@@ -218,8 +220,8 @@ def extract_number_of_atomic_states(
 
         try:
             number_of_atomic_states = int(next(atomic_states_matches).group(1))
-            print_success(
-                f"Number of atomic states extracted successfully. There are {number_of_atomic_states} atomic states in this calculation.\n"
+            print_info(
+                f"There are {number_of_atomic_states} atomic states in this calculation.\n"
             )
             return number_of_atomic_states
 
@@ -264,7 +266,7 @@ def extract_atomic_states_info(
         FileNotFoundError: If the file does not exist
         ValueError: If the atomic state cannot be extracted
     """
-    console.rule(f"Getting atomic projection {atom}-{orbital}")
+    print_info(f"Getting atomic projection {atom}-{orbital}...")
 
     if not is_pdos:
         try:
@@ -397,6 +399,7 @@ def extract_wannier_parameters(
         ValueError: If parameters cannot be extracted
         FileNotFoundError: If the file does not exist
     """
+    console.rule("Getting Wannier parameters")
     print_info(f"Reading {compound_name}_nscf_wannier{flag}.pw.out...")
 
     with open(file_path, "r") as f:
