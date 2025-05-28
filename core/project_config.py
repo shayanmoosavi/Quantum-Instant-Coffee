@@ -206,7 +206,8 @@ class ProjectConfig:
                         input={
                             "vc_relax_input": "{compound_name}_vc_relax{flag}.pw.in",  # Pattern for vc-relax input files
                             "scf_input": "{compound_name}_scf{flag}.pw.in",  # Pattern for SCF input files
-                            "nscf_input": "{compound_name}_nscf{flag}.pw.in",  # Pattern for NSCF input files
+                            "nscf_wannier_input": "{compound_name}_nscf_wannier{flag}.pw.in",
+                            # Pattern for NSCF wannier input files
                             "pw2wan_input": "{compound_name}{flag}.pw2wan.in",  # Pattern for pw2wannier90 input files
                             "wannier_input": "{compound_name}_wannier{flag}.win",  # Pattern for wannier input files
                             "pw_bands_input": "{compound_name}_bands{flag}.pw.in",  # Pattern for PW Bands input files
@@ -216,14 +217,15 @@ class ProjectConfig:
                         output={
                             "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",  # Pattern for vc-relax output files
                             "scf_output": "{compound_name}_scf{flag}.pw.out",  # Pattern for SCF output files
-                            "nscf_output": "{compound_name}_nscf{flag}.pw.out",  # Pattern for NSCF output files
-                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat",  # Pattern for wannier band data
+                            "nscf_wannier_output": "{compound_name}_nscf_wannier{flag}.pw.out",
+                            # Pattern for NSCF wannier output files                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat",  # Pattern for wannier band data
                             "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
                             # Pattern for PW Bands output files
                             "kpdos_output": "{compound_name}{flag}.kpdos.out",  # Pattern for KPDOS output files
                             "projbands_output": "{compound_name}{flag}.projbands",
                             # Pattern for generated projbands files from the AWK script
-                            "bands_gnu": "{compound_name}.bands.gnu"  # Pattern for DFT band data
+                            "bands_gnu": "{compound_name}.bands.gnu" , # Pattern for DFT band data
+                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat"  # Pattern for wannier band data
                         }
                     )
                 )
