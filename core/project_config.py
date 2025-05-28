@@ -218,7 +218,7 @@ class ProjectConfig:
                             "vc_relax_output": "{compound_name}_vc_relax{flag}.pw.out",  # Pattern for vc-relax output files
                             "scf_output": "{compound_name}_scf{flag}.pw.out",  # Pattern for SCF output files
                             "nscf_wannier_output": "{compound_name}_nscf_wannier{flag}.pw.out",
-                            # Pattern for NSCF wannier output files                            "wannier_bands": "{compound_name}_wannier{flag}_band.dat",  # Pattern for wannier band data
+                            # Pattern for NSCF wannier output files
                             "pw_bands_output": "{compound_name}_bands{flag}.pw.out",
                             # Pattern for PW Bands output files
                             "kpdos_output": "{compound_name}{flag}.kpdos.out",  # Pattern for KPDOS output files
