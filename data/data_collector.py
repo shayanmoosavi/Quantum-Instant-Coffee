@@ -21,9 +21,6 @@ Functions:
     prepare_bands_info: Prepares band structure information by extracting data from output files.
     prepare_wannier_info: Prepares Wannier information by extracting data from NSCF Wannier output files.
     prepare_pdos_info: Prepares PDOS information by extracting data from output files.
-    display_dft_info: Displays DFT calculation information in a formatted table.
-    display_atomic_states: Displays atomic states information in a formatted table.
-    display_wannier_info: Displays Wannier calculation information in a formatted table.
 """
 import argparse
 import os.path
