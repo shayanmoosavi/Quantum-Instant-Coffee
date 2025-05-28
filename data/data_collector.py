@@ -23,7 +23,6 @@ Functions:
     prepare_pdos_info: Prepares PDOS information by extracting data from output files.
 """
 import argparse
-import os.path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from sys import argv
@@ -31,13 +30,11 @@ from typing import Any, Callable, Optional
 
 from data.data_generator import generate_pdos, generate_projected_bands
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
-from ui.ui_helpers import prompt_input, print_warning, print_header, console
-from utils.external_tools import run_awk_script, run_sum_pdos
+from ui.ui_helpers import prompt_input, print_header
 from utils.file_parser import *
 from core.project_setup import initialize_project
 from core.input_handler import get_atomic_states
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup
-from subprocess import CalledProcessError, run
 from core.project_setup import ProjectInitializationError
 
 
@@ -307,6 +304,32 @@ class AtomicStatesExtractor(DataExtractor):
         return "\nSuccessfully extracted atomic states information.\n"
 
 
+class WannierDataExtractor(DataExtractor):
+    """Extractor for Wannier parameters (alat and Fermi energy)."""
+
+    def __init__(self, path_key: str = "nscf_wannier_output_paths"):
+        self.path_key = path_key
+
+    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
+        """Extract Wannier parameters from NSCF output files.
+
+        Returns:
+            Tuple containing ((alat, fermi_energy), success_flag)
+        """
+        try:
+            alat, fermi_energy = extract_wannier_parameters(path, compound_name, flag)
+            return (alat, fermi_energy), True
+        except (FileNotFoundError, ValueError) as e:
+            print_error(f"Error extracting Wannier parameters: {e}")
+            return None, False
+
+    def get_path_key(self) -> str:
+        return self.path_key
+
+    def get_success_message(self, **kwargs) -> str:
+        return "Successfully extracted Wannier parameters.\n"
+
+
 class DataCollector:
     """Template method class for collecting data from Quantum ESPRESSO files."""
 
@@ -373,6 +396,42 @@ class DataCollector:
         return None
 
 
+class WannierCollector(DataCollector):
+    """Template method class for collecting Wannier data from Quantum ESPRESSO files."""
+
+    def __init__(self, extractor: DataExtractor):
+        super().__init__(extractor)
+        self.soc_handler = None  # Will be set during collection
+
+    def collect(self, config: CollectionConfig) -> Tuple[List[float], List[float]]:
+        """
+        Collect Wannier data and return separate lists for alat and Fermi energies.
+
+        Returns:
+            Tuple of (alat_parameters, fermi_energies)
+        """
+        self.soc_handler = SpinOrbitHandler(config.skip_soc, config.skip_normal)
+        alat_parameters = []
+        fermi_energies = []
+
+        # Get the appropriate paths based on the extractor
+        paths = self._get_paths(config)
+
+        for path, flag in zip(paths, config.spin_orbit_flags):
+            if self.soc_handler.should_skip(flag):
+                continue
+
+            result = self._process_single_case(path, config, flag, self.soc_handler)
+            if result is not None:
+                alat, fermi_energy = result
+                alat_parameters.append(alat)
+                fermi_energies.append(fermi_energy)
+
+        # Validate that at least one case was successful
+        self.soc_handler.validate_at_least_one_case()
+        return alat_parameters, fermi_energies
+
+
 class CollectorFactory:
     """Factory for creating data collectors."""
 
@@ -407,6 +466,11 @@ class CollectorFactory:
     def create_atomic_states_info_collector() -> DataCollector:
         extractor = AtomicStatesExtractor("kpdos_output_paths")
         return DataCollector(extractor)
+
+    @staticmethod
+    def create_wannier_collector() -> WannierCollector:
+        extractor = WannierDataExtractor()
+        return WannierCollector(extractor)
 
 
 def collect_band_numbers(paths: Dict[str, List[str]],
@@ -624,41 +688,35 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     """
     print_header("Wannier Info Extraction")
 
-    fermi_energies = []
-    alat_parameters = []
-    skip_normal = False
-
     spin_orbit_flags = ["", "_soc"]
 
-    nscf_paths = project.output_paths["nscf_wannier_output_paths"]
-
-    for path, flag in zip(nscf_paths, spin_orbit_flags):
-        try:
-            alat, fermi_energy = extract_wannier_parameters(path, project.compound_name, flag)
-            alat_parameters.append(alat)
-            fermi_energies.append(fermi_energy)
-
-        except FileNotFoundError as e:
-            if flag == "":
-
-                response = prompt_input("Non-SOC calculation files missing. Skip non-SOC case? (y/n): ")
-                if response.lower() == "y":
-                    skip_normal = True
-                    continue
-            raise ProjectInitializationError("Required Wannier files missing") from e
-
-        except ValueError as e:
-            raise ProjectInitializationError(f"Failed to extract Wannier parameters: {str(e)}")
-
-    wannier_setup = WannierSetup(
-        fermi_energies=fermi_energies,
-        alat_parameters=alat_parameters,
-        skip_normal=skip_normal
+    config = CollectionConfig(
+        paths=project.output_paths,
+        compound_name=project.compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=project.skip_soc,
+        skip_normal=False
     )
 
-    # Add Wannier setup to project configuration
-    project.add_wannier_setup(wannier_setup)
-    return project
+    # Collect Wannier parameters using the factory pattern
+    collector = CollectorFactory.create_wannier_collector()
+
+    try:
+        alat_parameters, fermi_energies = collector.collect(config)
+
+        wannier_setup = WannierSetup(
+            fermi_energies=fermi_energies,
+            alat_parameters=alat_parameters,
+            skip_normal=collector.soc_handler.skip_normal,
+            skip_soc=collector.soc_handler.skip_soc
+        )
+
+        # Add Wannier setup to project configuration
+        project.add_wannier_setup(wannier_setup)
+        return project
+
+    except Exception as e:
+        raise ProjectInitializationError(f"Failed to prepare Wannier info: {str(e)}")
 
 
 def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
