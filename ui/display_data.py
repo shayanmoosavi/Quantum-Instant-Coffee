@@ -6,6 +6,7 @@ This module provides functions to display various types of data in a formatted m
 
 from typing import Dict, Any
 
+from numpy import ndarray
 from rich import box
 from rich.table import Table
 
@@ -79,5 +80,21 @@ def display_wannier_info(fermi_energy: float, alat_parameter: float) -> None:
 
     table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
     table.add_row("Lattice parameter (Å)", f"{alat_parameter:.6f}")
+
+    console.print(table)
+
+
+def display_dft_data_info(bands: int, kpoints: ndarray, fermi_energy: float, stress_amount: str = None):
+    table = Table(title="Bands Info", box=box.ROUNDED)
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+
+    if stress_amount:
+        strain_percent = float(stress_amount.replace('_', '.')) * 100
+        table.caption = f"Results for {strain_percent:.2f}% strain"
+
+    table.add_row("Number of bands", str(bands))
+    table.add_row("Number of k-points", str(len(kpoints)))
+    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
 
     console.print(table)

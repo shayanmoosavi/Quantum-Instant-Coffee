@@ -12,6 +12,7 @@ from rich.table import Table
 from data.data_collector import *
 import numpy as np
 from data.models import BandData, ProjectSetup
+from ui.display_data import display_dft_data_info
 
 
 class BandDataProcessor:
@@ -409,22 +410,6 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
 
     project.add_dos_setup(dos_setup)
     return project
-
-
-def display_dft_data_info(bands: int, kpoints: np.ndarray, fermi_energy: float, stress_amount: str = None):
-    table = Table(title="Bands Info", box=box.ROUNDED)
-    table.add_column("Property", style="cyan")
-    table.add_column("Value", style="green")
-
-    if stress_amount:
-        strain_percent = float(stress_amount.replace('_', '.')) * 100
-        table.caption = f"Results for {strain_percent:.2f}% strain"
-
-    table.add_row("Number of bands", str(bands))
-    table.add_row("Number of k-points", str(len(kpoints)))
-    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
-
-    console.print(table)
 
 
 # Testing to ensure the module works as expected
