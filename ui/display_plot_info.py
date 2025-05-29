@@ -1,8 +1,5 @@
 """ Module for displaying debug information for plots in Quantum Instant Coffee.
 
-This module provides functions for displaying debug information related to
-different types of plots in the Quantum Instant Coffee application.
-
 It includes functions to format and print debug information for band structure plots,
 Wannier comparison plots, and projected density of states (PDOS) plots.
 These functions utilize the `rich` library to create formatted tables for displaying

@@ -6,9 +6,13 @@ weights, and processing atomic projections.
 """
 import os.path
 
+from rich import box
+from rich.table import Table
+
 from data.data_collector import *
 import numpy as np
 from data.models import BandData, ProjectSetup
+from ui.display_data import display_dft_data_info
 
 
 class BandDataProcessor:
@@ -383,13 +387,14 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
 
     atomic_projection_list = project.dos_setup.atomic_states_info[0].keys()
     pdos_data_filename_list = [f"pdos_{atomic_projection.split('-')[0]}_{atomic_projection.split('-')[1]}.dat"
-                       for atomic_projection in atomic_projection_list]
+                               for atomic_projection in atomic_projection_list]
     dos_data_list = []
 
     for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"], project.dos_setup.fermi_energies):
 
         dos_data = {}
-        pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in pdos_data_filename_list]
+        pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in
+                                pdos_data_filename_list]
 
         for pdos_data, atomic_projection in zip(pdos_data_file_paths, atomic_projection_list):
             energy, dos = pdos_processor.load_pdos_data(pdos_data, fermi_energy)
@@ -407,21 +412,6 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
     return project
 
 
-def display_dft_data_info(bands: int, kpoints: np.ndarray, fermi_energy: float, stress_amount: str = None):
-    table = Table(title="Bands Info", box=box.ROUNDED)
-    table.add_column("Property", style="cyan")
-    table.add_column("Value", style="green")
-
-    if stress_amount:
-        strain_percent = float(stress_amount.replace('_', '.')) * 100
-        table.caption = f"Results for {strain_percent:.2f}% strain"
-
-    table.add_row("Number of bands", str(bands))
-    table.add_row("Number of k-points", str(len(kpoints)))
-    table.add_row("Fermi energy (eV)", f"{fermi_energy:.4f}")
-
-    console.print(table)
-
 # Testing to ensure the module works as expected
 if __name__ == "__main__":
     """
@@ -431,43 +421,69 @@ if __name__ == "__main__":
     atomic projections and weights are calculated correctly.
     """
     os.chdir("..")
-    # Create initialization options table
-    options_table = Table(title="Available Initialization Types")
-    options_table.add_column("Type", style="cyan")
-    options_table.add_column("Description", style="green")
-    options_table.add_row("wannier", "Prepare Wannier bands comparison setup")
-    options_table.add_row("bands", "Extract band structure information")
-    options_table.add_row("pdos", "Process projected density of states")
-    console.print(options_table)
 
-    is_input = len(argv) == 3
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Tests the data processor module.")
 
-    response = prompt_input("Select initialization type: ").strip().lower()
+    # Add arguments
+    parser.add_argument(
+        "compound_name",
+        type=str,
+        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
+    )
 
-    match response:
+    parser.add_argument(
+        "--project-config",
+        type=str,
+        help="Path to a custom JSON project configuration file."
+    )
+
+    parser.add_argument(
+        "--config-type",
+        type=str,
+        default="bands",
+        choices=["bands", "pdos", "wannier"],
+        help="Type of configuration to use (default: 'bands')."
+    )
+
+    args = parser.parse_args(argv[1:])
+
+    print_info(f"\n{args.config_type} config type was chosen for processing data.")
+
+    match args.config_type:
         case "wannier":
-            project = initialize_project(argv, is_input, is_wannier=True)
+            project = initialize_project(args.compound_name,
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_wannier=True)
             prepare_wannier_info(project)
             process_comparison_data(project)
             is_wannier = True
             is_pdos = False
 
         case "bands":
-            project = initialize_project(argv, is_input)
+            project = initialize_project(args.compound_name,
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False)
             prepare_bands_info(project)
             process_band_data(project)
             is_wannier = False
             is_pdos = False
 
         case "pdos":
-            project = initialize_project(argv, is_input, is_pdos=True)
+            project = initialize_project(args.compound_name,
+                                         args.project_config,
+                                         args.config_type,
+                                         is_input=False, is_pdos=True)
             prepare_pdos_info(project)
             process_pdos_data(project)
             is_wannier = False
             is_pdos = True
 
         case _:
-            raise ValueError("Invalid initialization type! Valid choices are: wannier, bands, pdos")
+            print_error(f"Invalid configuration type: {args.config_type}")
+            exit(1)
 
     print_info("Data processed successfully and ready for plotting.\n")
 
@@ -530,6 +546,6 @@ if __name__ == "__main__":
                     project.band_data.k_points,
                     project.band_info.fermi_energies,
                     ["", "(SOC)"]
-                    ):
+            ):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} bands")
                 display_dft_data_info(bands, k_points, fermi_energy)

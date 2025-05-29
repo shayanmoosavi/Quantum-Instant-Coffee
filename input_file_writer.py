@@ -8,12 +8,12 @@ import argparse
 from sys import argv
 
 from core.project_setup import initialize_project
-from input.input_file_generator import write_input_files
+from input.input_file_generator import InputFileManager
 
-# Create the parser
+# Creating the parser
 parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")
 
-# Add arguments
+# Adding arguments
 parser.add_argument(
     "compound_name",
     type=str,
@@ -37,7 +37,7 @@ parser.add_argument(
     help="Path to a custom JSON project configuration file."
 )
 
-# Parse the arguments
+# Parsing the arguments
 args = parser.parse_args(argv[1:])
 compound_name, poscar_file = args.compound_name, args.poscar_file
 config_type = args.config_type
@@ -48,5 +48,7 @@ project = initialize_project(compound_name,
                              config_type,
                              poscar_file,
                              is_input=True)
+
 skip_soc = project.skip_soc
-write_input_files(project, skip_soc)
+manager = InputFileManager(project)
+manager.write_all_input_files(skip_soc)
