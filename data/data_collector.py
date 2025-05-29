@@ -14,26 +14,21 @@ Functions:
     collect_fermi_energies: Collects Fermi energies from Quantum ESPRESSO output files.
     collect_number_of_atomic_states: Collects the number of atomic states from KPDOS output files.
     collect_atomic_states_info: Collects atomic states information from KPDOS or PDOS output files.
-    run_awk_script: Executes an AWK script to generate projected bands data.
-    run_sum_pdos: Executes the Quantum ESPRESSO sumpdos.x script to generate PDOS files.
-    generate_projected_bands: Generates projected bands data if not already present.
-    generate_pdos: Generates PDOS files if not already present.
     prepare_bands_info: Prepares band structure information by extracting data from output files.
     prepare_wannier_info: Prepares Wannier information by extracting data from NSCF Wannier output files.
     prepare_pdos_info: Prepares PDOS information by extracting data from output files.
 """
 import argparse
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from sys import argv
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
+from data.data_extractor import DataExtractor, SimpleDataExtractor, AtomicStatesExtractor, WannierDataExtractor
 from data.data_generator import generate_pdos, generate_projected_bands
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
 from ui.ui_helpers import prompt_input, print_header
 from utils.file_parser import *
 from core.project_setup import initialize_project
-from core.input_handler import get_atomic_states
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup
 from core.project_setup import ProjectInitializationError
 
@@ -168,166 +163,25 @@ class SpinOrbitHandler:
             exit(1)
 
 
-def collect_dft_data(path: str,
-                     compound_name: str,
-                     flag: str,
-                     extractor_func: Callable,
-                     *,
-                     atom: str = None,
-                     orbital: str = None,
-                     is_pdos: bool = False) -> None | Tuple[None, bool] | Tuple[Any, bool]:
-    """
-    Collect data from Quantum ESPRESSO output files using a specified extractor function.
-
-    Args:
-        path (dict): The file path.
-        compound_name (str): Name of the compound being analyzed.
-        flag (str): Suffix for the file name (e.g., "_soc" or "").
-        extractor_func (Callable): Function used to extract specific data from the file.
-        atom (str): Atomic symbol
-        orbital (str): Orbital type (e.g., "s", "p", "d")
-        is_pdos (bool): Whether the data is from a PDOS file.
-
-    Returns:
-        tuple: A tuple containing:
-            - data (any): The extracted data if successful, or None if an error occurs.
-            - success (bool): True if data extraction was successful, False otherwise.
-
-    Raises:
-        FileNotFoundError: If the specified file does not exist.
-        ValueError: If the data cannot be extracted from the file or one of atom or orbital is not None.
-    """
-    try:
-        # atom and orbital should either be both None or both not None
-        match (atom is None, orbital is None):
-
-            case (True, True):
-                data = extractor_func(path, compound_name, flag) if \
-                    not is_pdos else extractor_func(path, compound_name, flag, is_pdos)
-                return data, True
-
-            case (True, False) | (False, True):
-                raise ValueError(
-                    """Both atom and orbital should be either None or not None.
-                    If you want to extract atomic states, please provide both atom and orbital."""
-                )
-
-            case (False, False):
-                data = extractor_func(path, compound_name, flag, atom, orbital) if \
-                    not is_pdos else extractor_func(path, compound_name, flag, atom, orbital, is_pdos)
-                return data, True
-
-    except (FileNotFoundError, ValueError) as e:
-        print_error(f"Error: {e}")
-        return None, False
-
-    return None, False
-
-
 @dataclass
 class CollectionConfig:
-    """Configuration for data collection operations."""
+    """
+    Configuration for data collection operations.
+
+    Attributes:
+        paths (Dict[str, List[str]]): Dictionary containing file paths for data collection.
+        compound_name (str): Name of the compound being analyzed.
+        spin_orbit_flags (List[str]): List of flags indicating spin-orbit coupling cases (e.g., "_soc").
+        skip_soc (bool): Whether to skip spin-orbit coupling cases. Defaults to False.
+        skip_normal (bool): Whether to skip non-spin-orbit coupling cases. Defaults to False.
+        is_pdos (bool): Whether the data collection involves PDOS files. Defaults to False.
+    """
     paths: Dict[str, List[str]]
     compound_name: str
     spin_orbit_flags: List[str]
     skip_soc: bool = False
     skip_normal: bool = False
     is_pdos: bool = False
-
-
-class DataExtractor(ABC):
-    """Abstract base class for data extraction strategies."""
-
-    @abstractmethod
-    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
-        """Extract data from a file."""
-        pass
-
-    @abstractmethod
-    def get_path_key(self) -> str:
-        """Return the key for accessing paths in the paths dictionary."""
-        pass
-
-    @abstractmethod
-    def get_success_message(self, **kwargs) -> str:
-        """Return success message for logging."""
-        pass
-
-
-class SimpleDataExtractor(DataExtractor):
-    """Extractor for single value extraction."""
-
-    def __init__(self, extractor_func: Callable, path_key: str, data_name: str):
-        self.extractor_func = extractor_func
-        self.path_key = path_key
-        self.data_name = data_name
-
-    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
-        is_pdos = kwargs.get('is_pdos', False)
-        return collect_dft_data(path, compound_name, flag, self.extractor_func, is_pdos=is_pdos)
-
-    def get_path_key(self) -> str:
-        return self.path_key
-
-    def get_success_message(self, **kwargs) -> str:
-        return f"Successfully extracted {self.data_name}.\n"
-
-
-class AtomicStatesExtractor(DataExtractor):
-    """Extractor for atomic states information."""
-
-    def __init__(self, path_key: str):
-        self.path_key = path_key
-        self.atomic_projection_list = get_atomic_states()
-
-    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
-        atomic_states_info = {}
-        is_pdos = kwargs.get('is_pdos', False)
-
-        for atom, orbital in self.atomic_projection_list:
-            data, success = collect_dft_data(
-                path, compound_name, flag, extract_atomic_states_info,
-                atom=atom, orbital=orbital, is_pdos=is_pdos
-            )
-
-            if not success:
-                return None, False
-
-            atomic_states_info.update(data)
-
-        return atomic_states_info, True
-
-    def get_path_key(self) -> str:
-        return self.path_key
-
-    def get_success_message(self, **kwargs) -> str:
-        return "\nSuccessfully extracted atomic states information.\n"
-
-
-class WannierDataExtractor(DataExtractor):
-    """Extractor for Wannier parameters (alat and Fermi energy)."""
-
-    def __init__(self, path_key: str = "nscf_wannier_output_paths"):
-        self.path_key = path_key
-
-    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
-        """Extract Wannier parameters from NSCF output files.
-
-        Returns:
-            Tuple containing ((alat, fermi_energy), success_flag)
-        """
-        try:
-            alat, fermi_energy = extract_wannier_parameters(path, compound_name, flag)
-            return (alat, fermi_energy), True
-        except (FileNotFoundError, ValueError) as e:
-            print_error(f"Error extracting Wannier parameters: {e}")
-            return None, False
-
-    def get_path_key(self) -> str:
-        return self.path_key
-
-    def get_success_message(self, **kwargs) -> str:
-        return "Successfully extracted Wannier parameters.\n"
 
 
 class DataCollector:
@@ -534,7 +388,6 @@ def collect_fermi_energies(paths: Dict[str, List[str]],
 
     collector = CollectorFactory.create_fermi_collector()
     return collector.collect(config)
-
 
 
 def collect_number_of_atomic_states(paths: Dict[str, List[str]],
