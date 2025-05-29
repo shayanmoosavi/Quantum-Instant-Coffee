@@ -1,24 +1,32 @@
-import argparse
+"""Input File Generation Module
+
+This module provides classes and data structures for generating input files
+for Quantum ESPRESSO and Wannier90 calculations. It includes configurations
+for different calculation types, context management for input generation,
+and parameter storage for Wannier calculations.
+"""
 from dataclasses import dataclass
-from sys import argv
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 from abc import ABC, abstractmethod
 
-from core.input_handler import get_pseudopotential_files
-from core.project_setup import initialize_project
-from data.fetch_atomic_info import get_atomic_weights
 from data.models import ProjectSetup
 from input.generators.kpoints import generate_k_points_section
 from input.generators.sections import *
 from input.user_prompts import prompt_nbands, prompt_kmesh
-from ui.print_thanks import print_animated_ascii
-from ui.ui_helpers import print_error, print_header, print_info, print_success, progress_track, console
-from utils.file_parser import get_poscar_data
+from ui.ui_helpers import print_error
 
 
 @dataclass
 class PWCalculationConfig:
-    """Configuration for PW.x calculations."""
+    """
+    Configuration for PW.x calculations.
+
+    Attributes:
+        calc_type (str): Type of calculation (e.g., "relax", "scf", "bands").
+        requires_bands (bool): Whether the calculation requires band information.
+        requires_ions_cell (bool): Whether the calculation requires IONS and CELL sections.
+        cell_dofree (str): Degree of freedom for cell optimization. Defaults to "ibrav".
+    """
     calc_type: str
     requires_bands: bool = False
     requires_ions_cell: bool = False
@@ -27,7 +35,18 @@ class PWCalculationConfig:
 
 @dataclass
 class GenerationContext:
-    """Context object containing all data needed for input generation."""
+    """
+    Context object containing all data needed for input generation.
+
+    Attributes:
+        project (ProjectSetup): Project setup information.
+        atomic_weights (List[float]): List of atomic weights for the compound.
+        pseudo_list (List[str]): List of pseudopotential file paths.
+        rel_pseudo_list (Optional[List[str]]): List of relativistic pseudopotential file paths.
+        atomic_positions (List[str]): List of atomic positions in fractional coordinates.
+        lattice_vectors (List[str]): List of lattice vectors in Cartesian coordinates.
+        relativistic (bool): Whether the calculation is relativistic (SOC). Defaults to False.
+    """
     project: ProjectSetup
     atomic_weights: List[float]
     pseudo_list: List[str]
@@ -38,39 +57,91 @@ class GenerationContext:
 
 
 class WannierParams:
-    """Simple parameter storage for Wannier calculations."""
+    """
+    Simple parameter storage for Wannier calculations.
+
+    Attributes:
+        _normal_params (dict): Parameters for non-relativistic calculations.
+        _soc_params (dict): Parameters for relativistic calculations.
+    """
 
     def __init__(self):
+        """
+        Initializes the WannierParams object with empty parameter dictionaries.
+        """
         self._normal_params = {}
         self._soc_params = {}
 
     def set_params(self, nbands: int, kmesh: Tuple[int, int, int], relativistic: bool):
+        """
+        Sets the parameters for Wannier calculations.
+
+        Args:
+            nbands (int): Number of bands.
+            kmesh (Tuple[int, int, int]): K-point mesh density.
+            relativistic (bool): Whether the calculation is relativistic (SOC).
+        """
         if relativistic:
             self._soc_params = {"nbands": nbands, "kmesh": kmesh}
         else:
             self._normal_params = {"nbands": nbands, "kmesh": kmesh}
 
     def get_params(self, relativistic: bool) -> Tuple[Optional[int], Optional[Tuple[int, int, int]]]:
+        """
+        Retrieves the stored parameters for Wannier calculations.
+
+        Args:
+            relativistic (bool): Whether to retrieve parameters for relativistic calculations.
+
+        Returns:
+            Tuple[Optional[int], Optional[Tuple[int, int, int]]]: Number of bands and K-point mesh density.
+        """
         params = self._soc_params if relativistic else self._normal_params
         return params.get("nbands"), params.get("kmesh")
 
 
 class InputGenerator(ABC):
-    """Abstract base class for input file generators."""
+    """
+    Abstract base class for input file generators.
+
+    This class defines the interface for input file generators, ensuring that
+    all derived classes implement the required methods for generating input
+    file content and retrieving required parameters.
+    """
 
     @abstractmethod
     def generate(self, context: GenerationContext, **kwargs) -> str:
-        """Generate input file content."""
+        """
+        Generate input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters specific to the input file generation.
+
+        Returns:
+            str: The generated input file content.
+        """
         pass
 
     @abstractmethod
     def get_required_params(self) -> List[str]:
-        """Get list of required parameters for this generator."""
+        """
+        Get the list of required parameters for this generator.
+
+        Returns:
+            List[str]: A list of parameter names required for input file generation.
+        """
         pass
 
 
 class PWCalculationGenerator(InputGenerator):
-    """Generator for PW.x calculation input files."""
+    """
+    Generator for PW.x calculation input files.
+
+    This class handles the generation of input files for different types of PW.x
+    calculations, such as 'relax', 'scf', 'nscf', and 'bands'. It uses predefined
+    configurations for each calculation type.
+    """
 
     # Configuration for different calculation types
     CONFIGS = {
@@ -82,6 +153,15 @@ class PWCalculationGenerator(InputGenerator):
     }
 
     def __init__(self, calc_type: str):
+        """
+        Initialize the PWCalculationGenerator with the specified calculation type.
+
+        Args:
+            calc_type (str): The type of calculation (e.g., 'relax', 'scf', 'bands').
+
+        Raises:
+            InputGenerationError: If the provided calculation type is invalid.
+        """
         if calc_type not in self.CONFIGS:
             valid_types = ", ".join(self.CONFIGS.keys())
             raise InputGenerationError(f"Invalid calculation type: {calc_type}. "
@@ -89,7 +169,16 @@ class PWCalculationGenerator(InputGenerator):
         self.config = self.CONFIGS[calc_type]
 
     def generate(self, context: GenerationContext, **kwargs) -> str:
-        """Generate PW.x input file."""
+        """
+        Generate the PW.x input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters such as 'kmesh' and 'nbnds'.
+
+        Returns:
+            str: The generated input file content.
+        """
         # Get optional parameters
         kmesh = kwargs.get('kmesh')
         nbnds = kwargs.get('nbnds')
@@ -128,7 +217,16 @@ class PWCalculationGenerator(InputGenerator):
         return content
 
     def _generate_system_section(self, context: GenerationContext, nbnds: Optional[int]) -> str:
-        """Generate SYSTEM section with band handling."""
+        """
+        Generate the SYSTEM section of the input file.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            nbnds (Optional[int]): The number of bands, if required.
+
+        Returns:
+            str: The SYSTEM section content.
+        """
         if not self.config.requires_bands:
             return generate_system_section(
                 context.project.compound_data.number_of_atoms,
@@ -158,7 +256,15 @@ class PWCalculationGenerator(InputGenerator):
 
     @staticmethod
     def _generate_species_and_structure_sections(context: GenerationContext) -> str:
-        """Generate ATOMIC_SPECIES, ATOMIC_POSITIONS, and CELL_PARAMETERS sections."""
+        """
+        Generate the ATOMIC_SPECIES, ATOMIC_POSITIONS, and CELL_PARAMETERS sections.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+
+        Returns:
+            str: The content of the species and structure sections.
+        """
         pseudo_list = (context.rel_pseudo_list if context.relativistic
                        else context.pseudo_list)
 
@@ -176,7 +282,20 @@ class PWCalculationGenerator(InputGenerator):
         return content
 
     def _generate_kpoints_section(self, context: GenerationContext, kmesh: Optional[Tuple[int, int, int]]) -> str:
-        """Generate K_POINTS section with error handling."""
+        """
+        Generate the K_POINTS section of the input file.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            kmesh (Optional[Tuple[int, int, int]]): The K-point mesh density.
+
+        Returns:
+            str: The K_POINTS section content.
+
+        Raises:
+            ValueError: If the K-point mesh density is invalid.
+            InputGenerationError: If there is a fatal error in generating the K_POINTS section.
+        """
         while True:
             try:
                 if self.config.calc_type != "bands":
@@ -199,7 +318,12 @@ class PWCalculationGenerator(InputGenerator):
                 exit(1)
 
     def get_required_params(self) -> List[str]:
-        """Get required parameters for this calculation type."""
+        """
+        Get the list of required parameters for this calculation type.
+
+        Returns:
+            List[str]: A list of parameter names required for input file generation.
+        """
         params = []
         if self.config.requires_bands:
             params.append("nbnds")
@@ -209,7 +333,13 @@ class PWCalculationGenerator(InputGenerator):
 
 
 class PostProcessingGenerator(InputGenerator):
-    """Generator for post-processing input files (PDOS, bands, etc.)."""
+    """
+    Generator for post-processing input files (PDOS, bands, etc.).
+
+    Attributes:
+        GENERATORS (dict): A dictionary mapping post-processing types to lambda functions
+                           that generate the corresponding input file content.
+    """
 
     GENERATORS = {
         "pdos": lambda compound_name, **kwargs: f"""&PROJWFC
@@ -239,6 +369,15 @@ class PostProcessingGenerator(InputGenerator):
     }
 
     def __init__(self, post_type: str):
+        """
+        Initializes the PostProcessingGenerator with the specified post-processing type.
+
+        Args:
+            post_type (str): The type of post-processing (e.g., 'pdos', 'kpdos', 'bands').
+
+        Raises:
+            InputGenerationError: If the provided post-processing type is invalid.
+        """
         if post_type not in self.GENERATORS:
             valid_types = ", ".join(self.GENERATORS.keys())
             raise InputGenerationError(f"Invalid post-processing type: {post_type}. "
@@ -246,18 +385,48 @@ class PostProcessingGenerator(InputGenerator):
         self.post_type = post_type
 
     def generate(self, context: GenerationContext, **kwargs) -> str:
-        """Generate post-processing input file."""
+        """
+        Generates the post-processing input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters specific to the post-processing type.
+
+        Returns:
+            str: The generated input file content.
+        """
         return self.GENERATORS[self.post_type](context.project.compound_name, **kwargs)
 
     def get_required_params(self) -> List[str]:
-        """Get required parameters."""
-        return []  # Post-processing files typically don't require additional params
+        """
+        Retrieves the list of required parameters for this generator.
+
+        Returns:
+            List[str]: An empty list, as post-processing files typically don't require additional parameters.
+        """
+        return []
 
 
 class WannierGenerator(InputGenerator):
-    """Generator for Wannier90-related input files."""
+    """
+    Generator for Wannier90-related input files.
+
+    Attributes:
+        wannier_type (str): The type of Wannier input file to generate (e.g., 'nscf_wannier', 'pw2wan', 'wannier').
+        wannier_params (WannierParams): An object for storing and retrieving Wannier calculation parameters.
+    """
 
     def __init__(self, wannier_input_type: str, wannier_params: WannierParams):
+        """
+        Initializes the WannierGenerator with the specified input type and parameters.
+
+        Args:
+            wannier_input_type (str): The type of Wannier input file to generate.
+            wannier_params (WannierParams): An object for storing and retrieving Wannier calculation parameters.
+
+        Raises:
+            InputGenerationError: If the provided Wannier input type is invalid.
+        """
         self.wannier_type = wannier_input_type
         self.wannier_params = wannier_params
 
@@ -267,7 +436,19 @@ class WannierGenerator(InputGenerator):
                                        f"Valid types are: {', '.join(valid_types)}")
 
     def generate(self, context: GenerationContext, **kwargs) -> str:
-        """Generate Wannier-related input file."""
+        """
+        Generates the Wannier-related input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters specific to the Wannier input type.
+
+        Returns:
+            str: The generated input file content.
+
+        Raises:
+            InputGenerationError: If the Wannier input type is unsupported.
+        """
         if self.wannier_type == "nscf_wannier":
             return self._generate_nscf_wannier(context, **kwargs)
         elif self.wannier_type == "pw2wan":
@@ -278,7 +459,16 @@ class WannierGenerator(InputGenerator):
             raise InputGenerationError(f"Unsupported Wannier type: {self.wannier_type}")
 
     def _generate_nscf_wannier(self, context: GenerationContext, **kwargs) -> str:
-        """Generate NSCF input for Wannier calculations."""
+        """
+        Generates NSCF input for Wannier calculations.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters such as 'nbnds' and 'kmesh'.
+
+        Returns:
+            str: The generated NSCF input file content.
+        """
         # Get stored parameters or prompt for new ones
         nbands = kwargs.get('nbnds')
         kmesh = kwargs.get('kmesh')
@@ -304,7 +494,15 @@ class WannierGenerator(InputGenerator):
 
     @staticmethod
     def _generate_pw2wannier(context: GenerationContext) -> str:
-        """Generate pw2wannier90.x input file."""
+        """
+        Generates pw2wannier90.x input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+
+        Returns:
+            str: The generated pw2wannier90.x input file content.
+        """
         compound_name = context.project.compound_name
 
         content = f"""&inputpp
@@ -325,7 +523,19 @@ class WannierGenerator(InputGenerator):
         return content
 
     def _generate_wannier_input(self, context: GenerationContext, **kwargs) -> str:
-        """Generate Wannier90 input file."""
+        """
+        Generates Wannier90 input file content.
+
+        Args:
+            context (GenerationContext): The context containing all necessary data for input generation.
+            **kwargs: Additional parameters such as 'stored_nbands', 'stored_kmesh', 'num_iter', and 'dis_num_iter'.
+
+        Returns:
+            str: The generated Wannier90 input file content.
+
+        Raises:
+            InputGenerationError: If required Wannier parameters are not set.
+        """
         # Get stored parameters
         nbands, kmesh = self.wannier_params.get_params(context.relativistic)
 
@@ -407,20 +617,44 @@ begin kpoints
         return content
 
     def get_required_params(self) -> List[str]:
-        """Get required parameters."""
+        """
+        Retrieves the list of required parameters for this generator.
+
+        Returns:
+            List[str]: A list of required parameters, depending on the Wannier input type.
+        """
         if self.wannier_type == "nscf_wannier":
             return ["nbnds", "kmesh"]
         return []
 
 
 class InputGeneratorFactory:
-    """Factory for creating input file generators."""
+    """
+    Factory for creating input file generators.
+
+    Attributes:
+        wannier_params (WannierParams): An object for storing and retrieving Wannier calculation parameters.
+    """
 
     def __init__(self):
+        """
+        Initializes the InputGeneratorFactory with a WannierParams object.
+        """
         self.wannier_params = WannierParams()
 
     def create_generator(self, input_type: str) -> InputGenerator:
-        """Create appropriate generator based on input type."""
+        """
+        Creates an appropriate generator based on the input type.
+
+        Args:
+            input_type (str): The type of input file to generate (e.g., 'relax', 'pdos', 'wannier').
+
+        Returns:
+            InputGenerator: The corresponding generator for the specified input type.
+
+        Raises:
+            InputGenerationError: If the input type is unknown.
+        """
 
         # PW calculations
         if input_type in ["relax", "vc-relax", "scf", "nscf", "bands"]:
@@ -437,185 +671,3 @@ class InputGeneratorFactory:
 
         else:
             raise InputGenerationError(f"Unknown input type: {input_type}")
-
-
-class InputFileManager:
-    """High-level manager for input file generation and writing."""
-
-    def __init__(self, project: ProjectSetup):
-        self.project = project
-        self.factory = InputGeneratorFactory()
-        self._context = None
-
-    def initialize_context(self) -> GenerationContext:
-        """Initialize the generation context with all required data."""
-        print_info("Fetching atomic weights and POSCAR data...")
-
-        with console.status("Retrieving atomic weights and POSCAR data"):
-            atomic_weights = get_atomic_weights(self.project.compound_data.element_names)
-            lattice_vectors, atomic_positions = get_poscar_data(self.project.poscar_file)
-
-        print_info("Fetching the Pseudopotentials...")
-        pseudo_list, rel_pseudo_list = get_pseudopotential_files(
-            self.project.compound_data.element_names,
-            self.project.pseudo_dir,
-            relativistic=True,
-            rel_pseudo_path=self.project.rel_pseudo_dir
-        )
-        print_info("Pseudopotentials fetched successfully.")
-
-        self._context = GenerationContext(
-            project=self.project,
-            atomic_weights=atomic_weights,
-            pseudo_list=pseudo_list,
-            rel_pseudo_list=rel_pseudo_list,
-            atomic_positions=atomic_positions,
-            lattice_vectors=lattice_vectors
-        )
-
-        return self._context
-
-    def generate_input_file(self, input_type: str, relativistic: bool = False, **kwargs) -> str:
-        """Generate a single input file."""
-        if self._context is None:
-            self.initialize_context()
-
-        # Update context for relativistic calculation
-        context = GenerationContext(
-            project=self._context.project,
-            atomic_weights=self._context.atomic_weights,
-            pseudo_list=self._context.pseudo_list,
-            rel_pseudo_list=self._context.rel_pseudo_list,
-            atomic_positions=self._context.atomic_positions,
-            lattice_vectors=self._context.lattice_vectors,
-            relativistic=relativistic
-        )
-
-        generator = self.factory.create_generator(input_type)
-        return generator.generate(context, **kwargs)
-
-    def write_all_input_files(self, skip_soc: bool = False) -> None:
-        """Write all input files for the project."""
-        if self._context is None:
-            self.initialize_context()
-
-        print_info("Starting input file generation...\n")
-        print_header("Input File Generation")
-
-        generated_files = []
-
-        print_info("Generating input files...")
-        for key, paths in self.project.input_paths.items():
-            input_type = key.replace("_paths", "").replace("_input", "")
-
-            try:
-                generator = self.factory.create_generator(input_type)
-            except InputGenerationError:
-                continue  # Skip unknown input types
-
-            if not self.project.include_stress:
-                # Generate both normal and SOC versions
-                for path, relativistic in zip(paths, [False, True]):
-                    file_name = os.path.basename(path)
-
-                    if "_soc" in file_name and skip_soc:
-                        print_info(f"Skipping SOC file generation for {file_name}")
-                        continue
-
-                    context = GenerationContext(
-                        project=self._context.project,
-                        atomic_weights=self._context.atomic_weights,
-                        pseudo_list=self._context.pseudo_list,
-                        rel_pseudo_list=self._context.rel_pseudo_list,
-                        atomic_positions=self._context.atomic_positions,
-                        lattice_vectors=self._context.lattice_vectors,
-                        relativistic=relativistic
-                    )
-
-                    try:
-                        content = generator.generate(context)
-                        generated_files.append((file_name, path, content))
-                    except Exception as e:
-                        print_error(f"Error generating {file_name}: {str(e)}")
-                        continue
-            else:
-                # Generate only normal version
-                for path in paths:
-                    file_name = os.path.basename(path)
-
-                    context = GenerationContext(
-                        project=self._context.project,
-                        atomic_weights=self._context.atomic_weights,
-                        pseudo_list=self._context.pseudo_list,
-                        rel_pseudo_list=self._context.rel_pseudo_list,
-                        atomic_positions=self._context.atomic_positions,
-                        lattice_vectors=self._context.lattice_vectors,
-                        relativistic=False
-                    )
-
-                    try:
-                        content = generator.generate(context)
-                        generated_files.append((file_name, path, content))
-                    except Exception as e:
-                        print_error(f"Error generating {file_name}: {str(e)}")
-                        continue
-
-        print_success("\nInput files have been generated successfully.\n")
-        print_header("Writing Input Files")
-
-        for file_name, path, content in progress_track(generated_files, description="Writing input files"):
-            try:
-                with open(path, "w") as f:
-                    f.write(content)
-                print_success(f"Wrote {file_name} at:\n    {path}")
-            except Exception as e:
-                print_error(f"Error writing {file_name}: {str(e)}")
-
-        print_success("All input files have been written successfully.")
-        print_animated_ascii("ascii-art.txt")
-        console.print("\nThanks for using Quantum Instant Coffee :)", style="bold cyan")
-
-
-if __name__ == "__main__":
-    """
-    Main entry point for the script.
-
-    This block initializes the project, retrieves necessary data, and generates
-    the NSCF input file for Quantum ESPRESSO calculations. It performs the following steps:
-    1. Determines if the script is called for input file generation.
-    2. Initializes the project setup using command-line arguments.
-    3. Retrieves pseudopotential files for the specified elements.
-    4. Fetches atomic weights and POSCAR data (lattice vectors and atomic positions).
-    5. Generates the NSCF input file using the provided data and configuration.
-    6. Prints the generated NSCF input file content.
-    """
-    # Create the parser
-    parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")
-
-    # Add arguments
-    parser.add_argument(
-        "compound_name",
-        type=str,
-        help="Name of the compound (e.g., 'GaAs', 'SiO2')."
-    )
-    parser.add_argument(
-        "poscar_file",
-        type=str,
-        help="Path to the POSCAR file."
-    )
-
-    # Parse the arguments
-    args = parser.parse_args(argv[1:])
-    compound_name, poscar_file = args.compound_name, args.poscar_file
-
-    os.chdir("../..")
-
-    project = initialize_project(compound_name, poscar_file=poscar_file, is_input=True)
-
-    manager = InputFileManager(project)
-
-    try:
-        nscf_input = manager.generate_input_file("nscf", relativistic=True)
-        print_info(nscf_input)
-    except Exception as e:
-        print_error(f"Error generating NSCF input: {str(e)}")
