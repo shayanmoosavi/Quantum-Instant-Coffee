@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="quantum_instant_coffee",
-    version="2.1",
+    version="2.2",
     packages=find_packages(),
     install_requires=[
         "numpy",
