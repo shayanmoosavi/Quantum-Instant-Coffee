@@ -284,17 +284,21 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     print_header("PDOS Info Extraction")
 
     spin_orbit_flags = ["", "_soc"]
-    fermi_energies = collect_fermi_energies(project.output_paths,
-                                            project.compound_name,
-                                            spin_orbit_flags,
-                                            project.skip_soc,
-                                            is_pdos=True)
+    config = CollectionConfig(
+        project=project,
+        paths=project.output_paths,
+        compound_name=project.compound_name,
+        spin_orbit_flags=spin_orbit_flags,
+        skip_soc=project.skip_soc,
+        skip_normal=project.skip_normal,
+        is_pdos=True
+    )
 
-    atomic_states_info_list = collect_atomic_states_info(project.output_paths,
-                                                         project.compound_name,
-                                                         spin_orbit_flags,
-                                                         project.skip_soc,
-                                                         is_pdos=True)
+    fermi_collector = CollectorFactory.create_fermi_collector()
+    fermi_energies = fermi_collector.collect(config)
+
+    atomic_states_collector = CollectorFactory.create_atomic_states_info_collector()
+    atomic_states_info_list = atomic_states_collector.collect(config)
 
     dos_setup = DOSSetup(fermi_energies=fermi_energies,
                          spin_orbit_flags=spin_orbit_flags,
@@ -302,7 +306,8 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
 
     project.add_dos_setup(dos_setup)
 
-    success = generate_pdos(project.output_paths, list(project.dos_setup.atomic_states_info[0].keys()))
+    success = generate_pdos(project.output_paths, list(project.dos_setup.atomic_states_info[0].keys()),
+                            project.skip_soc, project.skip_normal)
     if not all(success):
         raise ProjectInitializationError("Some PDOS files were not generated successfully.")
 
