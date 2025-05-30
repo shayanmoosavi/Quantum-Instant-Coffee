@@ -165,13 +165,14 @@ class ProjectSetup:
         stress_amounts (Optional[List[str]]): List of stress amounts, if applicable.
         rel_pseudo_dir (Optional[str]): Path to the relativistic pseudopotential directory.
         poscar_file (Optional[str]): Path to the POSCAR file, if applicable.
-        dft_info (Optional[BandInfo]): DFT calculation results, if available.
+        band_info (Optional[BandInfo]): DFT bands calculation results, if available.
         band_data (Optional[BandData]): Band structure calculation data, if available.
         wannier_setup (Optional[WannierSetup]): Wannier calculation setup, if available.
         dos_setup (Optional[DOSSetup]): Density of states calculation setup, if available.
         input_paths (Optional[Dict[str, List[str]]]): Paths for input files, if applicable.
         output_paths (Optional[Dict[str, List[str]]]): Paths for output files, if applicable.
-        skip_soc (bool): Whether spin-orbit coupling is skipped.
+        skip_soc (bool): Whether spin-orbit coupling calculations are skipped.
+        skip_normal (bool): Whether normal calculations are skipped.
     """
     compound_name: str
     project_dir: str
@@ -189,6 +190,7 @@ class ProjectSetup:
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None
     skip_soc: bool = False
+    skip_normal: bool = False
 
     def add_bands_info(self, band_info: BandInfo) -> None:
         """Add projected bands calculation results to the project setup.
