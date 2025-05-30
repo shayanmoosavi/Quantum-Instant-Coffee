@@ -389,8 +389,16 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
     pdos_data_filename_list = [f"pdos_{atomic_projection.split('-')[0]}_{atomic_projection.split('-')[1]}.dat"
                                for atomic_projection in atomic_projection_list]
     dos_data_list = []
+    for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"],
+                                      project.dos_setup.fermi_energies if not (project.skip_soc or project.skip_normal)
+                                      else [None, project.dos_setup.fermi_energies[0]]):
 
-    for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"], project.dos_setup.fermi_energies):
+        if "soc" in pdos_dir and project.skip_soc:
+            print_info(f"Skipping SOC PDOS processing for: `{os.path.basename(pdos_dir)}`\n")
+            continue
+        elif "soc" not in pdos_dir and project.skip_normal:
+            print_info(f"Skipping non-SOC PDOS processing for: `{os.path.basename(pdos_dir)}`\n")
+            continue
 
         dos_data = {}
         pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in

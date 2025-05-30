@@ -422,7 +422,7 @@ def plot_pdos(project: ProjectSetup,
     spin_orbit_flags = ["", "_soc"]
     projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
     unique_elements_list = projection_processor.get_unique_elements()
-    total_plots = len(spin_orbit_flags)
+    total_plots = len(spin_orbit_flags) if not (project.skip_soc or project.skip_normal) else 1
 
     with console.status("Processing projection data..."):
         projection_data_processor = ProjectionDataProcessor(plot_config,
@@ -445,11 +445,16 @@ def plot_pdos(project: ProjectSetup,
     else:
 
         plotter = DOSPlotter(plot_config)
-
         for i, (projection_data, flag) in enumerate(
-                zip(projection_data_list, spin_orbit_flags), 1):
+                zip(projection_data_list if not (project.skip_soc or project.skip_normal)
+                    else [None, projection_data_list[0]], spin_orbit_flags), 1):
 
-            console.rule(f"Processing dataset {i} of {total_plots}")
+            if flag == "_soc" and project.skip_soc:
+                continue
+            elif flag == "" and project.skip_normal:
+                continue
+
+            console.rule(f"Processing dataset {i if total_plots != 1 else 1} of {total_plots}")
 
             # Get total DOS from first element's energy values
             energy = projection_data[unique_elements_list[0]]["energies"][0]

@@ -2,7 +2,7 @@ import os
 from subprocess import CalledProcessError
 from typing import Dict, List
 
-from ui.ui_helpers import print_header, console, print_warning, print_success, print_error
+from ui.ui_helpers import print_header, console, print_warning, print_success, print_error, print_info
 from utils.external_tools import run_awk_script, run_sum_pdos
 
 
@@ -65,7 +65,9 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
 
 def generate_pdos(paths: Dict[str, List[str]],
-                  atomic_projection_list: List[str]
+                  atomic_projection_list: List[str],
+                  skip_soc: bool = False,
+                  skip_normal: bool = False
                   ) -> List[bool]:
     """
     Generates Projected Density of States (PDOS) files if not already present.
@@ -82,11 +84,18 @@ def generate_pdos(paths: Dict[str, List[str]],
     # List to track whether the pdos generation was successful for each file
     success_list = []
 
-    total_files = len(paths["pdos_output_paths"]) * len(atomic_projection_list)
+    total_files = len(atomic_projection_list) if skip_soc or skip_normal else len(paths["pdos_output_paths"]) * len(
+        atomic_projection_list)
     current_file = 0
 
     # Iterating over the PDOS output paths and corresponding PDOS data
     for pdos_dir in paths["pdos_output_paths"]:
+        if "soc" in pdos_dir and skip_soc:
+            print_info(f"Skipping SOC PDOS generation: `{os.path.basename(pdos_dir)}`\n")
+            continue
+        elif "soc" not in pdos_dir and skip_normal:
+            print_info(f"Skipping non-SOC PDOS generation: `{os.path.basename(pdos_dir)}`\n")
+            continue
 
         os.chdir(os.path.dirname(pdos_dir))
         for atomic_projection in atomic_projection_list:
