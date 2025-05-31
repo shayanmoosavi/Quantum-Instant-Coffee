@@ -1,13 +1,12 @@
 import os
+from typing import Optional, Dict
 
 from rich import box
 from rich.table import Table
 
-from data.models import CompoundData, ProjectSetup
 from core.config_handler import load_project_config
 from core.input_handler import get_strain_amounts, get_pbands_type
-from typing import Optional, Dict
-
+from data.models import CompoundData, ProjectSetup
 from ui.ui_helpers import print_header, print_info, console, print_success
 
 
@@ -41,6 +40,7 @@ def has_soc_directories(directory_structure: Dict[str, str]) -> bool:
 
     return bool(soc_dirs & set(directory_structure.keys()))
 
+
 def initialize_project(
         compound_name: str,
         config_file: str = None,
@@ -48,7 +48,9 @@ def initialize_project(
         poscar_file: Optional[str] = None,
         is_input: bool = True,
         is_wannier: bool = False,
-        is_pdos: bool = False
+        is_pdos: bool = False,
+        skip_soc: bool = False,
+        skip_normal: bool = False
 ) -> ProjectSetup:
     """
     Initialize the project directory and parse compound information.
@@ -61,6 +63,8 @@ def initialize_project(
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
         is_pdos (bool): Flag indicating if the function is called for PDOS initialization. Defaults to False.
+        skip_soc (bool): Whether to skip SOC calculations.
+        skip_normal (bool): Whether to skip normal (non-SOC) calculations.
 
     Returns:
         ProjectSetup: An object containing the initialized project setup details.
@@ -71,19 +75,28 @@ def initialize_project(
     from core.path_handler import get_project_directory, create_directories, build_file_paths
     print('\n')
     print_header("Project Initialization")
+
+    # Validate skip flags
+    if skip_soc and skip_normal:
+        raise ProjectInitializationError("Both skip_soc and skip_normal cannot be True simultaneously.")
+
     config = load_project_config(config_file, config_type)
 
     # Detect if SOC directories are available in config
     soc_available = has_soc_directories(config.directory_structure)
 
     # Determine skip_soc flag
+    final_skip_soc = skip_soc
+
     if not soc_available:
-        # No SOC directories in config, automatically skip SOC
-        skip_soc = True
-        print_info("No SOC directories found in configuration. SOC calculations will be skipped.")
-    else:
-        # SOC directories are available, let SpinOrbitHandler manage user prompts
-        skip_soc = False
+        if not skip_normal:
+            # No SOC directories in config, automatically skip SOC
+            final_skip_soc = True
+            print_info("No SOC directories found in configuration. SOC calculations will be skipped.")
+        else:
+            # We cannot proceed with skipping normal calculations if SOC directories are not available
+            raise ProjectInitializationError(
+                "Cannot skip normal calculations when SOC directories are not available in the configuration.")
 
     if is_input:
         # For input file generation
@@ -127,7 +140,9 @@ def initialize_project(
             project_dir,
             config.directory_structure,
             include_stress,
-            stress_amounts
+            stress_amounts,
+            final_skip_soc,
+            skip_normal
         )
 
         paths = build_file_paths(project_dir,
@@ -135,7 +150,9 @@ def initialize_project(
                                  config,
                                  is_input,
                                  include_stress,
-                                 stress_amounts)
+                                 stress_amounts,
+                                 final_skip_soc,
+                                 skip_normal)
 
         print_success("Project initialization completed successfully.\n")
         # Return the project setup details
@@ -153,25 +170,35 @@ def initialize_project(
             ) if not skip_soc else None,
             input_paths=paths,
             poscar_file=os.path.abspath(poscar_file),
-            skip_soc=True if include_stress or skip_soc else False
+            skip_soc=final_skip_soc,
+            skip_normal=skip_normal
         )
 
     else:
         # For output/analysis, return the project setup details
-        if skip_soc:
+        if final_skip_soc:
             paths, _ = build_file_paths(project_dir,
-                                               compound_name,
-                                               config,
-                                               is_input,
-                                               include_stress,
-                                               stress_amounts)
+                                        compound_name,
+                                        config,
+                                        is_input,
+                                        include_stress,
+                                        stress_amounts,
+                                        final_skip_soc,
+                                        skip_normal)
         else:
-            paths, skip_soc = build_file_paths(project_dir,
-                                               compound_name,
-                                               config,
-                                               is_input,
-                                               include_stress,
-                                               stress_amounts)
+            paths, skip_stress_soc = build_file_paths(project_dir,
+                                                      compound_name,
+                                                      config,
+                                                      is_input,
+                                                      include_stress,
+                                                      stress_amounts,
+                                                      final_skip_soc,
+                                                      skip_normal)
+
+            # Update final_skip_soc if stress calculations force SOC to be skipped
+            if skip_stress_soc:
+                final_skip_soc = True
+
         print_success("Project analysis setup completed successfully.\n")
         return ProjectSetup(
             compound_name=compound_name,
@@ -184,7 +211,8 @@ def initialize_project(
             rel_pseudo_dir=os.path.abspath(
                 os.path.join(
                     project_dir, config.directory_structure["pseudo_rel"])
-            ) if not skip_soc else None,
+            ) if not final_skip_soc else None,
             output_paths=paths,
-            skip_soc=skip_soc
+            skip_soc=final_skip_soc,
+            skip_normal=skip_normal
         )

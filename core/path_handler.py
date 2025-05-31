@@ -5,12 +5,12 @@ It includes functionality for validating command-line arguments, creating direct
 and building structured file paths for input and output files.
 """
 import argparse
-from sys import argv
 import os
+from sys import argv
 from typing import List, Tuple, Dict
 
-from core.project_setup import initialize_project, ProjectInitializationError
 from core.config_handler import ProjectConfig
+from core.project_setup import initialize_project, ProjectInitializationError
 from ui.ui_helpers import *
 
 
@@ -64,6 +64,40 @@ def append_file_paths(file_paths: Dict[str, Dict[str, List[str]]],
             continue
 
 
+def should_include_calculation(calculation: str, skip_soc: bool = False, skip_normal: bool = False,
+                               include_stress: bool = False) -> bool:
+    """
+    Determine if a calculation should be included based on SOC and normal flags.
+
+    Args:
+        calculation (str): The calculation type (e.g., 'scf', 'scf_soc', 'strain').
+        skip_soc (bool): Whether to skip SOC calculations.
+        skip_normal (bool): Whether to skip normal (non-SOC) calculations.
+        include_stress (bool): Whether stress calculations are included.
+
+    Returns:
+        bool: True if the calculation should be included, False otherwise.
+    """
+    # Special cases that are always handled separately
+    if calculation in ["pseudo", "pseudo_rel", "strain"]:
+        return True
+
+    # Check if it's an SOC calculation
+    is_soc = "_soc" in calculation
+
+    # Apply SOC/normal filtering
+    if skip_soc and is_soc:
+        return False
+    if skip_normal and not is_soc:
+        return False
+
+    # Apply existing stress logic for SOC calculations
+    if include_stress and is_soc:
+        return False
+
+    return True
+
+
 def add_paths_for_directories(
         calculation_dirs: Dict[str, str],
         compound_name: str,
@@ -71,7 +105,9 @@ def add_paths_for_directories(
         file_paths: Dict[str, Dict[str, List[str]]],
         is_input: bool = True,
         include_stress: bool = False,
-        stress_amounts: List[str] = None
+        stress_amounts: List[str] = None,
+        skip_soc: bool = False,
+        skip_normal: bool = False
 ) -> None:
     """
     Add file paths for the given directory structure.
@@ -84,8 +120,14 @@ def add_paths_for_directories(
         is_input (bool): Whether the paths are for input files.
         include_stress (bool): Whether to include strain analysis paths.
         stress_amounts (list, optional): List of strain amounts. Defaults to None.
+        skip_soc (bool): Whether to skip SOC calculations.
+        skip_normal (bool): Whether to skip normal (non-SOC) calculations.
     """
     for calculation, path in calculation_dirs.items():
+
+        # Check if this calculation should be included
+        if not should_include_calculation(calculation, skip_soc, skip_normal, include_stress):
+            continue
 
         flag = "_soc" if "soc" in calculation else ""
         if include_stress and calculation == "strain":
@@ -127,7 +169,9 @@ def build_file_paths(
         config: ProjectConfig,
         is_input: bool = False,
         include_stress: bool = False,
-        stress_amounts: List[str] = None
+        stress_amounts: List[str] = None,
+        skip_soc: bool = False,
+        skip_normal: bool = False
 ) -> Dict[str, List[str]] | Tuple[Dict[str, List[str]], bool]:
     """
     Build file paths based on the analysis type.
@@ -139,6 +183,8 @@ def build_file_paths(
         is_input (bool): Whether to build paths for input files.
         include_stress (bool): Whether to include stress analysis.
         stress_amounts (list, optional): List of strain amounts. Defaults to None.
+        skip_soc (bool): Whether to skip SOC calculations.
+        skip_normal (bool): Whether to skip normal (non-SOC) calculations.
 
     Returns:
         dict: Structured file paths for the calculations.
@@ -149,7 +195,7 @@ def build_file_paths(
         calculation_dirs = {calculation: os.path.join(project_dir, path) for calculation, path in dir_structure.items()}
         input_file_paths = {calculation: {} for calculation in dir_structure.keys()}
         add_paths_for_directories(calculation_dirs, compound_name, file_patterns, input_file_paths, is_input,
-                                  include_stress, stress_amounts)
+                                  include_stress, stress_amounts, skip_soc, skip_normal)
 
         paths = {key: value for key, value in input_file_paths.items() if value}
         structured_paths = {
@@ -214,7 +260,7 @@ def build_file_paths(
         calculation_dirs = {calculation: os.path.join(project_dir, path) for calculation, path in dir_structure.items()}
         output_file_paths = {calculation: {} for calculation in dir_structure.keys()}
         add_paths_for_directories(calculation_dirs, compound_name, file_patterns, output_file_paths, is_input,
-                                  include_stress, stress_amounts)
+                                  include_stress, stress_amounts, skip_soc, skip_normal)
 
         paths = {key: value for key, value in output_file_paths.items() if value}
         structured_paths = {
@@ -274,7 +320,10 @@ def build_file_paths(
 def create_directories(project_dir: str,
                        dir_structure: Dict[str, str],
                        include_stress: bool = False,
-                       stress_amounts: List[str] = None) -> List[str]:
+                       stress_amounts: List[str] = None,
+                       skip_soc: bool = False,
+                       skip_normal: bool = False
+                       ) -> List[str]:
     """
     Creates the directory structure for the project.
 
@@ -283,6 +332,8 @@ def create_directories(project_dir: str,
         dir_structure (dict): The directory structure of the project, mapping calculation types to directory paths.
         include_stress (bool): Whether to include strain analysis directories. Defaults to False.
         stress_amounts (list, optional): List of strain amounts to create subdirectories for, if strain analysis is included.
+        skip_soc (bool): Whether to skip SOC calculations.
+        skip_normal (bool): Whether to skip normal (non-SOC) calculations.
 
     Returns:
         list: A list of absolute paths to the created directories.
@@ -311,6 +362,10 @@ def create_directories(project_dir: str,
 
         # Creating directories for each calculation type
         for calculation, path in dir_structure.items():
+
+            # Check if this calculation should be included
+            if not should_include_calculation(calculation, skip_soc, skip_normal, include_stress):
+                continue
 
             if not include_stress and calculation == "strain":
                 continue  # Skip creation of strain directories if not needed
