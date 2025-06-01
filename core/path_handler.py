@@ -102,6 +102,158 @@ class FilePatternBuilder:
             return None
 
 
+class CalculationPathBuilder:
+    """Builds paths for specific calculation types."""
+
+    # Define which file types each calculation needs
+    CALCULATION_FILE_MAPPING = {
+        CalculationType.SCF: {
+            'input': ['relax_input', 'vc_relax_input', 'scf_input'],
+            'output': ['scf_output']
+        },
+        CalculationType.SCF_SOC: {
+            'input': ['relax_input', 'vc_relax_input', 'scf_input'],
+            'output': ['scf_output']
+        },
+        CalculationType.PROJECTED_BANDS: {
+            'input': ['pw_bands_input', 'kpdos_input', 'bands_input'],
+            'output': ['pw_bands_output', 'kpdos_output', 'projbands_output', 'bands_gnu']
+        },
+        CalculationType.PROJECTED_BANDS_SOC: {
+            'input': ['pw_bands_input', 'kpdos_input', 'bands_input'],
+            'output': ['pw_bands_output', 'kpdos_output', 'projbands_output', 'bands_gnu']
+        },
+        CalculationType.PDOS: {
+            'input': ['nscf_input', 'pdos_input'],
+            'output': ['nscf_output', 'pdos_output']
+        },
+        CalculationType.PDOS_SOC: {
+            'input': ['nscf_input', 'pdos_input'],
+            'output': ['nscf_output', 'pdos_output']
+        },
+        CalculationType.WANNIER: {
+            'input': ['nscf_wannier_input', 'pw2wan_input', 'wannier_input'],
+            'output': ['nscf_wannier_output', 'wannier_bands']
+        },
+        CalculationType.WANNIER_SOC: {
+            'input': ['nscf_wannier_input', 'pw2wan_input', 'wannier_input'],
+            'output': ['nscf_wannier_output', 'wannier_bands']
+        },
+        CalculationType.STRAIN: {
+            'input': ['scf_input', 'pw_bands_input', 'kpdos_input', 'bands_input'],
+            'output': ['scf_output', 'pw_bands_output', 'kpdos_output', 'projbands_output', 'bands_gnu']
+        }
+    }
+
+    def __init__(self, pattern_builder: FilePatternBuilder):
+        self.pattern_builder = pattern_builder
+
+    def build_paths_for_calculation(self, calc_type: CalculationType, base_path: str,
+                                    compound_name: str, is_input: bool,
+                                    stress_amounts: Optional[List[str]] = None) -> Dict[str, List[str]]:
+        """Build all paths for a specific calculation type."""
+        if calc_type not in self.CALCULATION_FILE_MAPPING:
+            raise ProjectInitializationError(f"Unsupported calculation type: {calc_type}")
+
+        file_type = 'input' if is_input else 'output'
+        file_keys = self.CALCULATION_FILE_MAPPING[calc_type][file_type]
+        flag = "_soc" if calc_type.is_soc else ""
+
+        result = {}
+
+        if calc_type == CalculationType.STRAIN and stress_amounts:
+            # Handle strain calculations with multiple stress amounts
+            for file_key in file_keys:
+                result[file_key] = []
+                for stress_amount in stress_amounts:
+                    stress_path = os.path.join(base_path, stress_amount)
+                    path = self.pattern_builder.build_file_path(
+                        stress_path, compound_name, file_key, flag
+                    )
+                    if path:
+                        result[file_key].append(path)
+        else:
+            # Handle regular calculations
+            for file_key in file_keys:
+                path = self.pattern_builder.build_file_path(
+                    base_path, compound_name, file_key, flag
+                )
+                if path:
+                    result[file_key] = [path]
+
+        return result
+
+
+class DirectoryManager:
+    """Manages directory creation and validation."""
+
+    def __init__(self, project_dir: str):
+        self.project_dir = project_dir
+
+    def create_project_directories(self, context: PathBuildingContext) -> List[str]:
+        """Create all required directories for the project."""
+        from ui.ui_helpers import print_success, print_error, print_header, console, Table
+
+        try:
+            os.makedirs(self.project_dir, exist_ok=True)
+            print_success(f"\nProject directory initialized at:\n {self.project_dir}\n")
+
+            os.chdir(self.project_dir)
+            created_dirs = []
+
+            table = Table(title="Directory Creation Progress")
+            table.add_column("Calculation Type", style="cyan")
+            table.add_column("Status")
+
+            print_header("Directory Creation")
+            print('\n')
+
+            for calc_name, dir_path in context.config.directory_structure.items():
+                try:
+                    calc_type = CalculationType(calc_name)
+                except ValueError:
+                    raise ProjectInitializationError("Invalid calculation type in directory structure.")
+
+                if not context.should_include_calculation(calc_type):
+                    continue
+
+                # Skip pseudopotential directories
+                if calc_type in [CalculationType.PSEUDO, CalculationType.PSEUDO_REL]:
+                    continue
+
+                if calc_type == CalculationType.STRAIN and not context.include_stress:
+                    continue
+
+                try:
+                    if context.include_stress and calc_type == CalculationType.STRAIN:
+                        for stress_amount in context.stress_amounts:
+                            stress_path = os.path.join(dir_path, stress_amount)
+                            os.makedirs(stress_path, exist_ok=True)
+                            created_dirs.append(os.path.abspath(stress_path))
+                            table.add_row(f"strain_{stress_amount}", "[green]✓ Created[/green]")
+                    else:
+                        os.makedirs(dir_path, exist_ok=True)
+                        created_dirs.append(os.path.abspath(dir_path))
+                        table.add_row(calc_name, "[green]✓ Created[/green]")
+
+                except OSError as e:
+                    table.add_row(calc_name, "[bold red]✗ Failed[/bold red]")
+                    print_error(f"Error creating directory: \n{str(e)}")
+
+            console.print(table)
+            print_success("\nSuccessfully created calculation directories.\n")
+
+            # Return to script root directory
+            script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            os.chdir(script_root_dir)
+
+            return created_dirs
+
+        except OSError as e:
+            print_error(f"Error creating directories: {e}")
+            return []
+
+
 def get_project_directory(compound_name: str) -> str:
     """
     Get the project directory for the given compound.
