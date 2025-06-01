@@ -30,14 +30,16 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
     # List to track whether the projbands generation was successful for each file
     success_list = []
-
+    total_plots = len(paths['projbands_paths'])
     # Iterating over the KPDOS output paths and corresponding projbands paths
     for i, (projbands_dir, kpdos_output_dir,
             number_of_atomic_states, fermi_energy) in enumerate(zip(
         paths["projbands_paths"], paths["kpdos_output_paths"],
-        number_of_atomic_states_list, fermi_energies
-    )):
-        console.rule(f"Generating file {i + 1} of {len(paths['projbands_paths'])}")
+        number_of_atomic_states_list,
+        fermi_energies
+    ), 1):
+
+        console.rule(f"Generating file {i if total_plots != 1 else 1} of {total_plots}")
 
         # Checking if the projbands file already exists
         if os.path.exists(projbands_dir):

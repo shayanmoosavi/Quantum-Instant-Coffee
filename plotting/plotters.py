@@ -340,8 +340,8 @@ class DOSPlotter:
         ax.set_xlabel("E (eV)")
         ax.set_ylabel("PDOS")
         ax.set_title(title)
-        ax.grid("on")
-        ax.set_xlim(self.config.energy_limits)
+        ax.grid(True)
+        ax.set_xlim(*self.config.energy_limits)
 
     @staticmethod
     def plot_pdos(ax: matplotlib.axes.Axes,

@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import List, Any, Dict, Optional, Tuple
 
 from data.data_extractor import DataExtractor, AtomicStatesExtractor, SimpleDataExtractor, WannierDataExtractor
+from data.models import ProjectSetup
 from ui.ui_helpers import print_info, prompt_input, print_error, console, print_success
 from utils.file_parser import extract_band_number, extract_fermi_energy, extract_number_of_atomic_states
 
@@ -39,18 +40,38 @@ class SpinOrbitHandler:
         normal_found (bool): Tracks whether non-SOC files have been successfully found.
     """
 
-    def __init__(self, skip_soc: bool = False, skip_normal: bool = False) -> None:
+    def __init__(self, project: ProjectSetup) -> None:
         """
         Initializes the SpinOrbitHandler with options to skip SOC or non-SOC cases.
 
         Args:
-            skip_soc (bool): Whether to skip SOC cases. Defaults to False.
-            skip_normal (bool): Whether to skip non-SOC cases. Defaults to False.
+            project (ProjectSetup): The project setup containing paths and configuration.
         """
-        self.skip_soc = skip_soc
-        self.skip_normal = skip_normal
+        self.project = project
+        self.skip_soc = project.skip_soc
+        self.skip_normal = project.skip_normal
         self.soc_found = False
         self.normal_found = False
+
+    def set_skip_soc(self, skip: bool) -> None:
+        """
+        Sets the skip flag for SOC cases.
+
+        Args:
+            skip (bool): Whether to skip SOC cases.
+        """
+        self.skip_soc = skip
+        self.project.skip_soc = skip
+
+    def set_skip_normal(self, skip: bool) -> None:
+        """
+        Sets the skip flag for non-SOC cases.
+
+        Args:
+            skip (bool): Whether to skip non-SOC cases.
+        """
+        self.skip_normal = skip
+        self.project.skip_normal = skip
 
     def should_skip(self, flag: str) -> bool:
         """
@@ -113,11 +134,14 @@ class SpinOrbitHandler:
 
             if skip_input == "y":
                 # Set the appropriate skip flag for future reference
-                if flag == "_soc":
-                    self.skip_soc = True
-                else:
-                    self.skip_normal = True
-                return True
+                # if flag == "_soc":
+                #     self.set_skip_soc(True)
+                # else:
+                #     self.set_skip_normal(True)
+                # return True
+                print_error(f"Unfortunately, this feature is not currently supported due to a bug in the code. Please"
+                            f" set the --skip-soc or --skip-normal flags manually while re-running the program.")
+                exit(1)
             else:
                 exit(1)
 
@@ -132,9 +156,9 @@ class SpinOrbitHandler:
             if skip_input == "y":
                 # Set the appropriate skip flag for future reference
                 if flag == "_soc":
-                    self.skip_soc = True
+                    self.set_skip_soc(True)
                 else:
-                    self.skip_normal = True
+                    self.set_skip_normal(True)
                 return True
             else:
                 exit(1)
@@ -163,6 +187,7 @@ class CollectionConfig:
     Configuration for data collection operations.
 
     Attributes:
+        project (ProjectSetup): The project setup containing paths and configuration.
         paths (Dict[str, List[str]]): Dictionary containing file paths for data collection.
         compound_name (str): Name of the compound being analyzed.
         spin_orbit_flags (List[str]): List of flags indicating spin-orbit coupling cases (e.g., "_soc").
@@ -170,6 +195,7 @@ class CollectionConfig:
         skip_normal (bool): Whether to skip non-spin-orbit coupling cases. Defaults to False.
         is_pdos (bool): Whether the data collection involves PDOS files. Defaults to False.
     """
+    project: ProjectSetup
     paths: Dict[str, List[str]]
     compound_name: str
     spin_orbit_flags: List[str]
@@ -194,6 +220,7 @@ class DataCollector:
             extractor (DataExtractor): The data extractor to be used for data collection.
         """
         self.extractor = extractor
+        self.soc_handler = None
 
     def collect(self, config: CollectionConfig) -> List[Any]:
         """
@@ -205,7 +232,7 @@ class DataCollector:
         Returns:
             List[Any]: A list of collected data.
         """
-        soc_handler = SpinOrbitHandler(config.skip_soc, config.skip_normal)
+        self.soc_handler = SpinOrbitHandler(config.project)
         results = []
 
         # Get the appropriate paths based on the extractor
@@ -214,15 +241,15 @@ class DataCollector:
         for path, flag in zip(paths, config.spin_orbit_flags):
             if isinstance(self.extractor, AtomicStatesExtractor):
                 console.rule(f"Getting atomic projections info {'(SOC)' if flag else '(Non-SOC)'}")
-            if soc_handler.should_skip(flag):
+            if self.soc_handler.should_skip(flag):
                 continue
 
-            result = self._process_single_case(path, config, flag, soc_handler)
+            result = self._process_single_case(path, config, flag, self.soc_handler)
             if result is not None:
                 results.append(result)
 
         # Validate that at least one case was successful
-        soc_handler.validate_at_least_one_case()
+        self.soc_handler.validate_at_least_one_case()
         return results
 
     def _get_paths(self, config: CollectionConfig) -> List[str]:

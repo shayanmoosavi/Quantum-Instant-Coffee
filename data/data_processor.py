@@ -6,11 +6,11 @@ weights, and processing atomic projections.
 """
 import os.path
 
+import numpy as np
 from rich import box
 from rich.table import Table
 
 from data.data_collector import *
-import numpy as np
 from data.models import BandData, ProjectSetup
 from ui.display_data import display_dft_data_info
 
@@ -389,8 +389,8 @@ def process_pdos_data(project: ProjectSetup) -> ProjectSetup:
     pdos_data_filename_list = [f"pdos_{atomic_projection.split('-')[0]}_{atomic_projection.split('-')[1]}.dat"
                                for atomic_projection in atomic_projection_list]
     dos_data_list = []
-
-    for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"], project.dos_setup.fermi_energies):
+    for pdos_dir, fermi_energy in zip(project.output_paths["pdos_output_paths"],
+                                      project.dos_setup.fermi_energies):
 
         dos_data = {}
         pdos_data_file_paths = [os.path.join(os.path.dirname(pdos_dir), filename) for filename in
@@ -545,7 +545,9 @@ if __name__ == "__main__":
                     project.band_info.number_of_bands,
                     project.band_data.k_points,
                     project.band_info.fermi_energies,
-                    ["", "(SOC)"]
+                    [""] if project.skip_soc
+                    else ["(SOC)"] if project.skip_normal
+                    else ["", "(SOC)"]
             ):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} bands")
                 display_dft_data_info(bands, k_points, fermi_energy)
