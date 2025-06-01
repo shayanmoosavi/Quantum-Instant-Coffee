@@ -15,6 +15,7 @@ Classes:
 import re
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
+
 from numpy import ndarray
 
 
@@ -140,14 +141,10 @@ class WannierSetup:
     Attributes:
         fermi_energies (List[float]): List of Fermi energies.
         alat_parameters (List[float]): List of lattice parameters.
-        skip_soc (bool): Whether to skip SOC calculations.
-        skip_normal (bool): Whether to skip non-SOC calculations.
         comparison_data (Dict[str, List[ndarray]]): Wannier and DFT data for comparison.
     """
     fermi_energies: List[float]
     alat_parameters: List[float]
-    skip_soc: bool = False
-    skip_normal: bool = False
     comparison_data: Dict[str, List[ndarray]] = None
 
 

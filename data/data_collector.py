@@ -125,8 +125,6 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
         wannier_setup = WannierSetup(
             fermi_energies=fermi_energies,
             alat_parameters=alat_parameters,
-            skip_normal=collector.soc_handler.skip_normal,
-            skip_soc=collector.soc_handler.skip_soc
         )
 
         # Add Wannier setup to project configuration
@@ -294,7 +292,7 @@ if __name__ == "__main__":
             for fermi_energy, alat_parameter, flag in zip(
                     project.wannier_setup.fermi_energies,
                     project.wannier_setup.alat_parameters,
-                    ["(SOC)"] if project.wannier_setup.skip_normal else ["", "(SOC)"]
+                    ["(SOC)"] if project.skip_normal else ["", "(SOC)"]
             ):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
                 display_wannier_info(fermi_energy, alat_parameter)
