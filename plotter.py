@@ -8,7 +8,7 @@ import argparse
 import os
 from sys import argv
 
-from core.config_handler import load_project_config, load_plot_config
+from core.config_handler import load_plot_config
 from core.project_setup import initialize_project
 from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data
@@ -46,6 +46,18 @@ parser.add_argument(
     help="Save the figure to a file instead of displaying it."
 )
 
+parser.add_argument(
+    "--skip-soc",
+    action="store_true",
+    help="Skip generation of plots with spin-orbit coupling (SOC)."
+)
+
+parser.add_argument(
+    "--skip-normal",
+    action="store_true",
+    help="Skip generation of plots without spin-orbit coupling (SOC)."
+)
+
 # Parsing the arguments
 args = parser.parse_args(argv[1:])
 compound_name = args.compound_name
@@ -56,7 +68,9 @@ if args.plot_type == "bands":
     project = initialize_project(compound_name,
                                  project_config_file,
                                  config_type="bands",
-                                 is_input=False)
+                                 is_input=False,
+                                 skip_soc=args.skip_soc,
+                                 skip_normal=args.skip_normal)
     prepare_bands_info(project)
     process_band_data(project)
 
@@ -65,7 +79,9 @@ elif args.plot_type == "wannier":
                                  project_config_file,
                                  config_type="wannier",
                                  is_input=False,
-                                 is_wannier=True)
+                                 is_wannier=True,
+                                 skip_soc=args.skip_soc,
+                                 skip_normal=args.skip_normal)
     prepare_wannier_info(project)
     process_comparison_data(project)
 
@@ -74,7 +90,9 @@ elif args.plot_type == "pdos":
                                  project_config_file,
                                  config_type="pdos",
                                  is_input=False,
-                                 is_pdos=True)
+                                 is_pdos=True,
+                                 skip_soc=args.skip_soc,
+                                 skip_normal=args.skip_normal)
     prepare_pdos_info(project)
     process_pdos_data(project)
 
