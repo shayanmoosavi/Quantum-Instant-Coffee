@@ -20,12 +20,13 @@ Usage:
     - Use `CollectorFactory.create_wannier_collector()` to create a collector for Wannier data.
 """
 from dataclasses import dataclass
-from typing import List, Any, Dict, Optional, Tuple
+from typing import List, Any, Dict, Optional
 
-from data.data_extractor import DataExtractor, AtomicStatesExtractor, SimpleDataExtractor, WannierDataExtractor
+from data.data_extractor import DataExtractor, AtomicStatesExtractor, SimpleDataExtractor
 from data.models import ProjectSetup
 from ui.ui_helpers import print_info, prompt_input, print_error, console, print_success
-from utils.file_parser import extract_band_number, extract_fermi_energy, extract_number_of_atomic_states
+from utils.file_parser import extract_band_number, extract_fermi_energy, extract_number_of_atomic_states, \
+    extract_wannier_parameters
 
 
 class SpinOrbitHandler:
@@ -301,56 +302,6 @@ class DataCollector:
         return None
 
 
-class WannierCollector(DataCollector):
-    """
-    Template method class for collecting Wannier data from Quantum ESPRESSO files.
-
-    Attributes:
-        soc_handler (SpinOrbitHandler): Handler for SOC-related logic.
-    """
-
-    def __init__(self, extractor: DataExtractor):
-        """
-        Initializes the WannierCollector with a specific data extractor.
-
-        Args:
-            extractor (DataExtractor): The data extractor to be used for Wannier data collection.
-        """
-        super().__init__(extractor)
-        self.soc_handler = None  # Will be set during collection
-
-    def collect(self, config: CollectionConfig) -> Tuple[List[float], List[float]]:
-        """
-        Collects Wannier data and returns separate lists for alat and Fermi energies.
-
-        Args:
-            config (CollectionConfig): Configuration for data collection.
-
-        Returns:
-            Tuple[List[float], List[float]]: A tuple containing lists of alat parameters and Fermi energies.
-        """
-        self.soc_handler = SpinOrbitHandler(config.skip_soc, config.skip_normal)
-        alat_parameters = []
-        fermi_energies = []
-
-        # Get the appropriate paths based on the extractor
-        paths = self._get_paths(config)
-
-        for path, flag in zip(paths, config.spin_orbit_flags):
-            if self.soc_handler.should_skip(flag):
-                continue
-
-            result = self._process_single_case(path, config, flag, self.soc_handler)
-            if result is not None:
-                alat, fermi_energy = result
-                alat_parameters.append(alat)
-                fermi_energies.append(fermi_energy)
-
-        # Validate that at least one case was successful
-        self.soc_handler.validate_at_least_one_case()
-        return alat_parameters, fermi_energies
-
-
 class CollectorFactory:
     """
     Factory for creating data collectors.
@@ -420,12 +371,16 @@ class CollectorFactory:
         return DataCollector(extractor)
 
     @staticmethod
-    def create_wannier_collector() -> WannierCollector:
+    def create_wannier_collector() -> DataCollector:
         """
         Creates a collector for Wannier data.
 
         Returns:
-            WannierCollector: A collector for Wannier data.
+            DataCollector: A collector for Wannier data.
         """
-        extractor = WannierDataExtractor()
-        return WannierCollector(extractor)
+        extractor = SimpleDataExtractor(
+            extractor_func=extract_wannier_parameters,
+            path_key="nscf_wannier_output_paths",
+            data_name="Wannier parameters (alat and Fermi energy)"
+        )
+        return DataCollector(extractor)

@@ -79,9 +79,7 @@ def prepare_bands_info(project: ProjectSetup) -> ProjectSetup:
     success = generate_projected_bands(
         project.output_paths,
         band_info.number_of_atomic_states,
-        band_info.fermi_energies,
-        project.skip_soc,
-        project.skip_normal
+        band_info.fermi_energies
     )
 
     if not all(success):
@@ -109,6 +107,7 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     spin_orbit_flags = [""] if project.skip_soc else ["_soc"] if project.skip_normal else ["", "_soc"]
 
     config = CollectionConfig(
+        project=project,
         paths=project.output_paths,
         compound_name=project.compound_name,
         spin_orbit_flags=spin_orbit_flags,
@@ -120,13 +119,12 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     collector = CollectorFactory.create_wannier_collector()
 
     try:
-        alat_parameters, fermi_energies = collector.collect(config)
+        wannier_parameters = collector.collect(config)
+        alat_parameters, fermi_energies = zip(*wannier_parameters) if wannier_parameters else ([], [])
 
         wannier_setup = WannierSetup(
             fermi_energies=fermi_energies,
             alat_parameters=alat_parameters,
-            skip_normal=collector.soc_handler.skip_normal,
-            skip_soc=collector.soc_handler.skip_soc
         )
 
         # Add Wannier setup to project configuration
@@ -171,8 +169,7 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
 
     project.add_dos_setup(dos_setup)
 
-    success = generate_pdos(project.output_paths, list(project.dos_setup.atomic_states_info[0].keys()),
-                            project.skip_soc, project.skip_normal)
+    success = generate_pdos(project.output_paths, list(project.dos_setup.atomic_states_info[0].keys()))
     if not all(success):
         raise ProjectInitializationError("Some PDOS files were not generated successfully.")
 
@@ -295,7 +292,7 @@ if __name__ == "__main__":
             for fermi_energy, alat_parameter, flag in zip(
                     project.wannier_setup.fermi_energies,
                     project.wannier_setup.alat_parameters,
-                    ["(SOC)"] if project.wannier_setup.skip_normal else ["", "(SOC)"]
+                    ["(SOC)"] if project.skip_normal else ["", "(SOC)"]
             ):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
                 display_wannier_info(fermi_energy, alat_parameter)

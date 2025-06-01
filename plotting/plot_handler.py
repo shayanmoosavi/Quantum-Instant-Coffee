@@ -15,19 +15,20 @@ Functions:
 import os
 from sys import argv
 from typing import Dict, List
+
 import matplotlib.pyplot as plt
 import numpy as np
 from rich.table import Table
 
 from core.config_handler import BandsPlotConfig, DOSPlotConfig
-from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
-from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
-from data.models import ProjectSetup
 from core.project_setup import initialize_project
+from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
+from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
+from data.models import ProjectSetup
 from plotting.plotters import BandPlotter, WannierComparePlotter, DOSPlotter
 from ui.display_plot_info import display_band_plot_info, display_wannier_plot_info, display_pdos_plot_info
-from ui.ui_helpers import print_header, console, print_success, prompt_input
 from ui.print_thanks import print_animated_ascii
+from ui.ui_helpers import print_header, console, print_success, prompt_input
 
 
 class ProjectionDataProcessor:
@@ -337,7 +338,7 @@ def plot_wannier_comparison(project: ProjectSetup,
 
     plotter = WannierComparePlotter(plot_config)
     comparison_data = project.wannier_setup.comparison_data
-    spin_orbit_flags = ["_soc"] if project.wannier_setup.skip_normal else ["", "_soc"]
+    spin_orbit_flags = ["_soc"] if project.skip_normal else ["", "_soc"]
     total_plots = len(spin_orbit_flags)
 
     if test_module:
@@ -372,7 +373,7 @@ def plot_wannier_comparison(project: ProjectSetup,
                 with console.status("Creating Wannier comparison plot..."):
                     plotter.init_plot(
                         project.compound_name,
-                        project.wannier_setup.skip_normal,
+                        project.skip_normal,
                         flag
                     )
                     plotter.plot_comparison(
@@ -388,7 +389,7 @@ def plot_wannier_comparison(project: ProjectSetup,
                 with console.status("Creating Wannier comparison plot..."):
                     plotter.init_plot(
                         project.compound_name,
-                        project.wannier_setup.skip_normal,
+                        project.skip_normal,
                         flag
                     )
                     plotter.plot_comparison(
