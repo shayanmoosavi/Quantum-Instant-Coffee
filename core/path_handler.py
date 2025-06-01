@@ -6,9 +6,10 @@ and building structured file paths for input and output files.
 """
 import argparse
 import os
+from dataclasses import dataclass
 from enum import Enum
 from sys import argv
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 from core.config_handler import ProjectConfig
 from core.project_setup import initialize_project, ProjectInitializationError
@@ -38,6 +39,67 @@ class CalculationType(Enum):
     def base_type(self) -> str:
         """Get the base calculation type without SOC suffix."""
         return self.value.replace("_soc", "")
+
+
+@dataclass
+class PathBuildingContext:
+    """Context object containing all parameters needed for path building."""
+    project_dir: str
+    compound_name: str
+    config: ProjectConfig
+    is_input: bool = True
+    include_stress: bool = False
+    stress_amounts: Optional[List[str]] = None
+    skip_soc: bool = False
+    skip_normal: bool = False
+
+    def should_include_calculation(self, calc_type: CalculationType) -> bool:
+        """
+        Determine if a calculation should be included based on SOC and normal flags.
+
+        Args:
+            calc_type (str): The calculation type (e.g., 'scf', 'scf_soc', 'strain').
+
+        Returns:
+            bool: True if the calculation should be included, False otherwise.
+        """
+        # Pseudo directories are always excluded
+        if calc_type in [CalculationType.PSEUDO, CalculationType.PSEUDO_REL]:
+            return False
+
+        # It's unnecessary to check for strain directory if stress is not included
+        if calc_type == CalculationType.STRAIN and not self.include_stress:
+            return False
+
+        # Apply SOC/normal filtering
+        if self.skip_soc and calc_type.is_soc:
+            return False
+        if self.skip_normal and not calc_type.is_soc:
+            return False
+
+        # If stress is included, we should not include SOC calculations
+        if self.include_stress and calc_type.is_soc:
+            return False
+
+        return True
+
+
+class FilePatternBuilder:
+    """Handles file pattern building and validation."""
+
+    def __init__(self, file_patterns: Dict[str, str]):
+        self.file_patterns = file_patterns
+
+    def build_file_path(self, base_path: str, compound_name: str,
+                        pattern_key: str, flag: str = "") -> Optional[str]:
+        """Build a single file path from pattern."""
+        try:
+            pattern = self.file_patterns[pattern_key]
+            filename = pattern.format(compound_name=compound_name, flag=flag)
+            return os.path.join(base_path, filename)
+        except KeyError:
+            print_warning(f"Key '{pattern_key}' not found in file patterns. Skipping...")
+            return None
 
 
 def get_project_directory(compound_name: str) -> str:
@@ -88,7 +150,6 @@ def append_file_paths(file_paths: Dict[str, Dict[str, List[str]]],
         except KeyError:
             print_warning(f"Key '{key}' not found in provided config. Skipping...")
             continue
-
 
 def should_include_calculation(calculation: str, skip_soc: bool = False, skip_normal: bool = False,
                                include_stress: bool = False) -> bool:
