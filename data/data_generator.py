@@ -2,7 +2,7 @@ import os
 from subprocess import CalledProcessError
 from typing import Dict, List
 
-from ui.ui_helpers import print_header, console, print_warning, print_success, print_error, print_info
+from ui.ui_helpers import print_header, console, print_warning, print_success, print_error
 from utils.external_tools import run_awk_script, run_sum_pdos
 
 
@@ -30,14 +30,16 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
     # List to track whether the projbands generation was successful for each file
     success_list = []
-
+    total_plots = len(paths['projbands_paths'])
     # Iterating over the KPDOS output paths and corresponding projbands paths
     for i, (projbands_dir, kpdos_output_dir,
             number_of_atomic_states, fermi_energy) in enumerate(zip(
         paths["projbands_paths"], paths["kpdos_output_paths"],
-        number_of_atomic_states_list, fermi_energies
-    )):
-        console.rule(f"Generating file {i + 1} of {len(paths['projbands_paths'])}")
+        number_of_atomic_states_list,
+        fermi_energies
+    ), 1):
+
+        console.rule(f"Generating file {i if total_plots != 1 else 1} of {total_plots}")
 
         # Checking if the projbands file already exists
         if os.path.exists(projbands_dir):
@@ -65,9 +67,7 @@ def generate_projected_bands(paths: Dict[str, List[str]],
 
 
 def generate_pdos(paths: Dict[str, List[str]],
-                  atomic_projection_list: List[str],
-                  skip_soc: bool = False,
-                  skip_normal: bool = False
+                  atomic_projection_list: List[str]
                   ) -> List[bool]:
     """
     Generates Projected Density of States (PDOS) files if not already present.
@@ -84,18 +84,11 @@ def generate_pdos(paths: Dict[str, List[str]],
     # List to track whether the pdos generation was successful for each file
     success_list = []
 
-    total_files = len(atomic_projection_list) if skip_soc or skip_normal else len(paths["pdos_output_paths"]) * len(
-        atomic_projection_list)
+    total_files = len(paths["pdos_output_paths"]) * len(atomic_projection_list)
     current_file = 0
 
     # Iterating over the PDOS output paths and corresponding PDOS data
     for pdos_dir in paths["pdos_output_paths"]:
-        if "soc" in pdos_dir and skip_soc:
-            print_info(f"Skipping SOC PDOS generation: `{os.path.basename(pdos_dir)}`\n")
-            continue
-        elif "soc" not in pdos_dir and skip_normal:
-            print_info(f"Skipping non-SOC PDOS generation: `{os.path.basename(pdos_dir)}`\n")
-            continue
 
         os.chdir(os.path.dirname(pdos_dir))
         for atomic_projection in atomic_projection_list:
