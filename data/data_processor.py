@@ -323,44 +323,25 @@ def process_comparison_data(project: ProjectSetup) -> ProjectSetup:
     wannier_energies_list = []
     dft_energies_list = []
 
-    if project.wannier_setup.skip_normal:
-
+    for wannier_bands_dir, bands_dir, alat_parameter, fermi_energy in zip(
+            project.output_paths["wannier_bands_paths"],
+            project.output_paths["bands_paths"],
+            project.wannier_setup.alat_parameters,
+            project.wannier_setup.fermi_energies
+    ):
         # Process Wannier data
         _, k_points_wannier, wannier_energies = wannier_processor.load_wannier_bands(
-            project.output_paths["wannier_bands_paths"][1],
-            project.wannier_setup.alat_parameters[0], project.wannier_setup.fermi_energies[0])
+            wannier_bands_dir, alat_parameter, fermi_energy)
 
         # Process DFT data
         _, k_points_dft, dft_energies = band_processor.load_bands(
-            project.output_paths["bands_paths"][1], project.wannier_setup.fermi_energies[0])
+            bands_dir, fermi_energy)
 
-        # Store the results
+        # Store results
         k_points_wannier_list.append(k_points_wannier)
         wannier_energies_list.append(wannier_energies)
         k_points_dft_list.append(k_points_dft)
         dft_energies_list.append(dft_energies)
-
-    else:
-
-        for wannier_bands_dir, bands_dir, alat_parameter, fermi_energy in zip(
-                project.output_paths["wannier_bands_paths"],
-                project.output_paths["bands_paths"],
-                project.wannier_setup.alat_parameters,
-                project.wannier_setup.fermi_energies
-        ):
-            # Process Wannier data
-            _, k_points_wannier, wannier_energies = wannier_processor.load_wannier_bands(
-                wannier_bands_dir, alat_parameter, fermi_energy)
-
-            # Process DFT data
-            _, k_points_dft, dft_energies = band_processor.load_bands(
-                bands_dir, fermi_energy)
-
-            # Store results
-            k_points_wannier_list.append(k_points_wannier)
-            wannier_energies_list.append(wannier_energies)
-            k_points_dft_list.append(k_points_dft)
-            dft_energies_list.append(dft_energies)
 
     comparison_data = {
         "k_points_wannier": k_points_wannier_list,
