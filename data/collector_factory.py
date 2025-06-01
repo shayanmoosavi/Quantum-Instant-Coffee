@@ -134,11 +134,14 @@ class SpinOrbitHandler:
 
             if skip_input == "y":
                 # Set the appropriate skip flag for future reference
-                if flag == "_soc":
-                    self.set_skip_soc(True)
-                else:
-                    self.set_skip_normal(True)
-                return True
+                # if flag == "_soc":
+                #     self.set_skip_soc(True)
+                # else:
+                #     self.set_skip_normal(True)
+                # return True
+                print_error(f"Unfortunately, this feature is not currently supported due to a bug in the code. Please"
+                            f" set the --skip-soc or --skip-normal flags manually while re-running the program.")
+                exit(1)
             else:
                 exit(1)
 
