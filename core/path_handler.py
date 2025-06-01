@@ -6,12 +6,38 @@ and building structured file paths for input and output files.
 """
 import argparse
 import os
+from enum import Enum
 from sys import argv
 from typing import List, Tuple, Dict
 
 from core.config_handler import ProjectConfig
 from core.project_setup import initialize_project, ProjectInitializationError
 from ui.ui_helpers import *
+
+
+class CalculationType(Enum):
+    """Enumeration of calculation types for better type safety."""
+    SCF = "scf"
+    SCF_SOC = "scf_soc"
+    PROJECTED_BANDS = "projected_bands"
+    PROJECTED_BANDS_SOC = "projected_bands_soc"
+    PDOS = "pdos"
+    PDOS_SOC = "pdos_soc"
+    WANNIER = "wannier"
+    WANNIER_SOC = "wannier_soc"
+    STRAIN = "strain"
+    PSEUDO = "pseudo"
+    PSEUDO_REL = "pseudo_rel"
+
+    @property
+    def is_soc(self) -> bool:
+        """Check if this calculation type uses SOC."""
+        return "_soc" in self.value
+
+    @property
+    def base_type(self) -> str:
+        """Get the base calculation type without SOC suffix."""
+        return self.value.replace("_soc", "")
 
 
 def get_project_directory(compound_name: str) -> str:
@@ -78,9 +104,13 @@ def should_include_calculation(calculation: str, skip_soc: bool = False, skip_no
     Returns:
         bool: True if the calculation should be included, False otherwise.
     """
-    # Special cases that are always handled separately
-    if calculation in ["pseudo", "pseudo_rel", "strain"]:
-        return True
+    # Pseudo directories are always excluded
+    if calculation in ["pseudo", "pseudo_rel"]:
+        return False
+
+    # It's unnecessary to check for strain directory if stress is not included
+    if calculation == "strain" and not include_stress:
+        return False
 
     # Check if it's an SOC calculation
     is_soc = "_soc" in calculation
@@ -91,7 +121,7 @@ def should_include_calculation(calculation: str, skip_soc: bool = False, skip_no
     if skip_normal and not is_soc:
         return False
 
-    # Apply existing stress logic for SOC calculations
+    # If stress is included, we should not include SOC calculations
     if include_stress and is_soc:
         return False
 
@@ -138,8 +168,6 @@ def add_paths_for_directories(
                                   ["scf_output", "pw_bands_output", "kpdos_output", "projbands_output", "bands_gnu"])
 
         elif calculation == "strain":
-            continue
-        elif calculation in ["pseudo", "pseudo_rel"]:
             continue
         elif calculation in ["scf", "scf_soc"]:
 
