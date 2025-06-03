@@ -12,8 +12,8 @@ import argparse
 from sys import argv
 
 from core.path import ProjectInitializationError, initialize_project
-from data.collector_factory import CollectionConfig, CollectorFactory
-from data.data_generator import generate_pdos, generate_projected_bands
+from .factory import CollectionConfig, CollectorFactory
+from .data_generator import generate_pdos, generate_projected_bands
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
 from ui.ui_helpers import print_header
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     This script validates that the prepare_dft_info has executed successfully and prints the extracted 
     information if successful.
     """
-    os.chdir("..")
+    os.chdir("../..")
 
     # Create the parser
     parser = argparse.ArgumentParser(description="Tests the data collector module.")
