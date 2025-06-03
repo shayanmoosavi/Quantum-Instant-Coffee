@@ -11,8 +11,7 @@ Functions:
 import argparse
 from sys import argv
 
-from core.project_setup import ProjectInitializationError
-from core.project_setup import initialize_project
+from core.path import ProjectInitializationError, initialize_project
 from data.collector_factory import CollectionConfig, CollectorFactory
 from data.data_generator import generate_pdos, generate_projected_bands
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup

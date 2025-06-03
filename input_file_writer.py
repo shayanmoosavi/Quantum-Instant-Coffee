@@ -7,7 +7,7 @@ This script is designed to be run from the command line and takes two arguments:
 import argparse
 from sys import argv
 
-from core.project_setup import initialize_project
+from core.path import initialize_project
 from input.input_file_generator import InputFileManager
 
 # Creating the parser
