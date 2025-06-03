@@ -22,7 +22,7 @@ Usage:
 from dataclasses import dataclass
 from typing import List, Any, Dict, Optional
 
-from data.data_extractor import DataExtractor, AtomicStatesExtractor, SimpleDataExtractor
+from data.extractors import *
 from data.models import ProjectSetup
 from ui.ui_helpers import print_info, prompt_input, print_error, console, print_success
 from utils.file_parser import extract_band_number, extract_fermi_energy, extract_number_of_atomic_states, \

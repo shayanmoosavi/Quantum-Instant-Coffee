@@ -10,7 +10,7 @@ import numpy as np
 from rich import box
 from rich.table import Table
 
-from data.data_collector import *
+from data.collectors import *
 from data.models import BandData, ProjectSetup
 from ui.display_data import display_dft_data_info
 
