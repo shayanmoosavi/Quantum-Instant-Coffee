@@ -6,14 +6,14 @@ This module performs the following tasks:
 3. Stores the processed data in a SQLite database.
 """
 
-import sqlite3
 import os
+import sqlite3
 from io import StringIO
 from typing import List
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 from input.generators.sections import InputGenerationError
 
@@ -181,7 +181,8 @@ def get_atomic_weights(element_names: List[str]) -> List[float] | None:
     if not element_names:
         raise ValueError("Element names list cannot be empty.")
     try:
-        conn = sqlite3.connect("data/elements.db")
+        script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        conn = sqlite3.connect(os.path.join(script_root_dir, "data/elements.db"))
         cursor = conn.cursor()
         atomic_weights = []
 
