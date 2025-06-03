@@ -22,7 +22,7 @@ from .exceptions import ProjectInitializationError
 from .managers import PathManager
 from .models import PathBuildingContext, CalculationType
 from .utils import has_soc_directories, get_project_directory
-from ..config_handler import load_project_config
+from ..config import load_project_config
 from ..input_handler import get_strain_amounts, get_pbands_type
 
 

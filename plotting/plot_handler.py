@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from rich.table import Table
 
-from core.config_handler import BandsPlotConfig, DOSPlotConfig
+from core.config import BandsPlotConfig, DOSPlotConfig
 from core.path import initialize_project
 from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
 from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor

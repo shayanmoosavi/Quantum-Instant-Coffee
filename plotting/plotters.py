@@ -21,7 +21,7 @@ import matplotlib.collections
 import numpy as np
 from matplotlib import pyplot as plt
 
-from core.config_handler import BandsPlotConfig, DOSPlotConfig
+from core.config import BandsPlotConfig, DOSPlotConfig
 
 
 class CompoundNameFormatter:

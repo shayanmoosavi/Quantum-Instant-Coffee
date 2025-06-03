@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
 
-from core.project_config import ProjectConfig
+from core.config import ProjectConfig
 
 
 class CalculationType(Enum):
