@@ -4,8 +4,8 @@ This module handles loading and validating the different configurations.
 """
 import os
 
-from core.config.plot_config import BandsPlotConfig, DOSPlotConfig
-from core.config.project_config import ProjectConfig
+from core.config import BandsPlotConfig, DOSPlotConfig
+from core.config import ProjectConfig
 from ui.ui_helpers import print_error, print_info, print_success, print_warning
 from utils.config_validation import ConfigValidationError
 
