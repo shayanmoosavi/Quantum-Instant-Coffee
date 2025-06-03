@@ -4,8 +4,8 @@ This module handles loading and validating the different configurations.
 """
 import os
 
-from core.plot_config import BandsPlotConfig, DOSPlotConfig
-from core.project_config import ProjectConfig
+from core.config.plot_config import BandsPlotConfig, DOSPlotConfig
+from core.config.project_config import ProjectConfig
 from ui.ui_helpers import print_error, print_info, print_success, print_warning
 from utils.config_validation import ConfigValidationError
 
@@ -34,7 +34,7 @@ def load_project_config(config_file: str = None,
             user_id = os.getenv("COFFEE")
             if user_id:
                 script_root_dir = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
+                    os.path.join(os.path.dirname(__file__), "../.."))  # The root directory of the program
                 config_file = os.path.join(script_root_dir, "..", user_id, "project_config.json")
                 print_info(f"Config file path: {os.path.abspath(config_file)}")
                 if os.path.exists(os.path.abspath(config_file)):
@@ -82,7 +82,7 @@ def load_plot_config(config_file: str = None,
             user_id = os.getenv("COFFEE")
             if user_id:
                 script_root_dir = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), ".."))  # The root directory of the program
+                    os.path.join(os.path.dirname(__file__), "../.."))  # The root directory of the program
                 config_file = os.path.join(script_root_dir, "..", user_id, "plot_config.yaml")
                 print_info(f"Config file path: {os.path.abspath(config_file)}")
                 if os.path.exists(os.path.abspath(config_file)):
