@@ -22,8 +22,8 @@ from rich.table import Table
 
 from core.config import BandsPlotConfig, DOSPlotConfig
 from core.path import initialize_project
-from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
-from data.data_processor import process_band_data, process_comparison_data, process_pdos_data, AtomicProjectionProcessor
+from data.collectors import *
+from data.processors import *
 from data.models import ProjectSetup
 from plotting.plotters import BandPlotter, WannierComparePlotter, DOSPlotter
 from ui.display_plot_info import display_band_plot_info, display_wannier_plot_info, display_pdos_plot_info
