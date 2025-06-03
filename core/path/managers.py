@@ -1,3 +1,10 @@
+""" Path management module for organizing and creating project directories and file paths.
+
+Classes:
+    - DirectoryManager: Manages directory creation and validation.
+    - StructuredPathOrganizer: Organizes paths into a structured format expected by the application.
+    - PathManager: Main class that coordinates all path-related operations.
+"""
 import os
 from typing import List, Dict
 
@@ -7,13 +14,35 @@ from core.path.models import PathBuildingContext, CalculationType
 
 
 class DirectoryManager:
-    """Manages directory creation and validation."""
+    """
+    Manages directory creation and validation.
+
+    Attributes:
+        project_dir (str): The root directory of the project.
+    """
 
     def __init__(self, project_dir: str):
+        """
+        Initializes the DirectoryManager with the project directory.
+
+        Args:
+            project_dir (str): The root directory of the project.
+        """
         self.project_dir = project_dir
 
     def create_project_directories(self, context: PathBuildingContext) -> List[str]:
-        """Create all required directories for the project."""
+        """
+        Creates all required directories for the project based on the provided context.
+
+        Args:
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            List[str]: A list of absolute paths to the created directories.
+
+        Raises:
+            ProjectInitializationError: If an invalid calculation type is found in the directory structure.
+        """
         from ui.ui_helpers import print_success, print_error, print_header, console, Table
 
         try:
@@ -77,7 +106,13 @@ class DirectoryManager:
 
 
 class StructuredPathOrganizer:
-    """Organizes paths into the structured format expected by the application."""
+    """
+    Organizes paths into the structured format expected by the application.
+
+    Attributes:
+        INPUT_PATH_KEYS (List[str]): Keys for input paths.
+        OUTPUT_PATH_KEYS (List[str]): Keys for output paths.
+    """
 
     INPUT_PATH_KEYS = [
         "relax_input_paths", "vc_relax_input_paths", "scf_input_paths",
@@ -94,7 +129,16 @@ class StructuredPathOrganizer:
 
     def organize_paths(self, raw_paths: Dict[str, Dict[str, List[str]]],
                        context: PathBuildingContext) -> Dict[str, List[str]]:
-        """Organize raw paths into structured format."""
+        """
+        Organizes raw paths into a structured format based on the context.
+
+        Args:
+            raw_paths (Dict[str, Dict[str, List[str]]]): Raw paths grouped by calculation type.
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            Dict[str, List[str]]: Structured paths grouped by input or output keys.
+        """
         if context.is_input:
             return self._organize_input_paths(raw_paths, context)
         else:
@@ -102,7 +146,16 @@ class StructuredPathOrganizer:
 
     def _organize_input_paths(self, raw_paths: Dict[str, Dict[str, List[str]]],
                               context: PathBuildingContext) -> Dict[str, List[str]]:
-        """Organize input paths."""
+        """
+        Organizes input paths into a structured format.
+
+        Args:
+            raw_paths (Dict[str, Dict[str, List[str]]]): Raw input paths grouped by calculation type.
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            Dict[str, List[str]]: Structured input paths grouped by keys.
+        """
         structured = {key: [] for key in self.INPUT_PATH_KEYS}
 
         # Remove wannier paths if stress is included
@@ -122,7 +175,16 @@ class StructuredPathOrganizer:
 
     def _organize_output_paths(self, raw_paths: Dict[str, Dict[str, List[str]]],
                                context: PathBuildingContext) -> Dict[str, List[str]]:
-        """Organize output paths."""
+        """
+        Organizes output paths into a structured format.
+
+        Args:
+            raw_paths (Dict[str, Dict[str, List[str]]]): Raw output paths grouped by calculation type.
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            Dict[str, List[str]]: Structured output paths grouped by keys.
+        """
         structured = {key: [] for key in self.OUTPUT_PATH_KEYS}
 
         for calc_name, file_paths in raw_paths.items():
@@ -140,7 +202,15 @@ class StructuredPathOrganizer:
                                           calc_type: CalculationType,
                                           file_paths: Dict[str, List[str]],
                                           context: PathBuildingContext):
-        """Add output paths for a specific calculation."""
+        """
+        Adds output paths for a specific calculation type to the structured format.
+
+        Args:
+            structured (Dict[str, List[str]]): The structured output paths.
+            calc_type (CalculationType): The type of calculation.
+            file_paths (Dict[str, List[str]]): Raw file paths for the calculation type.
+            context (PathBuildingContext): The context containing project configuration and settings.
+        """
         if calc_type in [CalculationType.SCF, CalculationType.SCF_SOC]:
             if not (context.include_stress and calc_type.is_soc):
                 if "scf_output" in file_paths:
@@ -189,7 +259,15 @@ class StructuredPathOrganizer:
                                          calc_type: CalculationType,
                                          file_paths: Dict[str, List[str]],
                                          context: PathBuildingContext):
-        """Add input paths for a specific calculation."""
+        """
+        Adds input paths for a specific calculation type to the structured format.
+
+        Args:
+            structured (Dict[str, List[str]]): The structured input paths.
+            calc_type (CalculationType): The type of calculation.
+            file_paths (Dict[str, List[str]]): Raw file paths for the calculation type.
+            context (PathBuildingContext): The context containing project configuration and settings.
+        """
         if calc_type in [CalculationType.SCF, CalculationType.SCF_SOC]:
             if not (context.include_stress and calc_type.is_soc):
                 for path_type in ["relax_input", "vc_relax_input", "scf_input"]:
@@ -222,16 +300,38 @@ class StructuredPathOrganizer:
 
 
 class PathManager:
-    """Main class that coordinates all path-related operations."""
+    """
+    Main class that coordinates all path-related operations.
+
+    Attributes:
+        pattern_builder (FilePatternBuilder): Builder for file patterns.
+        calc_path_builder (CalculationPathBuilder): Builder for calculation paths.
+        directory_manager (DirectoryManager): Manager for project directories.
+        path_organizer (StructuredPathOrganizer): Organizer for structured paths.
+    """
 
     def __init__(self):
+        """
+        Initializes the PathManager with default builders and organizers.
+        """
         self.pattern_builder = None
         self.calc_path_builder = None
         self.directory_manager = None
         self.path_organizer = StructuredPathOrganizer()
 
     def build_file_paths(self, context: PathBuildingContext) -> Dict[str, List[str]]:
-        """Main method to build file paths based on context."""
+        """
+        Builds file paths based on the provided context.
+
+        Args:
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            Dict[str, List[str]]: Structured file paths grouped by keys.
+
+        Raises:
+            ProjectInitializationError: If an invalid calculation type is found in the directory structure.
+        """
         # Initialize builders
         file_patterns = context.config.file_patterns.input if context.is_input else context.config.file_patterns.output
         self.pattern_builder = FilePatternBuilder(file_patterns)
@@ -267,6 +367,14 @@ class PathManager:
         return self.path_organizer.organize_paths(raw_paths, context)
 
     def create_directories(self, context: PathBuildingContext) -> List[str]:
-        """Create project directories."""
+        """
+        Creates project directories based on the provided context.
+
+        Args:
+            context (PathBuildingContext): The context containing project configuration and settings.
+
+        Returns:
+            List[str]: A list of absolute paths to the created directories.
+        """
         self.directory_manager = DirectoryManager(context.project_dir)
         return self.directory_manager.create_project_directories(context)

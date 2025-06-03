@@ -1,3 +1,15 @@
+"""
+This module provides functionality for initializing a project directory, parsing compound information,
+and managing paths and configurations for calculations. It includes utility functions, exceptions,
+and core classes for handling paths and project setup.
+
+Exports:
+    - initialize_project: Main function to initialize the project directory and parse compound information.
+    - ProjectInitializationError: Custom exception for project initialization errors.
+    - CalculationType: Enum for different calculation types.
+    - PathBuildingContext: Dataclass for storing path building context.
+    - PathManager: Core class for managing paths and directories.
+"""
 import os
 from typing import Optional
 

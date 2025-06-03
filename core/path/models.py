@@ -1,3 +1,11 @@
+""" Models for path building context and calculation types.
+
+This module defines the context and types used for building paths in the project.
+
+Classes:
+    - CalculationType: Enum representing different calculation types.
+    - PathBuildingContext: Dataclass containing parameters needed for path building.
+"""
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
@@ -6,7 +14,22 @@ from core.project_config import ProjectConfig
 
 
 class CalculationType(Enum):
-    """Enumeration of calculation types for better type safety."""
+    """
+    Enumeration of calculation types for better type safety.
+
+    Attributes:
+        SCF (str): Self-consistent field calculation.
+        SCF_SOC (str): Self-consistent field calculation with spin-orbit coupling.
+        PROJECTED_BANDS (str): Projected bands calculation.
+        PROJECTED_BANDS_SOC (str): Projected bands calculation with spin-orbit coupling.
+        PDOS (str): Projected density of states calculation.
+        PDOS_SOC (str): Projected density of states calculation with spin-orbit coupling.
+        WANNIER (str): Wannier function calculation.
+        WANNIER_SOC (str): Wannier function calculation with spin-orbit coupling.
+        STRAIN (str): Strain calculation.
+        PSEUDO (str): Pseudopotential directory.
+        PSEUDO_REL (str): Relativistic pseudopotential directory.
+    """
     SCF = "scf"
     SCF_SOC = "scf_soc"
     PROJECTED_BANDS = "projected_bands"
@@ -21,18 +44,40 @@ class CalculationType(Enum):
 
     @property
     def is_soc(self) -> bool:
-        """Check if this calculation type uses SOC."""
+        """
+        Check if this calculation type uses spin-orbit coupling (SOC).
+
+        Returns:
+            bool: True if the calculation type includes SOC, False otherwise.
+        """
         return "_soc" in self.value
 
     @property
     def base_type(self) -> str:
-        """Get the base calculation type without SOC suffix."""
+        """
+        Get the base calculation type without the SOC suffix.
+
+        Returns:
+            str: The base calculation type.
+        """
         return self.value.replace("_soc", "")
 
 
 @dataclass
 class PathBuildingContext:
-    """Context object containing all parameters needed for path building."""
+    """
+    Context object containing all parameters needed for path building.
+
+    Attributes:
+        project_dir (str): The root directory of the project.
+        compound_name (str): The name of the compound being processed.
+        config (ProjectConfig): The project configuration object.
+        is_input (bool): Flag indicating whether paths are for input files. Defaults to True.
+        include_stress (bool): Flag indicating whether stress calculations are included. Defaults to False.
+        stress_amounts (Optional[List[str]]): List of stress amounts for strain calculations. Defaults to None.
+        skip_soc (bool): Flag indicating whether to skip SOC calculations. Defaults to False.
+        skip_normal (bool): Flag indicating whether to skip normal (non-SOC) calculations. Defaults to False.
+    """
     project_dir: str
     compound_name: str
     config: ProjectConfig

@@ -1,3 +1,8 @@
+""" Utility functions for handling project directories and checking for SOC-related directories.
+
+This module includes functions for constructing project directories and identifying
+the presence of spin-orbit coupling (SOC) related directories within a project structure.
+"""
 import os
 from typing import Dict
 

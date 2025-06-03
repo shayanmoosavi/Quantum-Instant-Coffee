@@ -1,3 +1,11 @@
+""" Module for building file paths for calculations.
+
+This module provides classes for building file paths for various calculations in a project.
+
+Classes:
+    - FilePatternBuilder: Handles file pattern building and validation.
+    - CalculationPathBuilder: Builds paths for specific calculation types based on predefined patterns.
+"""
 import os
 from typing import Optional, Dict, List
 
@@ -7,14 +15,38 @@ from ui.ui_helpers import print_warning
 
 
 class FilePatternBuilder:
-    """Handles file pattern building and validation."""
+    """
+    Handles file pattern building and validation.
 
+    Attributes:
+        file_patterns (Dict[str, str]): A dictionary mapping pattern keys to file patterns.
+    """
     def __init__(self, file_patterns: Dict[str, str]):
+        """
+        Initializes the FilePatternBuilder with a dictionary of file patterns.
+
+        Args:
+            file_patterns (Dict[str, str]): A dictionary mapping pattern keys to file patterns.
+        """
         self.file_patterns = file_patterns
 
     def build_file_path(self, base_path: str, compound_name: str,
                         pattern_key: str, flag: str = "") -> Optional[str]:
-        """Build a single file path from pattern."""
+        """
+        Builds a single file path based on the provided pattern key.
+
+        Args:
+            base_path (str): The base directory path.
+            compound_name (str): The name of the compound.
+            pattern_key (str): The key to retrieve the file pattern.
+            flag (str): An optional flag to append to the filename (e.g., "_soc" for SOC calculations).
+
+        Returns:
+            Optional[str]: The constructed file path, or None if the pattern key is not found.
+
+        Raises:
+            KeyError: If the pattern key is not found in the file patterns.
+        """
         try:
             pattern = self.file_patterns[pattern_key]
             filename = pattern.format(compound_name=compound_name, flag=flag)
@@ -25,7 +57,14 @@ class FilePatternBuilder:
 
 
 class CalculationPathBuilder:
-    """Builds paths for specific calculation types."""
+    """
+    Builds paths for specific calculation types.
+
+    Attributes:
+        pattern_builder (FilePatternBuilder): An instance of FilePatternBuilder used for path construction.
+        CALCULATION_FILE_MAPPING (Dict[CalculationType, Dict[str, List[str]]]):
+            A mapping of calculation types to required input and output file keys.
+    """
 
     # Define which file types each calculation needs
     CALCULATION_FILE_MAPPING = {
@@ -68,12 +107,33 @@ class CalculationPathBuilder:
     }
 
     def __init__(self, pattern_builder: FilePatternBuilder):
+        """
+        Initializes the CalculationPathBuilder with a FilePatternBuilder instance.
+
+        Args:
+            pattern_builder (FilePatternBuilder): An instance of FilePatternBuilder used for path construction.
+        """
         self.pattern_builder = pattern_builder
 
     def build_paths_for_calculation(self, calc_type: CalculationType, base_path: str,
                                     compound_name: str, is_input: bool,
                                     stress_amounts: Optional[List[str]] = None) -> Dict[str, List[str]]:
-        """Build all paths for a specific calculation type."""
+        """
+        Builds all paths for a specific calculation type.
+
+        Args:
+            calc_type (CalculationType): The type of calculation.
+            base_path (str): The base directory path.
+            compound_name (str): The name of the compound.
+            is_input (bool): Flag indicating whether to build input or output paths.
+            stress_amounts (Optional[List[str]]): A list of stress amounts for strain calculations. Defaults to None.
+
+        Returns:
+            Dict[str, List[str]]: A dictionary mapping file keys to lists of constructed file paths.
+
+        Raises:
+            ProjectInitializationError: If the calculation type is unsupported.
+        """
         if calc_type not in self.CALCULATION_FILE_MAPPING:
             raise ProjectInitializationError(f"Unsupported calculation type: {calc_type}")
 
