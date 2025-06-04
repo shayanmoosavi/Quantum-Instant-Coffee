@@ -15,7 +15,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from input.generators.sections import InputGenerationError
+from input.generators.exceptions import InputGenerationError
 
 
 # Fetching the webpage

@@ -16,7 +16,7 @@ specified, and for 'nscf' and 'wannier' calculations, it can utilize a
 from subprocess import run, CalledProcessError
 from typing import Tuple
 
-from input.generators.sections import InputGenerationError
+from .exceptions import InputGenerationError
 
 
 def generate_k_points_section(calculation_type: str,

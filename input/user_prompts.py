@@ -14,7 +14,7 @@ Functions:
         Prompts the user to input the K-point mesh density for a given calculation type.
         Validates that the input consists of three positive integers.
 """
-from input.generators.sections import InputGenerationError
+from input.generators.exceptions import InputGenerationError
 from ui.ui_helpers import prompt_input
 
 
