@@ -292,7 +292,15 @@ class DataCollector:
         processed_paths = []
         corresponding_flags = []
 
-        path_key = self.extractor.get_path_key().replace("_paths", "")
+        if config.is_pdos:
+            if self.extractor.get_path_key() == "kpdos_output_paths":
+                path_key = "pdos_output"
+            elif self.extractor.get_path_key() == "scf_output_paths":
+                path_key = "nscf_output"
+            else:
+                path_key = self.extractor.get_path_key().replace("_paths", "")
+        else:
+            path_key = self.extractor.get_path_key().replace("_paths", "")
 
         # Process non-SOC paths
         if base_paths_dict and path_key in base_paths_dict:
