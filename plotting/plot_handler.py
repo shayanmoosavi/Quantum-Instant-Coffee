@@ -245,7 +245,7 @@ def plot_band_structure(project: ProjectSetup,
         project.band_data.energy)
     stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
         project.band_data.energy)
-    total_plots = len(spin_orbit_flags)
+    total_plots = len(list(project.output_paths.values())[0])
 
     if test_module:
         # Debug mode: Printing projection information for verification
@@ -338,7 +338,7 @@ def plot_wannier_comparison(project: ProjectSetup,
 
     plotter = WannierComparePlotter(plot_config)
     comparison_data = project.wannier_setup.comparison_data
-    spin_orbit_flags = ["_soc"] if project.skip_normal else ["", "_soc"]
+    spin_orbit_flags = ["_soc"] if project.skip_normal else [""] if project.skip_soc else ["", "_soc"]
     total_plots = len(spin_orbit_flags)
 
     if test_module:
@@ -423,7 +423,7 @@ def plot_pdos(project: ProjectSetup,
     spin_orbit_flags = ["", "_soc"]
     projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
     unique_elements_list = projection_processor.get_unique_elements()
-    total_plots = len(spin_orbit_flags) if not (project.skip_soc or project.skip_normal) else 1
+    total_plots = len(list(project.output_paths.values())[0])
 
     with console.status("Processing projection data..."):
         projection_data_processor = ProjectionDataProcessor(plot_config,
@@ -447,8 +447,7 @@ def plot_pdos(project: ProjectSetup,
 
         plotter = DOSPlotter(plot_config)
         for i, (projection_data, flag) in enumerate(
-                zip(projection_data_list if not (project.skip_soc or project.skip_normal)
-                    else [None, projection_data_list[0]], spin_orbit_flags), 1):
+                zip(projection_data_list, spin_orbit_flags), 1):
 
             if flag == "_soc" and project.skip_soc:
                 continue
