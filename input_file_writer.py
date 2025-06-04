@@ -8,7 +8,7 @@ import argparse
 from sys import argv
 
 from core.path import initialize_project
-from input.input_file_generator import InputFileManager
+from input import InputFileManager
 
 # Creating the parser
 parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")

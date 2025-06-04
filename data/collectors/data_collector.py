@@ -11,13 +11,34 @@ Functions:
 import argparse
 from sys import argv
 
-from core.path import ProjectInitializationError, initialize_project
-from .factory import CollectionConfig, CollectorFactory
+from core.path import ProjectInitializationError, initialize_project, PathManager, PathBuildingContext
+from .factory import CollectionConfig, CollectorFactory, SpinOrbitHandler
 from .data_generator import generate_pdos, generate_projected_bands
 from data.models import BandInfo, WannierSetup, ProjectSetup, DOSSetup
 from ui.display_data import display_dft_info, display_atomic_states, display_wannier_info
 from ui.ui_helpers import print_header
 from utils.file_parser import *
+
+
+def setup_path_resolver(config: CollectionConfig, project: ProjectSetup) -> None:
+    """ Set up the path resolver for the project configuration.
+
+
+    """
+    context = PathBuildingContext(
+        project_dir=project.project_dir,
+        compound_name=project.compound_name,
+        config=project.config,
+        is_input=False,
+        include_stress=project.include_stress,
+        stress_amounts=project.stress_amounts,
+        skip_soc=project.skip_soc,
+        skip_normal=project.skip_normal
+    )
+
+    soc_handler = SpinOrbitHandler(project)
+    path_manager = PathManager()
+    config.path_resolver = path_manager.create_dynamic_resolver(context, soc_handler)
 
 
 def prepare_bands_info(project: ProjectSetup) -> ProjectSetup:
@@ -35,20 +56,19 @@ def prepare_bands_info(project: ProjectSetup) -> ProjectSetup:
     # Determine spin_orbit_flags based on project configuration
     spin_orbit_flags = (
         [""] * (len(project.stress_amounts) + 1) if project.include_stress
-        else [""] if project.skip_soc
-        else ["_soc"] if project.skip_normal
         else ["", "_soc"]
     )
 
     config = CollectionConfig(
         project=project,
-        paths=project.output_paths,
         compound_name=project.compound_name,
         spin_orbit_flags=spin_orbit_flags,
         skip_soc=project.skip_soc,
         skip_normal=project.skip_normal,
         is_pdos=False
     )
+
+    setup_path_resolver(config, project)
 
     # Extracting band numbers
     number_of_bands_collector = CollectorFactory.create_band_collector()
@@ -107,12 +127,13 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
 
     config = CollectionConfig(
         project=project,
-        paths=project.output_paths,
         compound_name=project.compound_name,
         spin_orbit_flags=spin_orbit_flags,
         skip_soc=project.skip_soc,
         skip_normal=project.skip_normal
     )
+
+    setup_path_resolver(config, project)
 
     # Collect Wannier parameters using the factory pattern
     collector = CollectorFactory.create_wannier_collector()
@@ -146,16 +167,19 @@ def prepare_pdos_info(project: ProjectSetup) -> ProjectSetup:
     """
     print_header("PDOS Info Extraction")
 
-    spin_orbit_flags = [""] if project.skip_soc else ["_soc"] if project.skip_normal else ["", "_soc"]
+    spin_orbit_flags = ["", "_soc"]
+
     config = CollectionConfig(
         project=project,
-        paths=project.output_paths,
         compound_name=project.compound_name,
         spin_orbit_flags=spin_orbit_flags,
         skip_soc=project.skip_soc,
         skip_normal=project.skip_normal,
         is_pdos=True
     )
+
+    setup_path_resolver(config, project)
+
     fermi_collector = CollectorFactory.create_fermi_collector()
     fermi_energies = fermi_collector.collect(config)
 
