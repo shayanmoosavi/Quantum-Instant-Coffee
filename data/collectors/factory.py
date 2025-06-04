@@ -22,7 +22,8 @@ Usage:
 from dataclasses import dataclass
 from typing import List, Any, Dict, Optional
 
-from data.extractors import *
+from core.path import CalculationType, PathManager, DynamicPathResolver
+from data.extractors import DataExtractor, AtomicStatesExtractor, SimpleDataExtractor
 from data.models import ProjectSetup
 from ui.ui_helpers import print_info, prompt_input, print_error, console, print_success
 from utils.file_parser import extract_band_number, extract_fermi_energy, extract_number_of_atomic_states, \
@@ -135,14 +136,11 @@ class SpinOrbitHandler:
 
             if skip_input == "y":
                 # Set the appropriate skip flag for future reference
-                # if flag == "_soc":
-                #     self.set_skip_soc(True)
-                # else:
-                #     self.set_skip_normal(True)
-                # return True
-                print_error(f"Unfortunately, this feature is not currently supported due to a bug in the code. Please"
-                            f" set the --skip-soc or --skip-normal flags manually while re-running the program.")
-                exit(1)
+                if flag == "_soc":
+                    self.set_skip_soc(True)
+                else:
+                    self.set_skip_normal(True)
+                return True
             else:
                 exit(1)
 
@@ -197,12 +195,12 @@ class CollectionConfig:
         is_pdos (bool): Whether the data collection involves PDOS files. Defaults to False.
     """
     project: ProjectSetup
-    paths: Dict[str, List[str]]
     compound_name: str
     spin_orbit_flags: List[str]
     skip_soc: bool = False
     skip_normal: bool = False
     is_pdos: bool = False
+    path_resolver: DynamicPathResolver = None
 
 
 class DataCollector:
@@ -236,12 +234,82 @@ class DataCollector:
         self.soc_handler = SpinOrbitHandler(config.project)
         results = []
 
-        # Get the appropriate paths based on the extractor
-        paths = self._get_paths(config)
+        calc_type_mapping = {
+            "pw_bands_output_paths": CalculationType.PROJECTED_BANDS,
+            "scf_output_paths": CalculationType.SCF,
+            "kpdos_output_paths": CalculationType.PROJECTED_BANDS,
+            "nscf_output_paths": CalculationType.PDOS,
+            "nscf_wannier_output_paths": CalculationType.WANNIER,
+        }
 
-        for path, flag in zip(paths, config.spin_orbit_flags):
+        if config.is_pdos:
+            if self.extractor.get_path_key() == "kpdos_output_paths":
+                calc_type = CalculationType.PDOS
+            elif self.extractor.get_path_key() == "scf_output_paths":
+                calc_type = CalculationType.PDOS
+            else:
+                calc_type = calc_type_mapping.get(self.extractor.get_path_key())
+        else:
+            calc_type = calc_type_mapping.get(self.extractor.get_path_key())
+
+        if not calc_type:
+            print_error(f"Error: Could not determine CalculationType for path key '{self.extractor.get_path_key()}'")
+            exit(1)
+
+        soc_calc_type = None
+        if calc_type == CalculationType.SCF:
+            soc_calc_type = CalculationType.SCF_SOC
+        elif calc_type == CalculationType.PROJECTED_BANDS:
+            soc_calc_type = CalculationType.PROJECTED_BANDS_SOC
+        elif calc_type == CalculationType.PDOS:
+            soc_calc_type = CalculationType.PDOS_SOC
+        elif calc_type == CalculationType.WANNIER:
+            soc_calc_type = CalculationType.WANNIER_SOC
+        elif calc_type == CalculationType.STRAIN:
+            soc_calc_type = None
+
+        # Collect paths for the base calculation type
+        base_paths_dict = config.path_resolver.get_calculation_paths(
+            calc_type, validate_existence=True
+        )
+        # Collect paths for the SOC calculation type if it exists
+        soc_paths_dict = {}
+        if soc_calc_type:
+            soc_paths_dict = config.path_resolver.get_calculation_paths(
+                soc_calc_type, validate_existence=True
+            )
+
+        # Modifying the project output paths if one set of paths are not found
+        if not base_paths_dict or not soc_paths_dict:
+            path_manager = PathManager()
+            paths = base_paths_dict or soc_paths_dict
+            is_soc = soc_paths_dict is not None
+            raw_paths = {calc_type.value if not is_soc else soc_calc_type.value: paths}
+            organized_paths = path_manager.path_organizer.organize_paths(raw_paths, config.path_resolver.context)
+            config.project.output_paths = organized_paths
+
+        # Merge paths from both dictionaries, keeping track of the flag
+        processed_paths = []
+        corresponding_flags = []
+
+        path_key = self.extractor.get_path_key().replace("_paths", "")
+
+        # Process non-SOC paths
+        if base_paths_dict and path_key in base_paths_dict:
+            for p in base_paths_dict[path_key]:
+                processed_paths.append(p)
+                corresponding_flags.append("")
+
+        # Process SOC paths
+        if soc_paths_dict and path_key in soc_paths_dict:
+            for p in soc_paths_dict[path_key]:
+                processed_paths.append(p)
+                corresponding_flags.append("_soc")
+
+        for path, flag in zip(processed_paths, corresponding_flags):
             if isinstance(self.extractor, AtomicStatesExtractor):
                 console.rule(f"Getting atomic projections info {'(SOC)' if flag else '(Non-SOC)'}")
+
             if self.soc_handler.should_skip(flag):
                 continue
 

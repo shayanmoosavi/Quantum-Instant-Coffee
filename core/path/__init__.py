@@ -19,7 +19,7 @@ from rich.table import Table
 from data.models import ProjectSetup, CompoundData
 from ui.ui_helpers import print_header, print_info, console, print_success
 from .exceptions import ProjectInitializationError
-from .managers import PathManager
+from .managers import PathManager, DynamicPathResolver
 from .models import PathBuildingContext, CalculationType
 from .utils import has_soc_directories, get_project_directory
 from ..config import load_project_config
@@ -192,5 +192,6 @@ __all__ = [
     'ProjectInitializationError',
     'CalculationType',
     'PathBuildingContext',
-    'PathManager'
+    'PathManager',
+    'DynamicPathResolver'
 ]
