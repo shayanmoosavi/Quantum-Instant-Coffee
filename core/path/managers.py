@@ -146,7 +146,7 @@ class DynamicPathResolver:
             return {}
 
         # Use cache if available
-        cache_key = f"{calc_type.value}_{flag}"
+        cache_key = calc_type.value
         if cache_key in self._path_cache:
             return self._path_cache[cache_key]
 
@@ -165,7 +165,7 @@ class DynamicPathResolver:
             )
 
             if validate_existence:
-                paths = self._validate_and_prompt(paths, calc_type, flag)
+                paths = self._validate_and_prompt(paths, flag)
 
             # Cache the result
             self._path_cache[cache_key] = paths
@@ -175,14 +175,12 @@ class DynamicPathResolver:
             print_error(f"Error building paths for {calc_type.value}: {e}")
             return {}
 
-    def _validate_and_prompt(self, paths: Dict[str, List[str]],
-                             calc_type: CalculationType, flag: str) -> Dict[str, List[str]]:
+    def _validate_and_prompt(self, paths: Dict[str, List[str]], flag: str) -> Dict[str, List[str]]:
         """
         Validate file existence and prompt user if files are missing.
 
         Args:
             paths: Dictionary of file types to path lists
-            calc_type: The calculation type being validated
             flag: SOC flag ("_soc" or "")
 
         Returns:
@@ -192,7 +190,7 @@ class DynamicPathResolver:
         files_exist = False
         missing_files = []
 
-        for file_type, file_paths in paths.items():
+        for _, file_paths in paths.items():
             for file_path in file_paths:
                 if os.path.exists(file_path):
                     files_exist = True
@@ -314,3 +312,18 @@ class PathManager:
         """
         self.directory_manager = DirectoryManager(context.project_dir)
         return self.directory_manager.create_project_directories(context)
+
+    @staticmethod
+    def create_dynamic_resolver(context: PathBuildingContext,
+                                soc_handler) -> DynamicPathResolver:
+        """
+        Create a dynamic path resolver for runtime path resolution.
+
+        Args:
+            context: PathBuildingContext with project configuration
+            soc_handler: SpinOrbitHandler instance
+
+        Returns:
+            DynamicPathResolver instance
+        """
+        return DynamicPathResolver(context, soc_handler)

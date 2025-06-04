@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from core.path import PathBuildingContext, CalculationType
+from .models import PathBuildingContext, CalculationType
 
 
 class StructuredPathOrganizer:
