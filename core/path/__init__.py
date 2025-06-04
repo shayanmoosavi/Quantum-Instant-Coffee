@@ -169,6 +169,7 @@ def initialize_project(
 
         print_success("Project analysis setup completed successfully.\n")
         return ProjectSetup(
+            config=config,
             compound_name=compound_name,
             project_dir=project_dir,
             pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo"])),
