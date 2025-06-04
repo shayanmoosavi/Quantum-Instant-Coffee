@@ -94,11 +94,11 @@ class CalculationPathBuilder:
         },
         CalculationType.WANNIER: {
             'input': ['nscf_wannier_input', 'pw2wan_input', 'wannier_input'],
-            'output': ['nscf_wannier_output', 'wannier_bands']
+            'output': ['nscf_wannier_output', 'wannier_bands', 'bands_gnu']
         },
         CalculationType.WANNIER_SOC: {
             'input': ['nscf_wannier_input', 'pw2wan_input', 'wannier_input'],
-            'output': ['nscf_wannier_output', 'wannier_bands']
+            'output': ['nscf_wannier_output', 'wannier_bands', 'bands_gnu']
         },
         CalculationType.STRAIN: {
             'input': ['scf_input', 'pw_bands_input', 'kpdos_input', 'bands_input'],
