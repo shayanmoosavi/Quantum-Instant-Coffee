@@ -13,10 +13,10 @@ from sys import argv
 
 from core.input_handler import get_pseudopotential_files
 from core.path import initialize_project
-from data.fetch_atomic_info import get_atomic_weights
 from data.models import ProjectSetup
+from input import get_atomic_weights
 from input.generators.factory import InputGeneratorFactory, GenerationContext
-from input.generators.sections import InputGenerationError
+from input.generators.exceptions import InputGenerationError
 from ui.print_thanks import print_animated_ascii
 from ui.ui_helpers import *
 from utils.file_parser import get_poscar_data
