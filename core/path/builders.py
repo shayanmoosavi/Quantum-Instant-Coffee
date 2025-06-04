@@ -10,7 +10,7 @@ import os
 from typing import Optional, Dict, List
 
 from .exceptions import ProjectInitializationError
-from .models import CalculationType, PathBuildingContext
+from .models import CalculationType
 from ui.ui_helpers import print_warning
 
 
@@ -164,29 +164,3 @@ class CalculationPathBuilder:
                     result[file_key] = [path]
 
         return result
-
-
-class LazyPathBuilder:
-    """
-    A lazy path builder that generates paths on demand without upfront validation.
-    """
-
-    def __init__(self, context: PathBuildingContext):
-        self.context = context
-        self.pattern_builder = FilePatternBuilder(
-            context.config.file_patterns.output if not context.is_input
-            else context.config.file_patterns.input
-        )
-        self.calc_path_builder = CalculationPathBuilder(self.pattern_builder)
-
-    def get_available_calculation_types(self) -> List[CalculationType]:
-        """Get all calculation types that are configured in the project."""
-        calc_types = []
-        for calc_name in self.context.config.directory_structure.keys():
-            try:
-                calc_type = CalculationType(calc_name)
-                if calc_type not in [CalculationType.PSEUDO, CalculationType.PSEUDO_REL]:
-                    calc_types.append(calc_type)
-            except ValueError:
-                continue
-        return calc_types
