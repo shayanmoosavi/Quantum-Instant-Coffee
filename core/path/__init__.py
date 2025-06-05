@@ -1,44 +1,29 @@
+"""
+This module provides functionality for initializing a project directory, parsing compound information,
+and managing paths and configurations for calculations. It includes utility functions, exceptions,
+and core classes for handling paths and project setup.
+
+Exports:
+    - initialize_project: Main function to initialize the project directory and parse compound information.
+    - ProjectInitializationError: Custom exception for project initialization errors.
+    - CalculationType: Enum for different calculation types.
+    - PathBuildingContext: Dataclass for storing path building context.
+    - PathManager: Core class for managing paths and directories.
+"""
 import os
-from typing import Optional, Dict
+from typing import Optional
 
 from rich import box
 from rich.table import Table
 
-from core.config_handler import load_project_config
-from core.input_handler import get_strain_amounts, get_pbands_type
-from data.models import CompoundData, ProjectSetup
+from data.models import ProjectSetup, CompoundData
 from ui.ui_helpers import print_header, print_info, console, print_success
-
-
-class ProjectInitializationError(Exception):
-    """
-    Custom exception raised for errors during project initialization.
-
-    Attributes:
-        message (str): Explanation of the error.
-    """
-    pass
-
-
-def has_soc_directories(directory_structure: Dict[str, str]) -> bool:
-    """
-    Check if the configuration contains SOC-related directories.
-
-    Args:
-        directory_structure (Dict[str, str]): A dictionary where keys are directory names
-            and values are their corresponding paths.
-
-    Returns:
-        bool: True if SOC directories are present, False otherwise.
-    """
-    soc_dirs = {
-        "scf_soc",
-        "projected_bands_soc",
-        "pdos_soc",
-        "pseudo_rel"
-    }
-
-    return bool(soc_dirs & set(directory_structure.keys()))
+from .exceptions import ProjectInitializationError
+from .managers import PathManager, DynamicPathResolver
+from .models import PathBuildingContext, CalculationType
+from .utils import has_soc_directories, get_project_directory
+from ..config import load_project_config
+from ..input_handler import get_strain_amounts, get_pbands_type
 
 
 def initialize_project(
@@ -72,7 +57,6 @@ def initialize_project(
     Raises:
         ProjectInitializationError: If parsing the compound name fails.
     """
-    from core.path_handler import get_project_directory, create_directories, build_file_paths
     print('\n')
     print_header("Project Initialization")
 
@@ -134,25 +118,23 @@ def initialize_project(
     project_dir = get_project_directory(compound_name)
     print_info(f"\nProject directory: {project_dir}")
 
+    context = PathBuildingContext(
+        project_dir=project_dir,
+        compound_name=compound_name,
+        config=config,
+        is_input=is_input,
+        include_stress=include_stress,
+        stress_amounts=stress_amounts,
+        skip_soc=skip_soc,
+        skip_normal=skip_normal
+    )
+
+    path_manager = PathManager()
+
     if is_input:
         # Create the required calculation directories
-        calculation_dirs = create_directories(
-            project_dir,
-            config.directory_structure,
-            include_stress,
-            stress_amounts,
-            final_skip_soc,
-            skip_normal
-        )
-
-        paths = build_file_paths(project_dir,
-                                 compound_name,
-                                 config,
-                                 is_input,
-                                 include_stress,
-                                 stress_amounts,
-                                 final_skip_soc,
-                                 skip_normal)
+        calculation_dirs = path_manager.create_directories(context)
+        paths = path_manager.build_file_paths(context)
 
         print_success("Project initialization completed successfully.\n")
         # Return the project setup details
@@ -177,30 +159,17 @@ def initialize_project(
     else:
         # For output/analysis, return the project setup details
         if final_skip_soc:
-            paths, _ = build_file_paths(project_dir,
-                                        compound_name,
-                                        config,
-                                        is_input,
-                                        include_stress,
-                                        stress_amounts,
-                                        final_skip_soc,
-                                        skip_normal)
+            paths = path_manager.build_file_paths(context)
         else:
-            paths, skip_stress_soc = build_file_paths(project_dir,
-                                                      compound_name,
-                                                      config,
-                                                      is_input,
-                                                      include_stress,
-                                                      stress_amounts,
-                                                      final_skip_soc,
-                                                      skip_normal)
+            paths = path_manager.build_file_paths(context)
 
             # Update final_skip_soc if stress calculations force SOC to be skipped
-            if skip_stress_soc:
+            if context.include_stress:
                 final_skip_soc = True
 
         print_success("Project analysis setup completed successfully.\n")
         return ProjectSetup(
+            config=config,
             compound_name=compound_name,
             project_dir=project_dir,
             pseudo_dir=os.path.abspath(os.path.join(project_dir, config.directory_structure["pseudo"])),
@@ -216,3 +185,13 @@ def initialize_project(
             skip_soc=final_skip_soc,
             skip_normal=skip_normal
         )
+
+
+__all__ = [
+    'initialize_project',
+    'ProjectInitializationError',
+    'CalculationType',
+    'PathBuildingContext',
+    'PathManager',
+    'DynamicPathResolver'
+]

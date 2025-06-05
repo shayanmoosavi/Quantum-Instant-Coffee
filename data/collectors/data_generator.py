@@ -119,6 +119,6 @@ def generate_pdos(paths: Dict[str, List[str]],
                 print_error(e.stderr.decode("utf-8"))
                 success_list.append(False)
 
-    os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
     return success_list

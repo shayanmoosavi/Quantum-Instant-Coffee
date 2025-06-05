@@ -8,10 +8,10 @@ import argparse
 import os
 from sys import argv
 
-from core.config_handler import load_plot_config
-from core.project_setup import initialize_project
-from data.data_collector import prepare_bands_info, prepare_wannier_info, prepare_pdos_info
-from data.data_processor import process_band_data, process_comparison_data, process_pdos_data
+from core.config import load_plot_config
+from core.path import initialize_project
+from data.collectors import *
+from data.processors import *
 from plotting.plot_handler import plot_band_structure, plot_wannier_comparison, plot_pdos
 from ui.ui_helpers import print_warning
 

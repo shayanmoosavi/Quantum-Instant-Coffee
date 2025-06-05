@@ -9,11 +9,6 @@ import os
 from typing import List, Dict
 
 
-class InputGenerationError(Exception):
-    """Custom exception for input file generation errors."""
-    pass
-
-
 def generate_control_section(
         calculation_type: str,
         pseudo_dir: str,

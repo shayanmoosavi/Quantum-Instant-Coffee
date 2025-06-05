@@ -4,15 +4,19 @@ This module provides classes and functions to process band structure data and at
 from Quantum ESPRESSO output files. It includes functionality for loading data, calculating orbital
 weights, and processing atomic projections.
 """
-import os.path
+import argparse
+import os
+from sys import argv
 
 import numpy as np
 from rich import box
 from rich.table import Table
 
-from data.data_collector import *
-from data.models import BandData, ProjectSetup
+from core.path import initialize_project
+from data.collectors import *
+from data.models import BandData, ProjectSetup, DOSSetup
 from ui.display_data import display_dft_data_info
+from ui.ui_helpers import print_info, print_error, print_header, console
 
 
 class BandDataProcessor:
@@ -401,7 +405,7 @@ if __name__ == "__main__":
     This script validates the processing of band data and ensures that the
     atomic projections and weights are calculated correctly.
     """
-    os.chdir("..")
+    os.chdir("../..")
 
     # Create the parser
     parser = argparse.ArgumentParser(description="Tests the data processor module.")

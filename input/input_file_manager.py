@@ -12,13 +12,13 @@ import os
 from sys import argv
 
 from core.input_handler import get_pseudopotential_files
-from core.project_setup import initialize_project
-from data.fetch_atomic_info import get_atomic_weights
+from core.path import initialize_project
 from data.models import ProjectSetup
+from input import get_atomic_weights
 from input.generators.factory import InputGeneratorFactory, GenerationContext
-from input.generators.sections import InputGenerationError
+from input.generators.exceptions import InputGenerationError
 from ui.print_thanks import print_animated_ascii
-from ui.ui_helpers import print_info, console, print_header, print_error, print_success, progress_track
+from ui.ui_helpers import *
 from utils.file_parser import get_poscar_data
 
 
@@ -47,7 +47,6 @@ class InputFileManager:
             GenerationContext: The initialized context containing project data and atomic information.
         """
         print_info("Fetching atomic weights and POSCAR data...")
-
         with console.status("Retrieving atomic weights and POSCAR data"):
             atomic_weights = get_atomic_weights(self.project.compound_data.element_names)
             lattice_vectors, atomic_positions = get_poscar_data(self.project.poscar_file)

@@ -18,7 +18,7 @@ from typing import Tuple, Any, Callable
 
 from core.input_handler import get_atomic_states
 from ui.ui_helpers import print_error
-from utils.file_parser import extract_atomic_states_info, extract_wannier_parameters
+from utils.file_parser import extract_atomic_states_info
 
 
 def collect_dft_data(path: str,
@@ -75,6 +75,7 @@ def collect_dft_data(path: str,
         return None, False
 
     return None, False
+
 
 class DataExtractor(ABC):
     """
@@ -251,61 +252,3 @@ class AtomicStatesExtractor(DataExtractor):
             str: Success message.
         """
         return "\nSuccessfully extracted atomic states information.\n"
-
-
-class WannierDataExtractor(DataExtractor):
-    """
-    Extractor for Wannier parameters (alat and Fermi energy).
-
-    This class handles the extraction of Wannier parameters from NSCF output files.
-    """
-
-    def __init__(self, path_key: str = "nscf_wannier_output_paths"):
-        """
-        Initialize the WannierDataExtractor.
-
-        Args:
-            path_key (str): Key for accessing paths in the paths dictionary. Defaults to "nscf_wannier_output_paths".
-        """
-        self.path_key = path_key
-
-    def extract_data(self, path: str, compound_name: str, flag: str, **kwargs) -> Tuple[Any, bool]:
-        """
-        Extract Wannier parameters from NSCF output files.
-
-        Args:
-            path (str): Path to the file.
-            compound_name (str): Name of the compound being analyzed.
-            flag (str): Flag indicating spin-orbit coupling case (e.g., "_soc").
-            **kwargs: Additional parameters for data extraction.
-
-        Returns:
-            Tuple[Any, bool]: Extracted Wannier parameters (alat and Fermi energy) and a success flag.
-        """
-        try:
-            alat, fermi_energy = extract_wannier_parameters(path, compound_name, flag)
-            return (alat, fermi_energy), True
-        except (FileNotFoundError, ValueError) as e:
-            print_error(f"Error extracting Wannier parameters: {e}")
-            return None, False
-
-    def get_path_key(self) -> str:
-        """
-        Get the key for accessing paths in the paths dictionary.
-
-        Returns:
-            str: Key for accessing paths.
-        """
-        return self.path_key
-
-    def get_success_message(self, **kwargs) -> str:
-        """
-        Get the success message for logging.
-
-        Args:
-            **kwargs: Additional parameters for generating the success message.
-
-        Returns:
-            str: Success message.
-        """
-        return "Successfully extracted Wannier parameters.\n"

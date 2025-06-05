@@ -7,8 +7,8 @@ This script is designed to be run from the command line and takes two arguments:
 import argparse
 from sys import argv
 
-from core.project_setup import initialize_project
-from input.input_file_generator import InputFileManager
+from core.path import initialize_project
+from input import InputFileManager
 
 # Creating the parser
 parser = argparse.ArgumentParser(description="Writes input files for Quantum ESPRESSO and Wannier90 calculations.")

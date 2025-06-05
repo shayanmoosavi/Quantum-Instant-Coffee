@@ -18,6 +18,8 @@ from typing import List, Optional, Dict, Any
 
 from numpy import ndarray
 
+from core.config import ProjectConfig
+
 
 @dataclass
 class CompoundData:
@@ -186,6 +188,7 @@ class ProjectSetup:
     dos_setup: Optional[DOSSetup] = None
     input_paths: Optional[Dict[str, List[str]]] = None
     output_paths: Optional[Dict[str, List[str]]] = None
+    config: Optional[ProjectConfig] = None
     skip_soc: bool = False
     skip_normal: bool = False
 
