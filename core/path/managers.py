@@ -97,7 +97,7 @@ class DirectoryManager:
             print_success("\nSuccessfully created calculation directories.\n")
 
             # Return to script root directory
-            script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            script_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
             os.chdir(script_root_dir)
 
             return created_dirs

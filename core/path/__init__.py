@@ -137,6 +137,8 @@ def initialize_project(
         paths = path_manager.build_file_paths(context)
 
         print_success("Project initialization completed successfully.\n")
+        script_root_dir = os.path.abspath(os.path.join(__file__, "../../.."))  # The root directory of the program
+
         # Return the project setup details
         return ProjectSetup(
             compound_name=compound_name,
@@ -151,7 +153,7 @@ def initialize_project(
                     project_dir, config.directory_structure["pseudo_rel"])
             ) if not skip_soc else None,
             input_paths=paths,
-            poscar_file=os.path.abspath(poscar_file),
+            poscar_file=os.path.abspath(os.path.join(script_root_dir, poscar_file)),
             skip_soc=final_skip_soc,
             skip_normal=skip_normal
         )

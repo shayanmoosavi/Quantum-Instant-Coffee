@@ -120,7 +120,7 @@ class InputFileManager:
 
         print_info("Generating input files...")
         for key, paths in self.project.input_paths.items():
-            input_type = key.replace("_paths", "").replace("_input", "")
+            input_type = key.replace("_paths", "")
 
             try:
                 generator = self.factory.create_generator(input_type)

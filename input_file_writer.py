@@ -25,7 +25,7 @@ parser.add_argument(
     help="Path to the POSCAR file."
 )
 parser.add_argument(
-    "config_type",
+    "--config-type",
     type=str,
     choices=["default", "bands", "pdos", "wannier"],
     default="default",
