@@ -286,7 +286,7 @@ if __name__ == "__main__":
         if not is_wannier and not is_pdos:
             print_header("Reporting Projected Bands Info")
             print('\n')
-            for band, fermi_energy, states, atomic_states_info, flag in zip(
+            for i, (band, fermi_energy, states, atomic_states_info, flag) in enumerate(zip(
                     project.band_info.number_of_bands,
                     project.band_info.fermi_energies,
                     project.band_info.number_of_atomic_states,
@@ -294,10 +294,10 @@ if __name__ == "__main__":
                     [""] if project.skip_soc
                     else ["(SOC)"] if project.skip_normal
                     else ["", "(SOC)"]
-            ):
+            )):
                 console.rule(f"Info for {'Non-SOC' if flag == '' else 'SOC'} calculation")
                 display_dft_info(band, fermi_energy, states)
-                display_atomic_states(project.band_info.atomic_states_info[0])
+                display_atomic_states(project.band_info.atomic_states_info[i])
                 print('\n')
 
         elif is_pdos:
