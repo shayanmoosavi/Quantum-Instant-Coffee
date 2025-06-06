@@ -205,11 +205,11 @@ class PWCalculationGenerator(InputGenerator):
         # Add IONS and CELL sections if needed
         if self.config.requires_ions_cell:
             content += f"""&IONS
-        /
-        &CELL
-            cell_dofree      = '{self.config.cell_dofree}'
-        /
-        """
+/
+&CELL
+    cell_dofree      = '{self.config.cell_dofree}'
+/
+"""
 
         # Generate remaining sections
         content += self._generate_species_and_structure_sections(context)
