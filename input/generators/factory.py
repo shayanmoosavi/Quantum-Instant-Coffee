@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 from abc import ABC, abstractmethod
 
 from data.models import ProjectSetup
+from input import InputGenerationError
 from input.generators.kpoints import generate_k_points_section
 from input.generators.sections import *
 from input.user_prompts import prompt_nbands, prompt_kmesh
@@ -145,11 +146,11 @@ class PWCalculationGenerator(InputGenerator):
 
     # Configuration for different calculation types
     CONFIGS = {
-        "relax": PWCalculationConfig("relax", requires_ions_cell=True),
-        "vc-relax": PWCalculationConfig("vc-relax", requires_ions_cell=True),
-        "scf": PWCalculationConfig("scf"),
-        "nscf": PWCalculationConfig("nscf", requires_bands=True),
-        "bands": PWCalculationConfig("bands", requires_bands=True),
+        "relax_input": PWCalculationConfig("relax", requires_ions_cell=True),
+        "vc_relax_input": PWCalculationConfig("vc-relax", requires_ions_cell=True),
+        "scf_input": PWCalculationConfig("scf"),
+        "nscf_input": PWCalculationConfig("nscf", requires_bands=True),
+        "bands_input": PWCalculationConfig("bands", requires_bands=True),
     }
 
     def __init__(self, calc_type: str):
@@ -342,14 +343,14 @@ class PostProcessingGenerator(InputGenerator):
     """
 
     GENERATORS = {
-        "pdos": lambda compound_name, **kwargs: f"""&PROJWFC
+        "pdos_input": lambda compound_name, **kwargs: f"""&PROJWFC
     outdir          = './out'
     prefix          = '{compound_name}'
     filpdos         = '{compound_name}'
     DeltaE          = {kwargs.get('delta', 0.01)}
  /""",
 
-        "kpdos": lambda compound_name, **kwargs: f"""&PROJWFC
+        "kpdos_input": lambda compound_name, **kwargs: f"""&PROJWFC
     outdir       = './out'
     prefix       = '{compound_name}'
     DeltaE       = {kwargs.get('delta', 0.01)}
@@ -359,7 +360,7 @@ class PostProcessingGenerator(InputGenerator):
     filproj      = '{compound_name}.proj.dat'
 /""",
 
-        "bands": lambda compound_name, **kwargs: f"""&BANDS
+        "bands_input": lambda compound_name, **kwargs: f"""&BANDS
     outdir       = './out'
     prefix       = '{compound_name}'
     filband      = '{compound_name}.bands'
@@ -430,7 +431,7 @@ class WannierGenerator(InputGenerator):
         self.wannier_type = wannier_input_type
         self.wannier_params = wannier_params
 
-        valid_types = ["nscf_wannier", "pw2wan", "wannier"]
+        valid_types = ["nscf_wannier_input", "pw2wan_input", "wannier_input"]
         if wannier_input_type not in valid_types:
             raise InputGenerationError(f"Invalid Wannier type: {wannier_input_type}. "
                                        f"Valid types are: {', '.join(valid_types)}")
@@ -449,11 +450,11 @@ class WannierGenerator(InputGenerator):
         Raises:
             InputGenerationError: If the Wannier input type is unsupported.
         """
-        if self.wannier_type == "nscf_wannier":
+        if self.wannier_type == "nscf_wannier_input":
             return self._generate_nscf_wannier(context, **kwargs)
-        elif self.wannier_type == "pw2wan":
+        elif self.wannier_type == "pw2wan_input":
             return self._generate_pw2wannier(context)
-        elif self.wannier_type == "wannier":
+        elif self.wannier_type == "wannier_input":
             return self._generate_wannier_input(context, **kwargs)
         else:
             raise InputGenerationError(f"Unsupported Wannier type: {self.wannier_type}")
@@ -489,7 +490,7 @@ class WannierGenerator(InputGenerator):
                     continue
 
         # Generate using PW calculator
-        pw_gen = PWCalculationGenerator("nscf")
+        pw_gen = PWCalculationGenerator("nscf_input")
         return pw_gen.generate(context, nbnds=nbands, kmesh=kmesh)
 
     @staticmethod
@@ -623,7 +624,7 @@ begin kpoints
         Returns:
             List[str]: A list of required parameters, depending on the Wannier input type.
         """
-        if self.wannier_type == "nscf_wannier":
+        if self.wannier_type == "nscf_wannier_input":
             return ["nbnds", "kmesh"]
         return []
 
@@ -657,16 +658,16 @@ class InputGeneratorFactory:
         """
 
         # PW calculations
-        if input_type in ["relax", "vc-relax", "scf", "nscf", "bands"]:
+        if input_type in ["relax_input", "vc_relax_input", "scf_input", "nscf_input", "bands_input"]:
             return PWCalculationGenerator(input_type)
 
         # Post-processing
-        elif input_type in ["pdos", "kpdos", "pw_bands"]:
+        elif input_type in ["pdos_input", "kpdos_input", "pw_bands_input"]:
             post_type = input_type.replace("pw_", "")  # Handle pw_bands -> bands
             return PostProcessingGenerator(post_type)
 
         # Wannier-related
-        elif input_type in ["nscf_wannier", "pw2wan", "wannier"]:
+        elif input_type in ["nscf_wannier_input", "pw2wan_input", "wannier_input"]:
             return WannierGenerator(input_type, self.wannier_params)
 
         else:
