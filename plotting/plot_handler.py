@@ -241,8 +241,11 @@ def plot_band_structure(project: ProjectSetup,
 
     # Extracting configuration values
     compound_name = project.compound_name
-    spin_orbit_flags = project.band_info.spin_orbit_flags if project.band_info.spin_orbit_flags else [False] * len(
-        project.band_data.energy)
+    if project.include_stress:
+        spin_orbit_flags = [False] * len(project.band_data.energy)
+    else:
+        spin_orbit_flags = [""] if project.skip_soc else ["_soc"] if project.skip_normal else ["", "_soc"]
+
     stress_amount_list = (["1"] + project.stress_amounts) if project.include_stress else ["1"] * len(
         project.band_data.energy)
     total_plots = len(list(project.output_paths.values())[0])
@@ -420,7 +423,7 @@ def plot_pdos(project: ProjectSetup,
     print_header("Processing PDOS Data")
 
     compound_name = project.compound_name
-    spin_orbit_flags = ["", "_soc"]
+    spin_orbit_flags = [""] if project.skip_soc else ["_soc"] if project.skip_normal else ["", "_soc"]
     projection_processor = AtomicProjectionProcessor(list(project.dos_setup.atomic_states_info[0].keys()))
     unique_elements_list = projection_processor.get_unique_elements()
     total_plots = len(list(project.output_paths.values())[0])
@@ -448,11 +451,6 @@ def plot_pdos(project: ProjectSetup,
         plotter = DOSPlotter(plot_config)
         for i, (projection_data, flag) in enumerate(
                 zip(projection_data_list, spin_orbit_flags), 1):
-
-            if flag == "_soc" and project.skip_soc:
-                continue
-            elif flag == "" and project.skip_normal:
-                continue
 
             console.rule(f"Processing dataset {i if total_plots != 1 else 1} of {total_plots}")
 

@@ -134,9 +134,14 @@ class StructuredPathOrganizer:
 
         elif calc_type in [CalculationType.WANNIER, CalculationType.WANNIER_SOC]:
             if not context.include_stress:
-                for path_type in ["nscf_wannier_output", "wannier_bands"]:
-                    if path_type in file_paths and file_paths[path_type]:
-                        structured[f"{path_type}_paths"].extend(file_paths[path_type])
+                path_mapping = {
+                    "nscf_wannier_output": "nscf_wannier_output_paths",
+                    "wannier_bands": "wannier_bands_paths",
+                    "bands_gnu": "bands_paths"
+                }
+                for file_type, struct_key in path_mapping.items():
+                    if file_type in file_paths:
+                        structured[struct_key].extend(file_paths[file_type])
 
         elif not (context.include_stress and calc_type.is_soc) and calc_type not in [
             CalculationType.PDOS, CalculationType.PDOS_SOC,
