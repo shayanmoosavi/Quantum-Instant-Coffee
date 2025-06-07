@@ -288,24 +288,38 @@ def extract_atomic_states_info(
 
             # Validating the orbital exists in orbital info file
             if orbital not in orbital_info:
-                raise ValueError(
-                    f"The orbital '{orbital}' is not defined in 'orbital_info.json'. Please check the file."
-                )
+                if orbital != "all":
+                    raise ValueError(
+                        f"The orbital '{orbital}' is not defined in 'orbital_info.json'. Please check the file."
+                    )
 
-            # Getting the index of all atomic states given by user input
-            for orbital_number in orbital_info[orbital]["orbital_numbers"]:
-                atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital_number}\)"
+            if orbital == "all":
+                atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), .*"
                 atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
 
                 projection_indices_list.extend(
                     [
                         int(atomic_state.group(1))
                         for atomic_state in atomic_state_regex_object.finditer(
-                            kpdos_calculation_output
-                        )
+                        kpdos_calculation_output
+                    )
                     ]
                 )
-            projection_indices_list.sort()
+            else:
+                # Getting the index of all atomic states given by user input
+                for orbital_number in orbital_info[orbital]["orbital_numbers"]:
+                    atomic_state_regex_pattern = rf"state #\s+(\d+): atom\s+\d+ \({atom}\s+\), wfc\s+\d+ \({orbital_number}\)"
+                    atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
+
+                    projection_indices_list.extend(
+                        [
+                            int(atomic_state.group(1))
+                            for atomic_state in atomic_state_regex_object.finditer(
+                            kpdos_calculation_output
+                        )
+                        ]
+                    )
+                projection_indices_list.sort()
 
             if orbital in same_orbitals:
                 key = f"{atom}-{same_orbitals[orbital]}"
@@ -320,7 +334,8 @@ def extract_atomic_states_info(
             return {
                 key: {
                     "indices": projection_indices_list,
-                    "coefficients": orbital_info[orbital]["orbital_coefficients"],
+                    "coefficients": orbital_info[orbital]["orbital_coefficients"]
+                    if orbital != "all" else [1 / len(projection_indices_list)] * len(projection_indices_list),
                 }
             }
 

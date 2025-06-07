@@ -191,14 +191,16 @@ def get_strain_amounts(is_input: bool = False) -> List[str] | None:
 def get_atomic_states() -> List[Tuple[str, str]] | None:
     """
     Prepares and retrieves the atomic projection list for plotting projected bands.
+    This function prompts the user to input atomic projections in two formats:
+    1. <element name>-<orbital> pairs for specific orbital projections
+    2. <element name> only for whole atom projections (uses 'all' as orbital flag)
 
-    This function prompts the user to input atomic projections in the format
-    <element name>-<orbital>, separated by spaces. It validates the input to ensure
-    correctness and returns a list of atomic projections.
+    Supports mixed input (both formats in the same input).
 
     Returns:
         list: A list of tuples where each tuple contains an element name (str) and
               an orbital type (str), e.g., [('O', 's'), ('C', 'p'), ('Fe', 'd')].
+              For whole atom projections, orbital will be 'all', e.g., [('Fe', 'all')].
     """
     print_header("Atomic Projections")
     print_info("Preparing the atomic projection list for plotting projected bands...")
@@ -208,8 +210,13 @@ def get_atomic_states() -> List[Tuple[str, str]] | None:
     print_info(f"""
 Supported orbitals:
 {', '.join(supported_orbitals)}
-Format: <element_name>-<orbital> separated by a single space.
-Example: O-s C-p Fe-d
+
+Input formats:
+1. Specific orbitals: <element_name>-<orbital> (e.g., O-s C-p Fe-d)
+2. Whole atoms: <element_name> only (e.g., Fe C O)
+3. Mixed: Fe-d C O-s (specific orbitals + whole atoms)
+
+Separate multiple entries with spaces.
     """, highlight=False)
 
     # Loop to repeatedly prompt the user until valid input is provided
@@ -222,23 +229,40 @@ Example: O-s C-p Fe-d
         # Processing the user input and extracting atomic projection information
         atomic_projection_list = []
         for atomic_projection in user_input.split():
+            # Check if it's in element-orbital format or element-only format
+            if '-' in atomic_projection:
+                # Format: element-orbital
+                parts = atomic_projection.split('-')
+                if len(parts) != 2:
+                    print_warning(f"Invalid format '{atomic_projection}'. Use <element>-<orbital> or <element> only.")
+                    break
 
-            # Validating the input format (must be in the form <element name>-<orbital>)
-            if '-' not in atomic_projection:
-                print_warning("Invalid input format. Expected <element_name>-<orbital>.")
+                element, orbital = parts
+
+                # Validate element
+                if not element.isalpha():
+                    print_warning(f"Invalid element symbol '{element}'!")
+                    break
+
+                # Validate orbital
+                if orbital not in supported_orbitals:
+                    print_warning(
+                        f"Invalid orbital type '{orbital}'! Supported types are: {', '.join(supported_orbitals)}")
+                    break
+
+                atomic_projection_list.append((element, orbital))
+            else:
+                print_warning("This feature is under development and will be available in the future.")
                 break
-
-            element, orbital = atomic_projection.split('-')
-
-            # Validating the element and orbital symbols
-            if not element.isalpha():
-                print_warning("Invalid element symbol!")
-                break
-
-            if orbital not in supported_orbitals:
-                print_warning(f"Invalid orbital type! Supported types are: {', '.join(supported_orbitals)}")
-                break
-
-            atomic_projection_list.append((element, orbital))
+                # # Format: element only (whole atom projection)
+                # element = atomic_projection
+                #
+                # # Validate element
+                # if not element.isalpha():
+                #     print_warning(f"Invalid element symbol '{element}'!")
+                #     break
+                #
+                # # Use 'all' as a flag for whole atom projection
+                # atomic_projection_list.append((element, 'all'))
         else:
             return atomic_projection_list
