@@ -252,33 +252,17 @@ Separate multiple entries with spaces.
 
                 atomic_projection_list.append((element, orbital))
             else:
-                # Format: element only (whole atom projection)
-                element = atomic_projection
-
-                # Validate element
-                if not element.isalpha():
-                    print_warning(f"Invalid element symbol '{element}'!")
-                    break
-
-                # Use 'all' as a flag for whole atom projection
-                atomic_projection_list.append((element, 'all'))
-
-            # # Validating the input format (must be in the form <element name>-<orbital>)
-            # if '-' not in atomic_projection:
-            #     print_warning("Invalid input format. Expected <element_name>-<orbital>.")
-            #     break
-            #
-            # element, orbital = atomic_projection.split('-')
-            #
-            # # Validating the element and orbital symbols
-            # if not element.isalpha():
-            #     print_warning("Invalid element symbol!")
-            #     break
-            #
-            # if orbital not in supported_orbitals:
-            #     print_warning(f"Invalid orbital type! Supported types are: {', '.join(supported_orbitals)}")
-            #     break
-            #
-            # atomic_projection_list.append((element, orbital))
+                print_warning("This feature is under development and will be available in the future.")
+                break
+                # # Format: element only (whole atom projection)
+                # element = atomic_projection
+                #
+                # # Validate element
+                # if not element.isalpha():
+                #     print_warning(f"Invalid element symbol '{element}'!")
+                #     break
+                #
+                # # Use 'all' as a flag for whole atom projection
+                # atomic_projection_list.append((element, 'all'))
         else:
             return atomic_projection_list
