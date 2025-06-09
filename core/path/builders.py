@@ -157,9 +157,16 @@ class CalculationPathBuilder:
         else:
             # Handle regular calculations
             for file_key in file_keys:
-                path = self.pattern_builder.build_file_path(
-                    base_path, compound_name, file_key, flag
-                )
+                if file_key == "bands_gnu" and calc_type in [CalculationType.WANNIER, CalculationType.WANNIER_SOC]:
+                    # Special case for bands_gnu in WANNIER calculations
+                    base_path_dft = os.path.join(base_path, "../projected_bands")
+                    path = self.pattern_builder.build_file_path(
+                        base_path_dft, compound_name, file_key, flag
+                    )
+                else:
+                    path = self.pattern_builder.build_file_path(
+                        base_path, compound_name, file_key, flag
+                    )
                 if path:
                     result[file_key] = [path]
 
