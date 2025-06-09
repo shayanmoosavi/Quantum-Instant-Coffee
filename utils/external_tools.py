@@ -46,7 +46,8 @@ def run_sum_pdos(atomic_projection: Tuple[str, str]) -> None:
     print_info(f"Summing the PDOS files for {atomic_projection[0]}-{atomic_projection[1]}")
 
     sum_pdos_command = (f"sumpdos.x "
-                        f"*\({atomic_projection[0]}\)*\({atomic_projection[1]}*\) "
+                        f"*\({atomic_projection[0]}\)*\({atomic_projection[1]}*\) " if atomic_projection[1] != "all"
+                        else f"sumpdos.x *\({atomic_projection[0]}\)* " 
                         f"> pdos_{atomic_projection[0]}_{atomic_projection[1]}.dat")
 
     run(sum_pdos_command, shell=True, check=True, capture_output=True)

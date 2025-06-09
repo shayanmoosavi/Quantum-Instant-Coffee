@@ -122,7 +122,8 @@ class BandsPlotConfig:
                 "px+py": "#0BF317",
                 "dz2": "#0D3EE0",
                 "dxz+dyz": "#0BF317",
-                "dx2y2+dxy": "#FF2B11"
+                "dx2y2+dxy": "#FF2B11",
+                "all": "#D72662"
             },
             figure_height=6,
             figure_width=12,
@@ -196,7 +197,8 @@ class DOSPlotConfig:
             orbital_colors={
                 "s": "#FF00ED",
                 "p": "#0BF317",
-                "d": "#FF2B11"
+                "d": "#FF2B11",
+                "all": "#D72662"
             },
             figure_height=6,
             figure_width=12,

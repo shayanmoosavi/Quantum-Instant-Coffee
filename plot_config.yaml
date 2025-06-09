@@ -11,6 +11,7 @@ bands_plot:
     dz2: "#0D3EE0"
     "dxz+dyz": "#0BF317"
     "dx2y2+dxy": "#FF2B11"
+    all: "#FBFF2F"
   figure:
     height: 6 # Height of the figure in inches
     width: 12 # Width of the figure in inches
@@ -22,6 +23,7 @@ dos_plot:
     s: "#FF00ED"
     p: "#0BF317"
     d: "#FF2B11"
+    all: "#FBFF2F"
   figure:
     height: 6
     width: 12
