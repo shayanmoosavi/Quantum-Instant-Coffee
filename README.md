@@ -396,7 +396,9 @@ dos_plot:
   figure:
     height: 6
     width: 12
+  plot:
     energy_limits: [ -5, 5 ]
+    dos_limits: [ 0, 10 ] # Limits for the DOS plot
 ```
 
 An example of modified `plot_config.yaml` with changed energy limits:
@@ -418,6 +420,7 @@ bands_plot:
   figure:
     height: 6 # Height of the figure in inches
     width: 12 # Width of the figure in inches
+  plot:
     energy_limits: [ -10, 5 ] # Energy limits for the plot
 
 # Density of States (DOS) plot configuration
@@ -429,7 +432,9 @@ dos_plot:
   figure:
     height: 6
     width: 12
+  plot:
     energy_limits: [ -10, 5 ]
+    dos_limits: [ 0, 10 ] # Limits for the DOS plot
 ```
 
 You can also provide partial configurations in the `plot_config.yaml` file. The script will use the default values for any missing keys. 
