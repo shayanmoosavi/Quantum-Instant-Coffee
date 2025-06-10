@@ -670,8 +670,7 @@ class InputGeneratorFactory:
 
         # Post-processing
         elif input_type in ["pdos_input", "kpdos_input", "bands_input"]:
-            post_type = input_type.replace("pw_", "")  # Handle pw_bands -> bands
-            return PostProcessingGenerator(post_type)
+            return PostProcessingGenerator(input_type)
 
         # Wannier-related
         elif input_type in ["nscf_wannier_input", "pw2wan_input", "wannier_input"]:
