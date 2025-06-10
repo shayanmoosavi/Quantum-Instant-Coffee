@@ -68,7 +68,7 @@ class ProjectionDataProcessor:
             self.elements_list = unique_elements_list
             self.is_pdos = is_pdos
         else:
-            self.config = config or DOSPlotConfig()
+            self.config = config or DOSPlotConfig.get_default_config()
             self.elements_list = unique_elements_list
             self.pdos_info_list = pdos_info_list
             self.is_pdos = is_pdos

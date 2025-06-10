@@ -252,17 +252,15 @@ Separate multiple entries with spaces.
 
                 atomic_projection_list.append((element, orbital))
             else:
-                print_warning("This feature is under development and will be available in the future.")
-                break
-                # # Format: element only (whole atom projection)
-                # element = atomic_projection
-                #
-                # # Validate element
-                # if not element.isalpha():
-                #     print_warning(f"Invalid element symbol '{element}'!")
-                #     break
-                #
-                # # Use 'all' as a flag for whole atom projection
-                # atomic_projection_list.append((element, 'all'))
+                # Format: element only (whole atom projection)
+                element = atomic_projection
+
+                # Validate element
+                if not element.isalpha():
+                    print_warning(f"Invalid element symbol '{element}'!")
+                    break
+
+                # Use 'all' as a flag for whole atom projection
+                atomic_projection_list.append((element, 'all'))
         else:
             return atomic_projection_list

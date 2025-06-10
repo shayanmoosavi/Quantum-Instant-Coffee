@@ -340,7 +340,7 @@ def extract_atomic_states_info(
             }
 
         except ValueError as e:
-            print_error(f"There was an error in extracting the atomic projection information.")
+            print_error(f"There was an error in extracting the atomic projection information. {str(e)}")
             raise
 
         except FileNotFoundError:
@@ -358,17 +358,24 @@ def extract_atomic_states_info(
             }  # Map orbital numbers to types
 
             if orbital not in orbital_lookup:
-                raise ValueError(
-                    f"The orbital '{orbital}' is not defined in the orbital lookup."
-                )
+                if orbital != "all":
+                    raise ValueError(
+                        f"The orbital '{orbital}' is not defined in the orbital lookup."
+                    )
 
             with open(file_path, "r") as pdos_output_file:
                 pdos_calculation_output = pdos_output_file.read()
 
-            atomic_state_regex_pattern = (
-                rf"state #\s+\d+: atom\s+(?P<atomic_index>\d+) \({atom}\s+\),"
-                rf" wfc\s+(?P<wfc_num>\d+) \(l=({orbital_lookup[orbital]}).*\)"
-            )
+            if orbital == "all":
+                atomic_state_regex_pattern = (
+                    rf"state #\s+\d+: atom\s+(?P<atomic_index>\d+) \({atom}\s+\),"
+                    rf" wfc\s+(?P<wfc_num>\d+) .*"
+                )
+            else:
+                atomic_state_regex_pattern = (
+                    rf"state #\s+\d+: atom\s+(?P<atomic_index>\d+) \({atom}\s+\),"
+                    rf" wfc\s+(?P<wfc_num>\d+) \(l=({orbital_lookup[orbital]}).*\)"
+                )
             atomic_state_regex_object = re.compile(atomic_state_regex_pattern)
             atomic_state_matches = atomic_state_regex_object.finditer(
                 pdos_calculation_output
@@ -376,7 +383,6 @@ def extract_atomic_states_info(
 
             projection_info_list = [(int(match.group("atomic_index")), int(match.group("wfc_num")))
                                  for match in atomic_state_matches]
-
 
             key = f"{atom}-{orbital}"
             return {
@@ -386,8 +392,8 @@ def extract_atomic_states_info(
                 }
             }
 
-        except ValueError:
-            print_error("There was an error in extracting the atomic projection information.")
+        except ValueError as e:
+            print_error(f"There was an error in extracting the atomic projection information. {str(e)}")
             raise
 
         except FileNotFoundError:

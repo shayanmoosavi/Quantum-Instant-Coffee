@@ -88,7 +88,7 @@ class BandPlotter:
         ax.set_ylabel(ylabel)
         ax.set_title(title)
         ax.set_xticks(self.config.high_symmetry_points, self.config.k_labels)
-        ax.grid("on")
+        ax.grid(True)
 
     @staticmethod
     def plot_bands(ax: matplotlib.axes.Axes,
@@ -342,6 +342,7 @@ class DOSPlotter:
         ax.set_title(title)
         ax.grid(True)
         ax.set_xlim(*self.config.energy_limits)
+        ax.set_ylim(*self.config.dos_limits)
 
     @staticmethod
     def plot_pdos(ax: matplotlib.axes.Axes,
