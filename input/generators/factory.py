@@ -204,10 +204,17 @@ class PWCalculationGenerator(InputGenerator):
 
         # Add IONS and CELL sections if needed
         if self.config.requires_ions_cell:
-            content += f"""&IONS
+            if self.config.calc_type == "vc_relax":
+                content += f"""&IONS
 /
 &CELL
     cell_dofree      = '{self.config.cell_dofree}'
+/
+"""
+            else:
+                content += f"""&IONS
+/
+&CELL
 /
 """
 
@@ -658,11 +665,11 @@ class InputGeneratorFactory:
         """
 
         # PW calculations
-        if input_type in ["relax_input", "vc_relax_input", "scf_input", "nscf_input", "bands_input"]:
+        if input_type in ["relax_input", "vc_relax_input", "scf_input", "nscf_input", "pw_bands_input"]:
             return PWCalculationGenerator(input_type)
 
         # Post-processing
-        elif input_type in ["pdos_input", "kpdos_input", "pw_bands_input"]:
+        elif input_type in ["pdos_input", "kpdos_input", "bands_input"]:
             post_type = input_type.replace("pw_", "")  # Handle pw_bands -> bands
             return PostProcessingGenerator(post_type)
 
