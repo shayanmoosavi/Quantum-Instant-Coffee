@@ -304,16 +304,33 @@ def validate_plot_config_structure(config: Dict[str, Any], plot_config_type: str
                 if field in figure_config and not isinstance(figure_config[field], (int, float)):
                     raise ConfigValidationError(f"figure.{field} must be numeric")
 
-            if "energy_limits" in figure_config:
-                energy_limits = figure_config["energy_limits"]
+        if "plot" in section_config:
+            plot_config = section_config["plot"]
+            if not isinstance(plot_config, dict):
+                raise ConfigValidationError(
+                    "Invalid figure section! Check default plot_config.yaml to see the correct format.")
+
+            if "energy_limits" in plot_config:
+                energy_limits = plot_config["energy_limits"]
 
                 if not isinstance(energy_limits, list) or len(energy_limits) != 2:
                     raise ConfigValidationError(
-                        "figure.energy_limits must be a list of two numeric values.")
+                        "plot.energy_limits must be a list of two numeric values.")
 
                 if not all(isinstance(val, (int, float)) for val in energy_limits):
                     raise ConfigValidationError(
-                        "figure.energy_limits must be a list of two numeric values.")
+                        "plot.energy_limits must be a list of two numeric values.")
+
+            if "dos_limits" in plot_config:
+                dos_limits = plot_config["dos_limits"]
+
+                if not isinstance(dos_limits, list) or len(dos_limits) != 2:
+                    raise ConfigValidationError(
+                        "plot.dos_limits must be a list of two numeric values.")
+
+                if not all(isinstance(val, (int, float)) for val in dos_limits):
+                    raise ConfigValidationError(
+                        "plot.dos_limits must be a list of two numeric values.")
 
         if config_type == "bands":
             if "high_symmetry_points" in section_config:

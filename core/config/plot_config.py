@@ -123,7 +123,7 @@ class BandsPlotConfig:
                 "dz2": "#0D3EE0",
                 "dxz+dyz": "#0BF317",
                 "dx2y2+dxy": "#FF2B11",
-                "all": "#D72662"
+                "all": "#FBFF2F"
             },
             figure_height=6,
             figure_width=12,
@@ -139,12 +139,14 @@ class DOSPlotConfig:
         orbital_colors (dict): Color codes for different orbital types
         figure_height (int): Default figure height in inches
         figure_width (int): Default figure width in inches
-        energy_limits (tuple): Y-axis energy range in eV
+        energy_limits (tuple): X-axis energy range in eV
+        dos_limits (tuple, optional): Y-axis DOS range in states/eV (default is None)
     """
     orbital_colors: Dict[str, str]
     figure_height: int
     figure_width: int
     energy_limits: Tuple
+    dos_limits: Tuple
 
     @classmethod
     def from_yaml(cls, config_file: str = "plot_config.yaml") -> 'DOSPlotConfig':
@@ -164,9 +166,11 @@ class DOSPlotConfig:
             merged_config_dict = overwrite_plot_config_values(default_config_dict.copy(), user_dos_plot_config)
 
             # Reconstructing energy_limits as a tuple
-            if 'figure' in user_dos_plot_config:
-                if 'energy_limits' in user_dos_plot_config['figure']:
-                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['figure']['energy_limits'])
+            if 'plot' in user_dos_plot_config:
+                if 'energy_limits' in user_dos_plot_config['plot']:
+                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['plot']['energy_limits'])
+                if 'dos_limits' in user_dos_plot_config['plot']:
+                    merged_config_dict['dos_limits'] = tuple(merged_config_dict['plot']['dos_limits'])
 
             # Extracting figure height and width from the merged 'figure' dictionary
             merged_config_dict['figure_height'] = merged_config_dict['figure']['height']
@@ -177,7 +181,8 @@ class DOSPlotConfig:
                 orbital_colors=merged_config_dict['orbital_colors'],
                 figure_height=merged_config_dict['figure_height'],
                 figure_width=merged_config_dict['figure_width'],
-                energy_limits=merged_config_dict['energy_limits']
+                energy_limits=merged_config_dict['energy_limits'],
+                dos_limits=merged_config_dict['dos_limits']
             )
 
         except ConfigValidationError as e:
@@ -198,9 +203,10 @@ class DOSPlotConfig:
                 "s": "#FF00ED",
                 "p": "#0BF317",
                 "d": "#FF2B11",
-                "all": "#D72662"
+                "all": "#FBFF2F"
             },
             figure_height=6,
             figure_width=12,
-            energy_limits=(-5, 5)
+            energy_limits=(-5, 5),
+            dos_limits=(0, 10)
         )

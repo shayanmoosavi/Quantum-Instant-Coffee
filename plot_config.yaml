@@ -27,4 +27,6 @@ dos_plot:
   figure:
     height: 6
     width: 12
+  plot:
     energy_limits: [ -5, 5 ]
+    dos_limits: [ 0, 10 ] # Limits for the DOS plot
