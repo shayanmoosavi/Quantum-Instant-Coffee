@@ -137,7 +137,8 @@ def initialize_project(
         paths = path_manager.build_file_paths(context)
 
         print_success("Project initialization completed successfully.\n")
-        script_root_dir = os.path.abspath(os.path.join(__file__, "../../.."))  # The root directory of the program
+        script_root_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../.."))  # The root directory of the program
 
         # Return the project setup details
         return ProjectSetup(

@@ -113,7 +113,7 @@ def prepare_wannier_info(project: ProjectSetup) -> ProjectSetup:
     """Prepare Wannier information by extracting data from NSCF Wannier output files.
 
     Args:
-        project (PojectSetup): Project setup object containing paths and parameters.
+        project (ProjectSetup): Project setup object containing paths and parameters.
 
     Returns:
         WannierSetup: Configuration object for Wannier calculations
