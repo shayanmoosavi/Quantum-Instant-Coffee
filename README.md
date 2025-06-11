@@ -102,7 +102,7 @@ If you encounter errors about missing pseudopotentials, ensure you have:
 In order to use these scripts to generate the input files, run `input_file_writer.py` as follows:
 
 ```bash
-COFFEE=<user-name> python input_file_writer.py --project-config /path/to/project_congig.json <compound-name> <POSCAR-file> <config-type>
+COFFEE=<user-name> python input_file_writer.py --project-config /path/to/project_config.json <compound-name> <POSCAR-file> <config-type>
 ```
 
 ### Arguments
