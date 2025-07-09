@@ -30,7 +30,7 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
         poscar_file_content = file.read()
 
     coordinates_regex_pattern = (
-        r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
+        r"(?P<x>-?\d\d?\.\d+(?!(\s+)?\n))\s+(?P<y>-?\d\d?\.\d+)\s+(?P<z>-?\d\d?\.\d+)"
     )
     coordinates_regex_object = re.compile(coordinates_regex_pattern)
     coordinates_matches = coordinates_regex_object.finditer(poscar_file_content)
@@ -42,11 +42,11 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
     for match in coordinates_matches:
         if counter < 3:
             lattice_vectors.append(
-                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
+                f"{match.group('x'):>20}    {match.group('y'):>20}    {match.group('z'):>20}"
             )
         else:
             atomic_positions.append(
-                f"{match.group(1):>20}    {match.group(2):>20}    {match.group(3):>20}"
+                f"{match.group('x'):>20}    {match.group('y'):>20}    {match.group('z'):>20}"
             )
         counter += 1
 
