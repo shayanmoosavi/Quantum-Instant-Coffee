@@ -150,7 +150,7 @@ class PWCalculationGenerator(InputGenerator):
         "vc_relax_input": PWCalculationConfig("vc-relax", requires_ions_cell=True),
         "scf_input": PWCalculationConfig("scf"),
         "nscf_input": PWCalculationConfig("nscf", requires_bands=True),
-        "bands_input": PWCalculationConfig("bands", requires_bands=True),
+        "pw_bands_input": PWCalculationConfig("bands", requires_bands=True),
     }
 
     def __init__(self, calc_type: str):
@@ -204,7 +204,7 @@ class PWCalculationGenerator(InputGenerator):
 
         # Add IONS and CELL sections if needed
         if self.config.requires_ions_cell:
-            if self.config.calc_type == "vc_relax":
+            if self.config.calc_type == "vc-relax":
                 content += f"""&IONS
 /
 &CELL
