@@ -186,9 +186,11 @@ it will create subdirectories based on the selected configuration type:
 └── user_name/
     └── compound_name/
         ├── scf
+        ├── projected_bands
         ├── wannier
         └── spin_orbit/
             ├── scf
+            ├── projected_bands
             └── wannier
 ```
 
@@ -223,17 +225,14 @@ Where `--plot-config` is the path to the custom user-defined plot configuration 
 ### 1- Projected Bands
 The input file generation and plotting for projected bands currently only supports 2D hexagonal structures. You may need to modify the code to support other structures.
 
-### 2- Atomic Projections
-The software currently lacks whole atom projections for the projected bands and projected DOS (PDOS).
-
 > [!NOTE]
 > These limitations are due to the fact that the software is still in its early stages and is being actively developed. They are planned to be addressed in future releases.
 
-### 3- Python Version
+### 2- Python Version
 > [!WARNING]
 > The software has been tested on Python 3.10. If you are using an older version of Python and encounter issues, open an issue on GitHub and I try to address it.
 
-### 4- Operating System
+### 3- Operating System
 > [!WARNING]
 > The software has only been tested on Linux. If you are using Windows or MacOS and encounter issues, open an issue on GitHub and I try to address it.
 
@@ -373,14 +372,15 @@ bands_plot:
   high_symmetry_points: [ 0.0000, 0.5774, 0.9107, 1.5774 ] # Coordinates of high symmetry points in the Brillouin zone
   k_labels: [ "Gamma", "M", "K", "Gamma" ] # Labels for the high symmetry points
   orbital_colors:
-    s: "#FF00ED"
-    p: "#0BF317"
-    d: "#FF2B11"
-    pz: "#0D3EE0"
-    "px+py": "#0BF317"
-    dz2: "#0D3EE0"
-    "dxz+dyz": "#0BF317"
-    "dx2y2+dxy": "#FF2B11"
+    s: "#FF00ED" # Magenta
+    p: "#0BF317" # Green
+    d: "#FF2B11" # Red
+    pz: "#0D3EE0" # Blue
+    "px+py": "#0BF317" # Green
+    dz2: "#0D3EE0" # Blue
+    "dxz+dyz": "#0BF317" # Green
+    "dx2y2+dxy": "#FF2B11" # Red
+    all: "#FBFF2F" # Yellow
   figure:
     height: 6 # Height of the figure in inches
     width: 12 # Width of the figure in inches
@@ -389,13 +389,16 @@ bands_plot:
 # Density of States (DOS) plot configuration
 dos_plot:
   orbital_colors:
-    s: "#FF00ED"
-    p: "#0BF317"
-    d: "#FF2B11"
+    s: "#FF00ED" # Magenta
+    p: "#0BF317" # Green
+    d: "#FF2B11" # Red
+    all: "#FBFF2F" # Yellow
   figure:
     height: 6
     width: 12
+  plot:
     energy_limits: [ -5, 5 ]
+    dos_limits: [ 0, 10 ] # Limits for the DOS plot
 ```
 
 An example of modified `plot_config.yaml` with changed energy limits:
@@ -417,6 +420,7 @@ bands_plot:
   figure:
     height: 6 # Height of the figure in inches
     width: 12 # Width of the figure in inches
+  plot:
     energy_limits: [ -10, 5 ] # Energy limits for the plot
 
 # Density of States (DOS) plot configuration
@@ -428,7 +432,9 @@ dos_plot:
   figure:
     height: 6
     width: 12
+  plot:
     energy_limits: [ -10, 5 ]
+    dos_limits: [ 0, 10 ] # Limits for the DOS plot
 ```
 
 You can also provide partial configurations in the `plot_config.yaml` file. The script will use the default values for any missing keys. 
