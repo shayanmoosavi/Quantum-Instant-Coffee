@@ -30,7 +30,7 @@ def get_poscar_data(poscar_file: str) -> Tuple[List[str], List[str]]:
         poscar_file_content = file.read()
 
     coordinates_regex_pattern = (
-        r"(-?\d\d?\.\d+(?!\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
+        r"(-?\d\d?\.\d+(?!(\s+)?\n))\s+(-?\d\d?\.\d+)\s+(-?\d\d?\.\d+)"
     )
     coordinates_regex_object = re.compile(coordinates_regex_pattern)
     coordinates_matches = coordinates_regex_object.finditer(poscar_file_content)
