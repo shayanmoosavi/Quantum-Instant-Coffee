@@ -75,9 +75,9 @@ class BandsPlotConfig:
                 ]
 
             # Reconstructing energy_limits as a tuple
-            if 'plot' in user_bands_plot_config:
-                if 'energy_limits' in user_bands_plot_config['plot']:
-                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['plot']['energy_limits'])
+            if 'figure' in user_bands_plot_config:
+                if 'energy_limits' in user_bands_plot_config['figure']:
+                    merged_config_dict['energy_limits'] = tuple(merged_config_dict['figure']['energy_limits'])
 
             # Extracting figure height and width from the merged 'figure' dictionary
             merged_config_dict['figure_height'] = merged_config_dict['figure']['height']
@@ -171,6 +171,7 @@ class DOSPlotConfig:
                     merged_config_dict['energy_limits'] = tuple(merged_config_dict['plot']['energy_limits'])
                 if 'dos_limits' in user_dos_plot_config['plot']:
                     merged_config_dict['dos_limits'] = tuple(merged_config_dict['plot']['dos_limits'])
+                del merged_config_dict['plot']
 
             # Extracting figure height and width from the merged 'figure' dictionary
             merged_config_dict['figure_height'] = merged_config_dict['figure']['height']
