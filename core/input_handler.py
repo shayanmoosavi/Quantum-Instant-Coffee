@@ -76,7 +76,7 @@ def get_pseudopotential_files(element_names: List[str],
 
         for element_name in element_names:
             pseudo_files = []
-            pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+            pseudo_regex_pattern = rf"{element_name}(?:[-\._].*)?\.upf"
             pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
             for filename in os.listdir(pseudo_dir_path):
                 if pseudo_regex_object.fullmatch(filename):
@@ -94,7 +94,7 @@ def get_pseudopotential_files(element_names: List[str],
 
                 for element_name in element_names:
                     rel_pseudo_files = []
-                    pseudo_regex_pattern = rf"{element_name}[-\._].*\.upf"
+                    pseudo_regex_pattern = rf"{element_name}(?:[-\._].*)?\.upf"
                     pseudo_regex_object = re.compile(pseudo_regex_pattern, re.IGNORECASE)
                     for filename in os.listdir(rel_pseudo_dir_path):
                         if pseudo_regex_object.fullmatch(filename):
