@@ -14,6 +14,8 @@ Functions:
 
 from typing import Dict, Any
 
+from ui.ui_helpers import print_warning
+
 
 class ConfigValidationError(Exception):
     """
@@ -299,6 +301,12 @@ def validate_plot_config_structure(config: Dict[str, Any], plot_config_type: str
                 raise ConfigValidationError(
                     "Invalid figure section! Check default plot_config.yaml to see the correct format.")
 
+            if "energy_limits" in figure_config and config_type == "dos":
+                print_warning(
+                    "The format of plot config for DOS section have changed and using the old format is deprecated, "
+                    "using the default value instead. Please update your plot_config.yaml file to the new format."
+                )
+
             # Validate numeric fields if present
             for field in ["height", "width"]:
                 if field in figure_config and not isinstance(figure_config[field], (int, float)):
@@ -359,5 +367,5 @@ def validate_plot_config_structure(config: Dict[str, Any], plot_config_type: str
     if plot_config_type == "bands":
         validate_sections(section_config, config_type="bands")
 
-    elif plot_config_type == "pdos":
-        validate_sections(section_config, config_type="pdos")
+    elif plot_config_type == "dos":
+        validate_sections(section_config, config_type="dos")
