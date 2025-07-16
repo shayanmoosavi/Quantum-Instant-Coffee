@@ -11,7 +11,7 @@ Classes:
 
 from abc import ABC, abstractmethod
 
-from ui_helpers import *
+from .ui_helpers import *
 
 
 class Logger(ABC):
