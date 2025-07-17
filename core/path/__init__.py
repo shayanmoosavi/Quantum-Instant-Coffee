@@ -13,11 +13,8 @@ Exports:
 import os
 from typing import Optional
 
-from rich import box
-from rich.table import Table
-
 from data.models import ProjectSetup, CompoundData
-from ui.ui_helpers import print_header, print_info, console, print_success
+from ui.display import RichDisplay
 from .exceptions import ProjectInitializationError
 from .managers import PathManager, DynamicPathResolver
 from .models import PathBuildingContext, CalculationType
@@ -31,6 +28,7 @@ def initialize_project(
         config_file: str = None,
         config_type: str = "default",
         poscar_file: Optional[str] = None,
+        display_handler: RichDisplay = RichDisplay(),
         is_input: bool = True,
         is_wannier: bool = False,
         is_pdos: bool = False,
@@ -45,6 +43,7 @@ def initialize_project(
         config_file (str): Path to the JSON configuration file. Defaults to None.
         config_type (str): Type of config, either 'default', 'bands', 'pdos', or 'wannier'.
         poscar_file (str): Path to the POSCAR file. Only used if is_input is True.
+        display_handler (RichDisplay): Display handler for UI output.
         is_input (bool): Flag indicating if the function is called for input file generation. Defaults to True.
         is_wannier (bool): Flag indicating if the function is called for Wannier comparison initialization. Defaults to False.
         is_pdos (bool): Flag indicating if the function is called for PDOS initialization. Defaults to False.
@@ -58,13 +57,13 @@ def initialize_project(
         ProjectInitializationError: If parsing the compound name fails.
     """
     print('\n')
-    print_header("Project Initialization")
+    display_handler.display_header("Project Initialization")
 
     # Validate skip flags
     if skip_soc and skip_normal:
         raise ProjectInitializationError("Both skip_soc and skip_normal cannot be True simultaneously.")
 
-    config = load_project_config(config_file, config_type)
+    config = load_project_config(display_handler, config_file, config_type)
 
     # Detect if SOC directories are available in config
     soc_available = has_soc_directories(config.directory_structure)
@@ -76,7 +75,7 @@ def initialize_project(
         if not skip_normal:
             # No SOC directories in config, automatically skip SOC
             final_skip_soc = True
-            print_info("No SOC directories found in configuration. SOC calculations will be skipped.")
+            display_handler.display_info("No SOC directories found in configuration. SOC calculations will be skipped.")
         else:
             # We cannot proceed with skipping normal calculations if SOC directories are not available
             raise ProjectInitializationError(
@@ -96,27 +95,28 @@ def initialize_project(
         stress_amounts = get_strain_amounts() if include_stress else None
 
     try:
-        print_info("Recognizing elements...\n")
+        display_handler.display_info("Recognizing elements...\n")
 
         # Parse compound information from the compound name
         compound_data = CompoundData.from_compound_name(compound_name)
 
         # Create compound info table
-        compound_table = Table(title="Compound Information", box=box.ROUNDED)
-        compound_table.add_column("Property", style="cyan")
-        compound_table.add_column("Value", style="green")
-
-        compound_table.add_row("Total atoms", str(compound_data.number_of_atoms))
-        compound_table.add_row("Distinct atom types", str(compound_data.atom_types))
-        compound_table.add_row("Elements", ", ".join(compound_data.element_names))
-        console.print(compound_table)
+        compound_table_data = [
+            ["Total atoms", str(compound_data.number_of_atoms)],
+            ["Distinct atom types", str(compound_data.atom_types)],
+            ["Elements", ", ".join(compound_data.element_names)]
+        ]
+        display_handler.display_table(["Property", "Value"],
+                                      compound_table_data,
+                                      "Compound Information",
+                                      ["cyan", "green"])
 
     except Exception as ex:
         raise ProjectInitializationError(f"Failed to parse compound name: {str(ex)}")
 
     # Get the project directory path
     project_dir = get_project_directory(compound_name)
-    print_info(f"\nProject directory: {project_dir}")
+    display_handler.display_info(f"\nProject directory: {project_dir}")
 
     context = PathBuildingContext(
         project_dir=project_dir,
@@ -136,7 +136,7 @@ def initialize_project(
         calculation_dirs = path_manager.create_directories(context)
         paths = path_manager.build_file_paths(context)
 
-        print_success("Project initialization completed successfully.\n")
+        display_handler.display_success("Project initialization completed successfully.\n")
         script_root_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../.."))  # The root directory of the program
 
@@ -170,7 +170,7 @@ def initialize_project(
             if context.include_stress:
                 final_skip_soc = True
 
-        print_success("Project analysis setup completed successfully.\n")
+        display_handler.display_success("Project analysis setup completed successfully.\n")
         return ProjectSetup(
             config=config,
             compound_name=compound_name,
