@@ -52,19 +52,25 @@ class InputFileManager:
             lattice_vectors, atomic_positions = get_poscar_data(self.project.poscar_file)
 
         print_info("Fetching the Pseudopotentials...")
-        pseudo_list, rel_pseudo_list = get_pseudopotential_files(
-            self.project.compound_data.element_names,
-            self.project.pseudo_dir,
-            relativistic=True,
-            rel_pseudo_path=self.project.rel_pseudo_dir
-        )
+        if self.project.skip_soc:
+            pseudo_list = get_pseudopotential_files(
+                self.project.compound_data.element_names,
+                self.project.pseudo_dir,
+            )
+        else:
+            pseudo_list, rel_pseudo_list = get_pseudopotential_files(
+                self.project.compound_data.element_names,
+                self.project.pseudo_dir,
+                relativistic=True,
+                rel_pseudo_path=self.project.rel_pseudo_dir
+            )
         print_info("Pseudopotentials fetched successfully.")
 
         self._context = GenerationContext(
             project=self.project,
             atomic_weights=atomic_weights,
             pseudo_list=pseudo_list,
-            rel_pseudo_list=rel_pseudo_list,
+            rel_pseudo_list=None if self.project.skip_soc else rel_pseudo_list,
             atomic_positions=atomic_positions,
             lattice_vectors=lattice_vectors
         )

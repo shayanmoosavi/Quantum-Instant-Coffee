@@ -125,7 +125,7 @@ def initialize_project(
         is_input=is_input,
         include_stress=include_stress,
         stress_amounts=stress_amounts,
-        skip_soc=skip_soc,
+        skip_soc=final_skip_soc,
         skip_normal=skip_normal
     )
 
@@ -151,23 +151,23 @@ def initialize_project(
             rel_pseudo_dir=os.path.abspath(
                 os.path.join(
                     project_dir, config.directory_structure["pseudo_rel"])
-            ) if not skip_soc else None,
+            ) if not context.skip_soc else None,
             input_paths=paths,
             poscar_file=os.path.abspath(os.path.join(script_root_dir, poscar_file)),
-            skip_soc=final_skip_soc,
+            skip_soc=context.skip_soc,
             skip_normal=skip_normal
         )
 
     else:
         # For output/analysis, return the project setup details
-        if final_skip_soc:
+        if context.skip_soc:
             paths = path_manager.build_file_paths(context)
         else:
             paths = path_manager.build_file_paths(context)
 
             # Update final_skip_soc if stress calculations force SOC to be skipped
             if context.include_stress:
-                final_skip_soc = True
+                context.skip_soc = True
 
         print_success("Project analysis setup completed successfully.\n")
         return ProjectSetup(
@@ -182,9 +182,9 @@ def initialize_project(
             rel_pseudo_dir=os.path.abspath(
                 os.path.join(
                     project_dir, config.directory_structure["pseudo_rel"])
-            ) if not final_skip_soc else None,
+            ) if not context.skip_soc else None,
             output_paths=paths,
-            skip_soc=final_skip_soc,
+            skip_soc=context.skip_soc,
             skip_normal=skip_normal
         )
 
